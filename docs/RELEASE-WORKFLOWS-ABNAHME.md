@@ -2,6 +2,8 @@
 
 Stand: 18. Oktober 2026. Autorisiert sind gemeinsame Sicherung/Speicherverwaltung, Video-Papierkorb, Finder-Öffnen, direkte Anleitungserstellung, optionale Schnellvorschau, Objektliste und der StoreKit-Unterbau für einen Einmalkauf. Keine Veröffentlichung oder echte Kaufaktivierung durch diesen Auftrag.
 
+Nachfolgender Nutzerauftrag am selben Tag: Free-/Pro-Paket und Einmalkauf 29,99 € Einführung / 39,99 € regulär bestätigt. Die Funktionssperren und der kommerzielle Client sind inzwischen implementiert; aktuelle Details und neue Prüfnachweise stehen in [FREE-PRO-ABNAHME.md](FREE-PRO-ABNAHME.md). Veröffentlichung und App-Store-Connect-Konfiguration sind weiterhin offen.
+
 ## Bedienung
 
 - **Ablage → Alles sichern … / Alles wiederherstellen …** ist der gemeinsame Weg. Er steht auch im Dateienmenü der Bild-/Videobibliothek und unter Einstellungen → Speicherorte. Die bisherigen einzelnen Sicherungsformate bleiben lesbar und ihre gezielten Aktionen verfügbar.
@@ -40,7 +42,7 @@ Die App liest keinen fremden Container automatisch und setzt keine Systemberecht
 
 Produktvorschlag: nicht verbrauchbar, ID `com.snaprivo.pro.lifetime`. `StoreKitProClient` lädt lokalisierte Produktpreise und prüft ausschließlich verifizierte, passende Apple-Transaktionen. `currentEntitlements` dient für Neustart/Offline-Belege; `Transaction.updates` berücksichtigt spätere Freigabe und Widerruf. Erfolg wird nach Verifikation bestätigt und die Transaktion abgeschlossen. `AppStore.sync()` wird nur durch „Käufe wiederherstellen“ ausgelöst. Abbruch, ausstehende Freigabe, Fehler und ungültige Belege sind eigene Zustände. Keine lokale Kaufbehauptung in UserDefaults und kein Lizenzserver.
 
-**Kommerzieller Schalter bleibt aus.** Die Paywall ist über Snaprivo Pro erreichbar und erklärt den Entwicklungsstand. Alle vorhandenen Funktionen bleiben zugänglich. Vor Aktivierung sind genaue Free-/Pro-Liste, Preis, Kaufversprechen und das Produkt in App Store Connect zu bestätigen; anschließend Sandbox/TestFlight mit dem tatsächlichen Produkt. Es gibt keine vorläufigen Funktionsschranken oder öffentliche Preiszusage. Der Betrag 1,23 im lokalen `.storekit` ist ausschließlich eine synthetische Testkonfiguration.
+**Nach Paketentscheidung aktualisiert:** Die Paywall zeigt den bestätigten Pro-Umfang und tatsächliche Store-Preise. Ohne verifizierten Kauf gelten die Free-/Pro-Grenzen; eigene Inhalte bleiben zugänglich und exportierbar. Der kommerzielle Client ist aktiviert, das Produkt muss jedoch noch in App Store Connect angelegt und dort mit Preisplan konfiguriert werden. Der lokale `.storekit`-Einführungspreis ist nun 29,99 €; die Tests prüfen zusätzlich 39,99 €. Die frühere Testkonfiguration 1,23 ist ersetzt. [Verbindliche Matrix und Preislogik](FREE-PRO-ABNAHME.md).
 
 Das getrennte Xcode-Scheme **SnaprivoStoreTests** verwendet einen eigenen minimalen Host mit eigener Bundle-ID und ohne Zugriff auf die Nutzerbibliothek. Native Tests prüfen Produktladen, verifizierten Kauf, Neustart, explizites Wiederherstellen und Erstattung. Der öffentliche StoreKit-Testprozess benötigt ein gültiges Präsentationsfenster; der Host stellt dieses bereit. Die Tests lösen keine echten Käufe aus.
 

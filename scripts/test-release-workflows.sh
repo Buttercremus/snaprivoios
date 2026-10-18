@@ -12,7 +12,7 @@ xcrun swiftc -swift-version 6 -whole-module-optimization -target "$validation_ta
   -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
   -Xlinker -rpath -Xlinker "$validation_dir" \
   Snaprivo/App/*.swift Snaprivo/Capture/*.swift Snaprivo/Editor/*.swift Snaprivo/Features/*.swift \
-  Tests/ReleaseWorkflowChecks.swift -o "$validation_dir/ReleaseWorkflowChecks"
+  Tests/ReleaseWorkflowChecks.swift Tests/ProAccessChecks.swift -o "$validation_dir/ReleaseWorkflowChecks"
 if [[ "${1:-}" == "--sandbox" ]]; then
   ./scripts/run-sandbox-checks.sh ReleaseWorkflow "$validation_dir/ReleaseWorkflowChecks" "$validation_dir/libSnagForgeDomain.dylib"
 else

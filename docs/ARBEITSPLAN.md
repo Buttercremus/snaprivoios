@@ -99,17 +99,17 @@ Video gehört laut Entwicklungsplan zur ersten vollständigen Kaufversion. Eine 
 
 ## 7. Kaufmodell und Pilotentscheidungen
 
-Diese Punkte sind offen. Sie blockieren die Entwicklung der Funktionen nicht; vor der finalen Bezahlschranke müssen sie geklärt sein.
+Paket und Preis sind am 18.10.2026 bestätigt. Die optionale Testphase und der Pilot bleiben offen.
 
-- [ ] **D01 Paketgrenzen festlegen – Nutzerentscheidung.** Vorschlag: kostenlose brauchbare Basis plus einmalig Pro; Kernfunktionen ohne eigenes Konto, kein Start-Abo. Free-/Pro-Liste aus dem Product Brief anhand echter Arbeitsabläufe bestätigen oder ändern. Keine bisher gekauften Funktionen später wieder entziehen.
-- [ ] **D02 Preis und Kaufversprechen prüfen – Nutzerentscheidung.** Hypothese: 39,99 € regulär, 29,99 € Einführung. Dauerhaft enthaltene Funktionen und mögliche spätere Zusatzpakete klar benennen; Wartungs-/Supportkosten berücksichtigen. Noch keine öffentlichen Preiszusagen.
+- [x] **D01 Paketgrenzen festlegen – Nutzerentscheidung.** Am 18.10.2026 vollständig bestätigt und als zentrale Policy umgesetzt: [verbindliche Free-/Pro-Matrix](FREE-PRO-ABNAHME.md). Gesamte OCR, Scroll, erweiterter Editor, Vorlagen/Bildobjekte/Gestaltung, Tags/Sammlungen, Anleitungen und Video in Pro. Datenzugriff, Export, Sicherung, Wiederherstellung, Papierkorb, Speicherverwaltung und grundlegende Bedienung bleiben Free. Kein eigenes Konto, kein Start-Abo.
+- [x] **D02 Preis und Kaufversprechen – Nutzerentscheidung.** Am 18.10.2026 bestätigt: 29,99 € Einführung, danach 39,99 € einmalig. Enthaltene Pro-Funktionen dauerhaft freigeschaltet, keine Nachzahlung für Einführungskäufer. Preisplan in App Store Connect ab Verkaufsstart einrichten; Preis in der App ausschließlich aus StoreKit. Zahlungsbereitschaft bleibt im Pilot zu prüfen.
 - [ ] **D03 Testphase entscheiden – Nutzerentscheidung.** Optional 14 Tage vollständiges Pro testen. StoreKit-konforme Testfreischaltung, Verhalten danach und weiter möglicher Zugriff/Export vorhandener Arbeit festlegen; kein einfacher lokaler Ablauf-Timer als Kaufnachweis.
 - [ ] **D04 Pilot durchführen.** Zielgruppe Support/Produkt/Dokumentation mit einer kleinen Testgruppe erproben. Ersten erfolgreichen Ablauf, freiwillige Wiederverwendung, Fehler/Nacharbeit und Preisgründe sammeln. Rekrutierung/Kontaktaufnahme erfolgt durch den Nutzer oder nach konkreter Autorisierung. Erste qualitative Rückmeldung schon mit fertiger Editor-/Bibliotheksbasis einholen; Pro-Paket nach P01 und V03 nochmals bewerten. Keine statistischen Absatzprognosen aus wenigen Rückmeldungen ableiten.
 - [ ] **D05 Name, Icon und Außendarstellung finalisieren – Nutzerentscheidung.** Produktname Snaprivo ist entschieden; sichtbare App-Umbenennung einschließlich App-Produkt, Xcode-Projekt, Scheme/Target, Menüs und Fehlermeldungen ist am 13.10.2026 umgesetzt. Bundle-ID und Speicherpfade bleiben kompatibel. Finale Außendarstellung steht noch aus. Namens-/Markenprüfung vor Veröffentlichung, finales App-Icon und konsistente Metadaten. Keine Umbenennung der App-/Projektidentität allein wegen eines neuen Namensvorschlags.
 
 ## 8. Bezahlung integrieren
 
-- [ ] **K01 Kaufweg umsetzen (technischer Unterbau umgesetzt, Paket-/Store-Konfiguration offen).** Nach D01/D02 entweder bezahlter Download oder kostenlose App mit einmaliger Pro-Freischaltung. Bei Freischaltung StoreKit und einen passenden nicht verbrauchbaren Kauf verwenden; Preis/Währung aus dem Store. Optionaler Trial erst nach D03. Keine eigene Lizenzserver-/Gerätebindungsarchitektur.
+- [ ] **K01 Kaufweg umsetzen (App implementiert, externe Store-Konfiguration offen).** Kostenlose App mit nicht verbrauchbarer Pro-Freischaltung `com.snaprivo.pro.lifetime`, bestätigten Funktionssperren, tatsächlichem Store-Preis und Paywall. Client aktiviert; ohne verfügbares Store-Produkt kein Kauf. Produkt und 29,99-→39,99-€-Preisplan in App Store Connect noch anlegen. Optionaler Trial erst nach D03. Keine eigene Lizenzserver-/Gerätebindungsarchitektur.
 - [ ] **K02 Kaufzustände und Zugriff.** Erfolgreich, abgebrochen, ausstehend, fehlgeschlagen, wiederhergestellt und erstattet behandeln. App-Neustart und Offline-Verhalten prüfen; eigener Inhalt bleibt nach Paketwechsel zugänglich. Abhängigkeit: K01.
 - [ ] **K03 Store-Tests.** Lokale StoreKit-Prüfungen, Sandbox/TestFlight, frische Installation, Wiederherstellung und Update mit bereits gekauftem Pro abnehmen. Keine mehrfachen Berechtigungen oder unbeabsichtigten Mehrfachkäufe. Abhängigkeit: K02.
 
@@ -193,7 +193,7 @@ Auf Nutzerwunsch dreistufige, überspringbare Einführung mit dezenten Animation
 - [x] **G06 Objektliste:** native Mehrfachauswahl, Benennung, Reihenfolge, Ebenenaktionen, Undo und Format-10-Persistenz; vollständige VoiceOver-/Canvas-Abnahme bleibt Q03.
 - [x] **G07 Identität und Versionsstand:** aktuelles `com.snaprivo.app` dokumentiert; ausdrücklicher Import alter Container; initialer Git-Snapshot vorhanden.
 - [x] **G08 StoreKit-Unterbau:** Einmalkauf-Adapter und Paywall mit Apple-Transaktionsprüfung, Restore/Widerruf, kontrollierten Kaufzuständen und lokalem nativen StoreKit-Test. Keine Funktionssperren vor Paketentscheidung.
-- [ ] **G09 Kauf freigeben:** Free-/Pro-Liste und Preis bestätigen, Produkt in App Store Connect einrichten, kommerziellen Schalter aktivieren und Sandbox/TestFlight abnehmen. D01/D02/K02/K03 bleiben für die endgültige Kaufversion offen.
+- [ ] **G09 Kauf freigeben:** Paket und Preis bestätigt, Funktionssperren/Paywall/kommerzieller Client implementiert. Extern bleiben App-Store-Connect-Produkt/Preisplan sowie Sandbox/TestFlight-Abnahme K03 offen. Keine Veröffentlichung vorgenommen. [Umsetzung und Nachweise](FREE-PRO-ABNAHME.md).
 - [ ] **P01 verbleibende reale Scroll-Abnahme:** drei öffentliche Seiten mit Browser-Viewport-Aufnahmen geprüft; subpixelbedingte Textrasterung wird nur für den Abgleich normalisiert. Unterstützte und konservativ abgelehnte Übergänge dokumentiert. Dies ersetzt keine vollständige ScreenCaptureKit-/Mehrdisplay-/Website-Abnahme.
 
 Nachweise, genaue Bedienwege und verbleibende Grenzen: [Release-Workflows-Abnahme](RELEASE-WORKFLOWS-ABNAHME.md).

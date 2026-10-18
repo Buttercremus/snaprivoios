@@ -5,13 +5,14 @@ import SnagForgeDomain
 
 @MainActor final class FakeProStore: ProStoreClient {
     var owns = false
+    var offered: ProOffer? = ProOffer(name: "Synthetic Pro", price: "EUR29.99", laterPrice: "EUR39.99")
     var outcome = ProPurchaseOutcome.cancelled
     var fails = false
     var purchases = 0
     var continuation: AsyncStream<Void>.Continuation?
     func offer() async throws -> ProOffer? {
         if fails { throw CocoaError(.fileReadUnknown) }
-        return ProOffer(name: "Synthetic Pro", price: "€1.23")
+        return offered
     }
     func entitled() async throws -> Bool { if fails { throw CocoaError(.fileReadUnknown) }; return owns }
     func purchase() async throws -> ProPurchaseOutcome {
@@ -36,7 +37,11 @@ import SnagForgeDomain
         let suite = "Snaprivo-Workflows-\(UUID())"
         let defaults = UserDefaults(suiteName: suite)!
         defer { try? FileManager.default.removeItem(at: root); defaults.removePersistentDomain(forName: suite) }
-        let workspace = WorkspaceModel(root: root.appendingPathComponent("source"), defaults: defaults)
+        let owned = FakeProStore(); owned.owns = true
+        let entitlement = ProPurchaseModel(client: owned)
+        await entitlement.start()
+        defer { entitlement.stop() }
+        let workspace = WorkspaceModel(root: root.appendingPathComponent("source"), defaults: defaults, purchases: entitlement)
         let context = CGContext(data: nil, width: 480, height: 320, bitsPerComponent: 8, bytesPerRow: 0,
             space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         context.setFillColor(CGColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 480, height: 320))
@@ -81,6 +86,9 @@ import SnagForgeDomain
         verify(restored)
         verify(target.items.count == 1 && target.trashItems.count == 1)
         verify(target.guides.documents.count == 2 && target.videos.items.count == 2)
+        let restoredGuide = try await target.guides.store.load(target.guides.documents.first { $0.stepCount == 2 }!.id).document
+        let allIDs = Set((target.items + target.trashItems).map(\.id))
+        verify(restoredGuide.steps.allSatisfy { $0.sourceProjectID.map(allIDs.contains) == true })
         let restoredVideo = target.videos.items.first { $0.document.state == .finished }!
         verify(restoredVideo.document.trashedAt != nil)
         verify(await target.videos.changeTrash(restoredVideo.id, action: .restore))
@@ -128,9 +136,6 @@ import SnagForgeDomain
         verify(await target.transfer(.importLegacy, at: root.appendingPathComponent("legacy")))
         verify(target.items.count == imageCountBeforeMigration + 1)
         verify(try await oldImages.list().items.count == 1)
-        let restoredGuide = try await target.guides.store.load(target.guides.documents.first { $0.stepCount == 2 }!.id).document
-        let allIDs = Set((target.items + target.trashItems).map(\.id))
-        verify(restoredGuide.steps.allSatisfy { $0.sourceProjectID.map(allIDs.contains) == true })
         // Optional preview preserves an existing editor until the explicit edit action.
         workspace.preferences.quickPreviewAfterCapture = true
         let previousID = workspace.editor?.document.id
@@ -143,17 +148,22 @@ import SnagForgeDomain
         let quickID = workspace.quickCapture!.document.id
         workspace.editQuickCapture(); verify(workspace.editor?.document.id == quickID && workspace.quickCapture == nil)
         try await purchases()
+        try await ProAccessChecks.run(image: image)
         print("PASS: complete backup/restore, trash, bytes, interrupted media, corruption rejection, Finder routing, guides, object names/undo, quick preview, purchase states")
     }
     @MainActor static func purchases() async throws {
         let fake = FakeProStore(), blocked = FakeProStore()
         blocked.outcome = .purchased
-        let model = ProPurchaseModel(client: blocked)
+        let model = ProPurchaseModel(client: blocked, purchasesEnabled: false)
         await model.start(); await model.buy(); verify(!model.hasPro && blocked.purchases == 0); model.stop()
         let store = ProPurchaseModel(client: fake, purchasesEnabled: true)
-        await store.start(); verify(store.offer?.price == "€1.23")
+        await store.start(); verify(store.offer?.price == "EUR29.99")
         await store.buy(); verify(!store.hasPro && store.message == nil)
         fake.outcome = .pending; await store.buy(); verify(!store.hasPro && store.message != nil)
+        fake.offered = ProOffer(name: "Synthetic Pro", price: "EUR39.99")
+        let purchasesBeforePriceChange = fake.purchases
+        await store.buy()
+        verify(fake.purchases == purchasesBeforePriceChange && !store.hasPro && store.offer?.price == "EUR39.99" && store.message != nil)
         fake.outcome = .purchased; await store.buy(); verify(store.hasPro)
         let restarted = ProPurchaseModel(client: fake, purchasesEnabled: true)
         await restarted.start(); verify(restarted.hasPro)

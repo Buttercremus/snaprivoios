@@ -24,6 +24,9 @@ struct ImageOutputView: View {
                     Text("\(Int(options.quality * 100)) %").monospacedDigit()
                 }
             }
+            if !model.hasProAccess() {
+                Button(String(localized: "Präsentationshintergründe · Pro"), systemImage: "lock") { _ = model.requestFeature(.presentation) }
+            } else {
             DisclosureGroup(String(localized: "Hintergrund, Abstand & Schatten")) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
@@ -48,6 +51,7 @@ struct ImageOutputView: View {
                     Text(String(localized: "Gestaltung für diese Ausgabe. Die Einstellungen werden für die nächste Ausgabe gemerkt.")).font(.caption).foregroundStyle(.secondary)
                 }.padding(.top, 8)
             }
+            }
             if let preview {
                 Image(decorative: preview, scale: 1).resizable().scaledToFit().frame(maxWidth: .infinity, maxHeight: .infinity)
                 Text("\(preview.width) × \(preview.height) px").font(.caption).foregroundStyle(.secondary)
@@ -63,6 +67,9 @@ struct ImageOutputView: View {
             }
         }.padding(24).frame(width: 700, height: 650).disabled(writing)
         .interactiveDismissDisabled(writing)
+        .onChange(of: model.hasProAccess(), initial: true) { _, hasPro in
+            if !hasPro { options = options.withoutPresentation }
+        }
         .onChange(of: options) { _, value in
             if let data = try? JSONEncoder().encode(value) { UserDefaults.standard.set(data, forKey: "image.output.options.v1") }
         }
@@ -92,6 +99,7 @@ struct ImageOutputView: View {
     }
     private func copy() {
         guard let preview, renderedOptions == options else { return }
+        guard !options.hasPresentation || model.requestFeature(.presentation) else { return }
         var requested = options; requested.format = .png
         let outputOptions = requested
         writing = true
@@ -107,6 +115,7 @@ struct ImageOutputView: View {
     }
     private func save() {
         guard let preview, renderedOptions == options else { return }
+        guard !options.hasPresentation || model.requestFeature(.presentation) else { return }
         let requested = options
         let panel = NSSavePanel(); panel.allowedContentTypes = [requested.format.type]
         panel.nameFieldStringValue = model.name + "." + (requested.format == .jpeg ? "jpg" : requested.format.rawValue)

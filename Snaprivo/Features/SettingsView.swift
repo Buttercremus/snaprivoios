@@ -4,7 +4,7 @@ struct SettingsView: View {
     let workspace: WorkspaceModel
     var body: some View {
         TabView {
-            GeneralSettings(preferences: workspace.preferences)
+            GeneralSettings(preferences: workspace.preferences, workspace: workspace)
                 .tabItem { Label(String(localized: "Allgemein"), systemImage: "gearshape") }
             EditorToolbarSettings(preferences: workspace.preferences)
                 .tabItem { Label(String(localized: "Symbolleiste"), systemImage: "slider.horizontal.3") }
@@ -26,6 +26,7 @@ struct SettingsView: View {
 
 private struct GeneralSettings: View {
     @Bindable var preferences: AppPreferences
+    let workspace: WorkspaceModel
     var body: some View {
         Form {
             Section(String(localized: "Erscheinungsbild")) {
@@ -40,9 +41,10 @@ private struct GeneralSettings: View {
                 LabeledContent(String(localized: "Speicherung"), value: String(localized: "Lokal · Automatisch"))
                 Text(String(localized: "Aufnahmen und importierte Bilder bleiben mit ihren Markierungen und Zuschnitten in der Bibliothek bearbeitbar. ⌘S sichert sofort."))
                     .font(.callout).foregroundStyle(.secondary)
-                Toggle(String(localized: "Bildinhalt lokal durchsuchen (OCR)"), isOn: $preferences.ocrIndexingEnabled)
+                Toggle(String(localized: "Bildinhalt lokal durchsuchen (OCR)"), isOn: Binding(
+                    get: { workspace.purchases.hasPro && preferences.ocrIndexingEnabled }, set: { workspace.setOCRIndexing($0) }))
                     .accessibilityIdentifier("settings.library.ocr")
-                Text(String(localized: "OCR-Indexierung ist zunächst aus. Aktivieren erkennt den sichtbaren Bildinhalt lokal; Ausschalten entfernt den Suchcache. Direkte Texterkennung im Editor bleibt verfügbar."))
+                Text(String(localized: "Texterkennung und OCR-Inhaltssuche gehören zu Pro. Die Indexierung ist zunächst aus und bleibt lokal. Ausschalten entfernt den Suchcache."))
                     .font(.callout).foregroundStyle(.secondary)
             }
             Section(String(localized: "Snaprivo")) {

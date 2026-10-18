@@ -25,9 +25,12 @@ struct VideoEditorView: View {
             }.font(.callout.monospacedDigit()).foregroundStyle(.secondary)
             trimRow(start: true)
             trimRow(start: false)
+            if !model.hasProAccess() {
+                Button(String(localized: "Video bearbeiten · Pro"), systemImage: "lock") { _ = model.requestFeature(.video) }
+            }
             if !model.isValid { Text(String(localized: "Start und Ende müssen innerhalb des Originals liegen. Behalte mindestens ein Videobild.")) .font(.caption).foregroundStyle(.red) }
             HStack {
-                Button(String(localized: "Ganzes Original")) { model.restoreOriginal() }
+                Button(String(localized: "Ganzes Original")) { if model.requestFeature(.video) { model.restoreOriginal() } }
                 Button(String(localized: "Rückgängig")) { Task { await model.undo() } }
                     .disabled(!model.canUndo)
                 Button(String(localized: "Wiederholen")) { Task { await model.redo() } }
@@ -83,7 +86,7 @@ struct VideoEditorView: View {
             Button(String(localized: "Hier setzen")) { if isStart { model.setStartFromPlayhead() } else { model.setEndFromPlayhead() } }
                 .help(String(localized: "Aktuelle Abspielposition als Grenze setzen"))
                 .accessibilityLabel(isStart ? String(localized: "Start an Abspielposition setzen") : String(localized: "Ende an Abspielposition setzen"))
-        }.disabled(model.isBusy)
+        }.disabled(model.isBusy || !model.hasProAccess())
     }
 }
 

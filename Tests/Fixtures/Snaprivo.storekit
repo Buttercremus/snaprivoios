@@ -3,25 +3,30 @@
   "nonRenewingSubscriptions": [],
   "products": [
     {
-      "displayPrice": "1.23",
+      "displayPrice": "29.99",
       "familyShareable": false,
       "internalID": "1000001",
       "localizations": [
         {
-          "description": "Synthetic local StoreKit test product.",
-          "displayName": "Snaprivo Pro Test",
+          "description": "Einmal kaufen. Pro dauerhaft freischalten. Lokales StoreKit-Testprodukt.",
+          "displayName": "Snaprivo Pro",
+          "locale": "de_DE"
+        },
+        {
+          "description": "Buy once. Unlock Pro permanently. Local StoreKit test product.",
+          "displayName": "Snaprivo Pro",
           "locale": "en_US"
         }
       ],
       "productID": "com.snaprivo.pro.lifetime",
-      "referenceName": "Snaprivo Pro local tests",
+      "referenceName": "Snaprivo Pro launch (local test)",
       "type": "NonConsumable"
     }
   ],
   "settings": {
     "_failTransactionsEnabled": false,
-    "_locale": "en_US",
-    "_storefront": "USA"
+    "_locale": "de_DE",
+    "_storefront": "DEU"
   },
   "subscriptionGroups": [],
   "version": {

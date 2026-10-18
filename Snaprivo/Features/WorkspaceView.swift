@@ -22,7 +22,7 @@ struct WorkspaceView: View {
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 280)
             .safeAreaInset(edge: .bottom) {
-                Button("Snaprivo Pro") { workspace.showsPaywall = true }
+                Button("Snaprivo Pro") { workspace.showPro() }
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding()
@@ -98,7 +98,7 @@ struct WorkspaceView: View {
                 workspace.showsOnboarding = true
             }
         }
-        .sheet(isPresented: $workspace.showsPaywall) { ProPaywallView(model: workspace.purchases) }
+        .sheet(isPresented: $workspace.showsPaywall) { ProPaywallView(model: workspace.purchases, feature: workspace.requestedProFeature) }
         .sheet(isPresented: Binding(get: { workspace.quickCapture != nil }, set: { if !$0 { workspace.quickCapture = nil } })) {
             if let capture = workspace.quickCapture { QuickCaptureView(workspace: workspace, model: capture) }
         }

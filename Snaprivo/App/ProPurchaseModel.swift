@@ -2,7 +2,22 @@ import Foundation
 import Observation
 import StoreKit
 
-struct ProOffer: Equatable, Sendable { let name: String; let price: String }
+struct ProOffer: Equatable, Sendable {
+    let name: String
+    let price: String
+    /// Only advertise the agreed EUR launch offer when the Store actually charges it.
+    var laterPrice: String? = nil
+    static let launchPrice: Decimal = 29.99
+    static let regularPrice: Decimal = 39.99
+    static func laterPrice(displayPrice: String, style: Decimal.FormatStyle.Currency) -> String? {
+        // Compare the customer's actual Store price using Apple's own formatter.
+        // This also avoids a StoreKitTest locale issue with the numeric price.
+        let expected = launchPrice.formatted(style).filter { !$0.isWhitespace }
+        guard style.currencyCode.uppercased() == "EUR",
+              displayPrice.filter({ !$0.isWhitespace }) == expected else { return nil }
+        return regularPrice.formatted(style)
+    }
+}
 enum ProPurchaseOutcome: Sendable { case purchased, pending, cancelled }
 
 @MainActor protocol ProStoreClient: AnyObject {
@@ -18,7 +33,8 @@ enum ProPurchaseOutcome: Sendable { case purchased, pending, cancelled }
     private var product: Product?
     func offer() async throws -> ProOffer? {
         product = try await Product.products(for: [Self.productID]).first { $0.id == Self.productID && $0.type == .nonConsumable }
-        return product.map { ProOffer(name: $0.displayName, price: $0.displayPrice) }
+        return product.map { ProOffer(name: $0.displayName, price: $0.displayPrice,
+            laterPrice: ProOffer.laterPrice(displayPrice: $0.displayPrice, style: $0.priceFormatStyle)) }
     }
     func entitled() async throws -> Bool {
         var active = false
@@ -67,10 +83,12 @@ enum ProPurchaseOutcome: Sendable { case purchased, pending, cancelled }
 }
 
 @MainActor @Observable final class ProPurchaseModel {
-    // Enable only after the owner approves the exact feature list and configures
-    // the matching non-consumable in App Store Connect. No provisional pay gates.
-    static let commercialPurchasesEnabled = false
+    // The approved package is active. StoreKit only enables buying when the
+    // matching App Store Connect product is available; no fabricated price.
+    static let commercialPurchasesEnabled = true
     private(set) var hasPro = false
+    private(set) var hasCheckedEntitlement = false
+    @ObservationIgnored var onEntitlementChanged: (@MainActor (Bool) -> Void)?
     private(set) var offer: ProOffer?
     private(set) var isBusy = false
     private(set) var isLoading = false
@@ -83,7 +101,7 @@ enum ProPurchaseOutcome: Sendable { case purchased, pending, cancelled }
         self.client = client; self.purchasesEnabled = purchasesEnabled
     }
     func start() async {
-        guard observer == nil else { return }
+        guard observer == nil else { await reload(); return }
         let events = client.updates()
         observer = Task { [weak self] in
             for await _ in events { guard !Task.isCancelled else { return }; await self?.refreshEntitlement() }
@@ -91,12 +109,18 @@ enum ProPurchaseOutcome: Sendable { case purchased, pending, cancelled }
         await reload()
     }
     func stop() { observer?.cancel(); observer = nil }
+    private func applyEntitlement(_ value: Bool) {
+        let notify = !hasCheckedEntitlement || hasPro != value
+        hasCheckedEntitlement = true; hasPro = value
+        if notify { onEntitlementChanged?(value) }
+    }
     private func refreshEntitlement() async {
-        do { hasPro = try await client.entitled(); if hasPro { message = nil; error = nil } }
-        catch { hasPro = false; self.error = String(localized: "Der Kaufbeleg konnte nicht geprüft werden. Bitte versuche es erneut.") }
+        do { applyEntitlement(try await client.entitled()); if hasPro { message = nil; error = nil } }
+        catch { applyEntitlement(false); self.error = String(localized: "Der Kaufbeleg konnte nicht geprüft werden. Bitte versuche es erneut.") }
     }
     func reload() async {
-        guard !isLoading else { return }
+        guard !isLoading, !isBusy else { return }
+        error = nil
         isLoading = true; defer { isLoading = false }
         await refreshEntitlement()
         guard purchasesEnabled, !hasPro else { offer = nil; return }
@@ -105,18 +129,27 @@ enum ProPurchaseOutcome: Sendable { case purchased, pending, cancelled }
     }
     func buy() async {
         guard purchasesEnabled, !isBusy, !hasPro, offer != nil else { return }
+        let displayedOffer = offer
         isBusy = true; error = nil; message = nil
         defer { isBusy = false }
         do {
+            // A launch-price change may happen while this window is open.
+            // Show the current Store price and require a fresh click if it changed.
+            offer = try await client.offer()
+            guard let offer, !hasPro else { return }
+            guard offer == displayedOffer else {
+                message = String(localized: "Der Store-Preis wurde aktualisiert. Bitte prüfe ihn und bestätige den Kauf erneut.")
+                return
+            }
             switch try await client.purchase() {
-            case .purchased: hasPro = true
+            case .purchased: applyEntitlement(true)
             case .pending: message = String(localized: "Der Kauf wartet auf Bestätigung. Pro wird nach erfolgreicher Freigabe aktiviert.")
             case .cancelled: break
             }
         } catch { self.error = error.localizedDescription }
     }
     func restore() async {
-        guard !isBusy else { return }
+        guard !isBusy, !isLoading else { return }
         isBusy = true; error = nil; message = nil
         defer { isBusy = false }
         do {

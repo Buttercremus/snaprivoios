@@ -14,15 +14,22 @@ struct GuideView: View {
             if let document = model.document {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 16) {
+                        if !workspace.purchases.hasPro {
+                            Button(String(localized: "Anleitung bearbeiten · Pro"), systemImage: "lock") { workspace.showPro(.guides) }
+                            Text(String(localized: "Öffnen und Exportieren bleibt kostenlos."))
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                         TextField(String(localized: "Anleitungstitel"), text: field(\.title, limit: 256))
                             .font(.title2).textFieldStyle(.roundedBorder).accessibilityIdentifier("guide.title")
+                            .disabled(!workspace.purchases.hasPro)
                         TextField(String(localized: "Einleitung (optional)"), text: field(\.introduction, limit: 8_000), axis: .vertical)
                             .lineLimit(2...8).textFieldStyle(.roundedBorder)
+                            .disabled(!workspace.purchases.hasPro)
                         HStack {
                             Picker(String(localized: "PDF-Stil"), selection: Binding(get: { document.style }, set: { style in model.edit { $0.style = style } })) {
                                 Text(String(localized: "Standard")).tag(GuideStyle.standard)
                                 Text(String(localized: "Kompakt")).tag(GuideStyle.compact)
-                            }.frame(maxWidth: 240)
+                            }.frame(maxWidth: 240).disabled(!workspace.purchases.hasPro)
                             Spacer()
                             Text(model.isSaving ? String(localized: "Wird gesichert …") : model.isDirty ? String(localized: "Ungesicherte Änderungen") : String(localized: "Gesichert"))
                                 .font(.caption).foregroundStyle(.secondary)
@@ -106,7 +113,10 @@ struct GuideView: View {
         } message: { Text(String(localized: "Das Bildprojekt bleibt in der Bibliothek erhalten.")) }
     }
     private var addScreenshots: some View {
-        Button(String(localized: "Screenshots hinzufügen"), systemImage: "photo.badge.plus") { replacing = nil; choosingImages = true }
+        Button(String(localized: "Screenshots hinzufügen"), systemImage: "photo.badge.plus") {
+            guard workspace.requirePro(.guides) else { return }
+            replacing = nil; choosingImages = true
+        }
             .accessibilityIdentifier("guide.addImages")
     }
     private func outputMenu(_ document: GuideDocument) -> some View {
@@ -169,9 +179,9 @@ struct GuideView: View {
                 Text(String(localized: "Schritt \(index + 1)")).font(.headline)
                 Spacer()
                 Button(String(localized: "Schritt nach oben"), systemImage: "arrow.up") { model.edit { $0.moveStep(step.id, by: -1) } }
-                    .disabled(index == 0).labelStyle(.iconOnly)
+                    .disabled(index == 0 || !workspace.purchases.hasPro).labelStyle(.iconOnly)
                 Button(String(localized: "Schritt nach unten"), systemImage: "arrow.down") { model.edit { $0.moveStep(step.id, by: 1) } }
-                    .disabled(index == count - 1).labelStyle(.iconOnly)
+                    .disabled(index == count - 1 || !workspace.purchases.hasPro).labelStyle(.iconOnly)
                 Menu {
                     if let source = step.sourceProjectID, step.sourceLibrary == GuideModel.libraryKey(workspace.store), workspace.items.contains(where: { $0.id == source }) {
                         Button(String(localized: "Bild aktualisieren")) { workspace.addGuideProjects([source], replacing: step.id) }
@@ -179,15 +189,18 @@ struct GuideView: View {
                     Button(String(localized: "Bild ersetzen …")) { replacing = step.id; choosingImages = true }
                     Button(String(localized: "Schritt entfernen …"), role: .destructive) { removing = step.id }
                 } label: { Image(systemName: "ellipsis.circle").accessibilityLabel(String(localized: "Schrittaktionen")) }
+                .disabled(!workspace.purchases.hasPro)
             }
             TextField(String(localized: "Schritttitel"), text: Binding(get: { step.title }, set: { text in model.editStep(step.id) { $0.title = String(text.prefix(256)) } }))
                 .textFieldStyle(.roundedBorder)
+                .disabled(!workspace.purchases.hasPro)
             if let image = NSImage(data: step.png) {
                 Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 280).frame(maxWidth: .infinity)
                     .accessibilityLabel(step.title)
             }
             TextField(String(localized: "Bildunterschrift / Beschreibung"), text: Binding(get: { step.caption }, set: { text in model.editStep(step.id) { $0.caption = String(text.prefix(8_000)) } }), axis: .vertical)
                 .lineLimit(2...12).textFieldStyle(.roundedBorder)
+                .disabled(!workspace.purchases.hasPro)
         }.padding(16).background(.background, in: .rect(cornerRadius: 12))
             .overlay { RoundedRectangle(cornerRadius: 12).stroke(.separator, lineWidth: 1) }
     }

@@ -7,12 +7,15 @@ import UniformTypeIdentifiers
 @MainActor
 @Observable
 final class EditorModel {
+    @ObservationIgnored var requestFeature: @MainActor (ProFeature) -> Bool = { _ in true }
+    @ObservationIgnored var hasProAccess: @MainActor () -> Bool = { true }
     let image: CGImage
     /// Freeze outgoing document input while retaining its rendered UI until the replacement is ready.
     var isSwitchingImage = false
     private(set) var document: ProjectDocument
     var name: String { document.title }
     @discardableResult func updateMetadata(title: String? = nil, favorite: Bool? = nil, tags: [String]? = nil, collections: [String]? = nil) -> Bool {
+        guard (tags == nil && collections == nil) || requestFeature(.organization) else { return false }
         guard !isSwitchingImage else { return false }
         // Validate the whole metadata edit before changing any part of the document.
         guard let nextTags = try? ProjectOrganization.normalized(tags ?? document.tags, limit: ProjectOrganization.maximumTags),
@@ -105,6 +108,9 @@ final class EditorModel {
     var tool: AnnotationTool = .selection {
         didSet {
             guard tool != oldValue else { return }
+            if let feature = ProFeature.required(for: tool), !requestFeature(feature) {
+                tool = oldValue; return
+            }
             if tool == .crop { startCropSession() }
             else if oldValue == .crop { closeCropSession() }
         }
@@ -157,6 +163,7 @@ final class EditorModel {
     var imageSize: CGSize { cropDraft != nil ? originalRect.size : CGSize(width: document.outputPixelSize.width, height: document.outputPixelSize.height) }
     func beginTextRecognition() {
         guard hasExportableImage, !isExporting else { return }
+        guard requestFeature(.textRecognition) else { return }
         endStyleEditing(); finishTextEditing(); isShowingTextRecognition = true
     }
     func beginImageResize() {
@@ -280,7 +287,16 @@ final class EditorModel {
         defaultStepSize = previous.defaultStepSize
         defaultArrowDrawingStyle = previous.defaultArrowDrawingStyle
         defaultEllipseDrawingStyle = previous.defaultEllipseDrawingStyle
-        tool = previous.tool == .crop ? .selection : previous.tool
+        tool = previous.tool == .crop || (!hasProAccess() && ProFeature.required(for: previous.tool) != nil) ? .selection : previous.tool
+    }
+    /// Revocation affects future operations, never the stored objects or output.
+    func proAccessDidChange() {
+        endStyleEditing(); finishTextEditing()
+        if ProFeature.required(for: tool) != nil { tool = .selection }
+        if ProFeature.required(for: defaultShapeKind) != nil { defaultShapeKind = .rectangle }
+        defaultArrowDrawingStyle = .precise; defaultEllipseDrawingStyle = .precise
+        isShowingTextRecognition = false
+        preview = nil
     }
     var selectedObject: EditorObject? { editingTextObject ?? (selectedIDs.count == 1 ? history.objects.first { selectedIDs.contains($0.id) } : nil) }
     var drawingKind: EditorObject.Kind? { tool == .rectangle ? defaultShapeKind : EditorObject.Kind.from(tool) }
@@ -300,10 +316,12 @@ final class EditorModel {
         return min(object.rect.width, object.rect.height)
     }
     func setHighlightMode(_ mode: EditorHighlightMode) {
+        guard requestFeature(.advancedEditing) else { return }
         endStyleEditing(); finishTextEditing()
         defaultHighlightMode = mode; selection = nil; tool = .highlight; focusRequest += 1
     }
     func updateHighlightOpacity(_ opacity: Double) {
+        guard requestFeature(.advancedEditing) else { return }
         guard opacity.isFinite else { return }
         defaultHighlightOpacity = min(1, max(0, opacity))
         updateInstructionObject { object in
@@ -312,11 +330,13 @@ final class EditorModel {
         }
     }
     func updateStepStyle(_ style: EditorStepStyle) {
+        guard requestFeature(.advancedEditing) else { return }
         guard (1...EditorSteps.maximumIndex).contains(style.index) else { return }
         defaultStepStyle = style
         updateInstructionObject { if $0.kind == .step { $0.stepStyle = style } }
     }
     func updateStepSize(_ size: CGFloat) {
+        guard requestFeature(.advancedEditing) else { return }
         guard size.isFinite else { return }
         defaultStepSize = min(240, max(24, size))
         updateInstructionObject { object in
@@ -335,6 +355,7 @@ final class EditorModel {
         } else { commit(next) }
     }
     func placeStep(at point: CGPoint) {
+        guard requestFeature(.advancedEditing) else { return }
         guard tool == .steps, cropDraft == nil, history.objects.count < 10_000 else { return }
         guard let index = nextStepIndex else { notice = String(localized: "Die Folge hat 10.000 Marken erreicht."); return }
         endStyleEditing(); finishTextEditing()
@@ -347,6 +368,7 @@ final class EditorModel {
     }
     func selectShape(_ kind: EditorObject.Kind, corner: CGFloat = 0) {
         guard kind.isShape else { return }
+        if let feature = ProFeature.required(for: kind), !requestFeature(feature) { return }
         endStyleEditing()
         if kind != .ellipse { defaultShapeKind = kind }
         defaultCornerRadius = corner
@@ -374,6 +396,8 @@ final class EditorModel {
     func updateStyle(color: EditorColor? = nil, width: CGFloat? = nil, font: CGFloat? = nil, blur: CGFloat? = nil,
                      fill: EditorFill? = nil, corner: CGFloat? = nil, stroke: EditorStroke? = nil, textStyle: EditorTextStyle? = nil, drawingStyle: EditorDrawingStyle? = nil) {
         guard !isSwitchingImage else { return }
+        if let kind = activeKind, let feature = ProFeature.required(for: kind), !requestFeature(feature) { return }
+        if drawingStyle == .handDrawn, !requestFeature(.advancedEditing) { return }
         if let drawingStyle {
             if activeKind == .arrow { defaultArrowDrawingStyle = drawingStyle }
             if activeKind == .ellipse { defaultEllipseDrawingStyle = drawingStyle }
@@ -455,6 +479,7 @@ final class EditorModel {
         return style.isValid ? style : nil
     }
     func applySavedStyle(_ style: EditorSavedStyle) {
+        guard requestFeature(.savedStyles) else { return }
         guard !isSwitchingImage, let current = currentSavedStyle, current.family == style.family, style.isValid else { return }
         endStyleEditing(); finishTextEditing()
         if let object = selectedObject, let styled = style.applying(to: object),
@@ -504,6 +529,14 @@ final class EditorModel {
     }
     func commit(_ objects: [EditorObject]) {
         guard !isSwitchingImage else { return }
+        // Cover insertion, duplication and canvas commits as well as toolbar actions.
+        // Existing paid objects can still be moved, reordered, renamed or removed.
+        let previous = Dictionary(uniqueKeysWithValues: history.objects.map { ($0.id, $0) })
+        for object in objects {
+            if let feature = ProFeature.required(for: object),
+               previous[object.id].map({ ProFeature.required(for: $0) != feature }) ?? true,
+               !requestFeature(feature) { preview = nil; return }
+        }
         endStyleEditing()
         preview = nil
         let old = history.objects; history.commit(objects); notice = nil
@@ -649,6 +682,8 @@ final class EditorModel {
     }
     func editText(at position: CGPoint, object: EditorObject? = nil, width: CGFloat? = nil) {
         guard !isSwitchingImage else { return }
+        let kind = object?.kind ?? (tool == .callout ? .callout : .text)
+        if let feature = ProFeature.required(for: kind), !requestFeature(feature) { return }
         endStyleEditing()
         finishTextEditing()
         preview = nil

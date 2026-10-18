@@ -11,6 +11,7 @@ struct InsertImageButton: View {
     var body: some View {
         Button {
             guard model.hasExportableImage, !busy else { return }
+            guard model.requestFeature(.insertedImages) else { return }
             let panel = NSOpenPanel(); panel.allowedContentTypes = [.png, .jpeg, .tiff, .heic]
             panel.allowsMultipleSelection = false
             guard panel.runModal() == .OK, let url = panel.url else { return }

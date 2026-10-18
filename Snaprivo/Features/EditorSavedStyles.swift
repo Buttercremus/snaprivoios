@@ -22,13 +22,14 @@ struct EditorSavedStyles: View {
                     Divider()
                 }
                 Button(String(localized: "Aktuellen Stil speichern …"), systemImage: "plus") {
+                    guard model.requestFeature(.savedStyles) else { return }
                     if let style = model.currentSavedStyle { saving = SavedStyleDraft(style: style) }
                 }
                 .disabled(model.currentSavedStyle == nil || preferences.styleLibraryError != nil
                     || preferences.savedStyles.count >= EditorStyleLibrary.maximumStyles)
                 Button(String(localized: "Stile verwalten …"), systemImage: "slider.horizontal.3") { isManaging = true }
             } label: {
-                Label(String(localized: "Eigene Stile"), systemImage: "paintpalette")
+                Label(model.hasProAccess() ? String(localized: "Eigene Stile") : String(localized: "Eigene Stile · Pro"), systemImage: "paintpalette")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .menuStyle(.borderedButton).controlSize(.small)
@@ -42,6 +43,7 @@ struct EditorSavedStyles: View {
         }
         .sheet(item: $saving) { draft in
             EditorStyleNameSheet(title: String(localized: "Stil speichern"), name: "") { name in
+                guard model.requestFeature(.savedStyles) else { throw CocoaError(.userCancelled) }
                 try preferences.saveStyle(name: name, style: draft.style)
             }
         }

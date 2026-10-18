@@ -6,6 +6,7 @@ import SnagForgeDomain
 @MainActor
 @Observable
 final class ScreenshotCoordinator {
+    @ObservationIgnored var authorizeCapture: @MainActor (_ scrolling: Bool, _ video: Bool) -> Bool = { _, _ in true }
     private(set) var isBusy = false
     private(set) var status = ""
     var errorMessage: String?
@@ -60,6 +61,7 @@ final class ScreenshotCoordinator {
                onVideoCapture: @escaping @MainActor (URL) async -> Void = { _ in },
                onCapture: @escaping @MainActor (CGImage) -> Void) {
         guard !isBusy else { return }
+        guard authorizeCapture(scrolling, configuration.media == .video) else { return }
         errorMessage = nil
         needsPermission = false
         guard checkPermission(requestIfNeeded: requestPermission) else { onFailure(); return }
@@ -102,6 +104,8 @@ final class ScreenshotCoordinator {
                 status = String(localized: "Fenster oder Bereich auswählen …")
                 guard let selected = try await selectionUI.select(source: scrolling ? .region : configuration.source, windows: windows, desktop: desktop, media: configuration.media, allowsVideoAction: !scrolling) else { return }
                 try Task.checkCancellation()
+                // The selection overlay can switch an image request to video.
+                guard authorizeCapture(scrolling, selected.media == .video) else { return }
                 status = String(localized: "Auswahl öffnen …")
                 if selected.media == .video {
                     let center = CaptureGeometry.quartzPoint(fromAppKit: CGPoint(x: selected.rect.midX, y: selected.rect.midY),
@@ -113,6 +117,7 @@ final class ScreenshotCoordinator {
                     }
                     try await Task.sleep(for: .milliseconds(350))
                     try Task.checkCancellation()
+                    guard authorizeCapture(false, true) else { return }
                     let session = VideoRecordingSession(selection: selected, includesCursor: configuration.includesCursor,
                                                         delaySeconds: configuration.delaySeconds, audio: videoAudio, files: videoFiles)
                     videoSession = session

@@ -13,6 +13,13 @@ struct ImageOutputOptions: Equatable, Codable, Sendable {
     var padding = 0
     var cornerRadius = 0.0
     var shadow = false
+    var hasPresentation: Bool { padding != 0 || cornerRadius != 0 || shadow || background != EditorColor(red: 1, green: 1, blue: 1) }
+    var withoutPresentation: Self {
+        var value = self
+        value.padding = 0; value.cornerRadius = 0; value.shadow = false
+        value.background = EditorColor(red: 1, green: 1, blue: 1)
+        return value
+    }
     static func restored() -> Self {
         guard let data = UserDefaults.standard.data(forKey: "image.output.options.v1"),
               let value = try? JSONDecoder().decode(Self.self, from: data),

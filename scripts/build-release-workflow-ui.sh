@@ -10,7 +10,7 @@ xcrun swiftc -swift-version 6 -whole-module-optimization -target "$(uname -m)-ap
   Snaprivo/App/*.swift Snaprivo/Capture/*.swift Snaprivo/Editor/*.swift Snaprivo/Features/*.swift \
   Tests/Fixtures/ReleaseWorkflowUI.swift -o "$validation_app/Contents/MacOS/WorkflowUI"
 mkdir -p "$validation_app/Contents/Resources"
-cp -R "$PWD/build/ReleaseWorkflows/Build/Products/Debug/Snaprivo.app/Contents/Resources/." "$validation_app/Contents/Resources/"
+cp -R "$PWD/build/ProPackage/Build/Products/Debug/Snaprivo.app/Contents/Resources/." "$validation_app/Contents/Resources/"
 cp "$validation_dir/libSnagForgeDomain.dylib" "$validation_app/Contents/Frameworks/"
 python3 - "$validation_app" <<'PLIST'
 import plistlib,sys

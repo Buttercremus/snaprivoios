@@ -15372,6 +15372,686 @@
           }
         }
       }
+    },
+    "%@ einmalig": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ einmalig"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ one-time purchase"
+          }
+        }
+      }
+    },
+    "Unbegrenzte Screenshots, Schnellvorschau, Anheften, grundlegende Bildwerkzeuge, Abdecken, Objektliste, lokale Bibliothek, Titelsuche, Favoriten und PNG/JPEG/Bild-PDF. Vorhandene Inhalte öffnen, exportieren, sichern, wiederherstellen und löschen bleibt immer möglich.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbegrenzte Screenshots, Schnellvorschau, Anheften, grundlegende Bildwerkzeuge, Abdecken, Objektliste, lokale Bibliothek, Titelsuche, Favoriten und PNG/JPEG/Bild-PDF. Vorhandene Inhalte öffnen, exportieren, sichern, wiederherstellen und löschen bleibt immer möglich."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlimited screenshots, quick preview, pinning, basic image tools, redaction, object list, local library, title search, favorites, and PNG/JPEG/image PDF. You can always open, export, back up, restore, and delete existing content."
+          }
+        }
+      }
+    },
+    "Callouts, Schrittnummern, Textmarker, zusätzliche Formen, handgezeichnete Stile, eigene Vorlagen und eingefügte Bilder.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Callouts, Schrittnummern, Textmarker, zusätzliche Formen, handgezeichnete Stile, eigene Vorlagen und eingefügte Bilder."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Callouts, step numbers, highlights, extra shapes, hand-drawn styles, custom presets, and inserted images."
+          }
+        }
+      }
+    },
+    "Präsentationshintergründe": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Präsentationshintergründe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presentation backgrounds"
+          }
+        }
+      }
+    },
+    "Scroll-Aufnahmen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scroll-Aufnahmen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrolling captures"
+          }
+        }
+      }
+    },
+    "Dieses Werkzeug gehört zu Snaprivo Pro.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Werkzeug gehört zu Snaprivo Pro."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This tool is included in Snaprivo Pro."
+          }
+        }
+      }
+    },
+    "Präsentationshintergründe · Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Präsentationshintergründe · Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presentation backgrounds · Pro"
+          }
+        }
+      }
+    },
+    "Bilder als Objekte einfügen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilder als Objekte einfügen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insert images as objects"
+          }
+        }
+      }
+    },
+    "Text erkennen · Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text erkennen · Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognize text · Pro"
+          }
+        }
+      }
+    },
+    "Texterkennung und Inhaltssuche": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texterkennung und Inhaltssuche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text recognition and content search"
+          }
+        }
+      }
+    },
+    "%@ gehört zu Pro.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ gehört zu Pro."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is included in Pro."
+          }
+        }
+      }
+    },
+    "Einführungspreis": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einführungspreis"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Launch price"
+          }
+        }
+      }
+    },
+    "Gestaltung und Ordnung": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestaltung und Ordnung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presentation and organization"
+          }
+        }
+      }
+    },
+    "Anleitungen aus mehreren Bildern": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitungen aus mehreren Bildern"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guides from multiple images"
+          }
+        }
+      }
+    },
+    "Handgezeichnet · Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Handgezeichnet · Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hand-drawn · Pro"
+          }
+        }
+      }
+    },
+    "Tags und Sammlungen · Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags und Sammlungen · Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tags and collections · Pro"
+          }
+        }
+      }
+    },
+    "Präsentationshintergründe, Tags und Sammlungen für wiederkehrende Arbeit.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Präsentationshintergründe, Tags und Sammlungen für wiederkehrende Arbeit."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presentation backgrounds, tags, and collections for recurring work."
+          }
+        }
+      }
+    },
+    "Einmal kaufen. Pro dauerhaft freischalten.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einmal kaufen. Pro dauerhaft freischalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buy once. Unlock Pro permanently."
+          }
+        }
+      }
+    },
+    "Der Store-Preis wurde aktualisiert. Bitte prüfe ihn und bestätige den Kauf erneut.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Store-Preis wurde aktualisiert. Bitte prüfe ihn und bestätige den Kauf erneut."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Store price has changed. Please review it and confirm your purchase again."
+          }
+        }
+      }
+    },
+    "Anleitung bearbeiten · Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitung bearbeiten · Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit guide · Pro"
+          }
+        }
+      }
+    },
+    "Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro"
+          }
+        }
+      }
+    },
+    "Lange Inhalte aufnehmen, verständliche Anleitungen erstellen und Abläufe mit Bild und Ton erklären.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lange Inhalte aufnehmen, verständliche Anleitungen erstellen und Abläufe mit Bild und Ton erklären."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture long content, create clear guides, and explain workflows with video and audio."
+          }
+        }
+      }
+    },
+    "Texterkennung und OCR-Inhaltssuche gehören zu Pro. Die Indexierung ist zunächst aus und bleibt lokal. Ausschalten entfernt den Suchcache.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texterkennung und OCR-Inhaltssuche gehören zu Pro. Die Indexierung ist zunächst aus und bleibt lokal. Ausschalten entfernt den Suchcache."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text recognition and OCR content search are included in Pro. Indexing is off by default and stays local. Turning it off removes the search cache."
+          }
+        }
+      }
+    },
+    "Das bleibt kostenlos": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das bleibt kostenlos"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What stays free"
+          }
+        }
+      }
+    },
+    "Öffnen und Exportieren bleibt kostenlos.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnen und Exportieren bleibt kostenlos."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening and exporting stays free."
+          }
+        }
+      }
+    },
+    "Mehrere Bilder zu bearbeitbaren Schritten verbinden und als PDF oder Markdown ausgeben.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehrere Bilder zu bearbeitbaren Schritten verbinden und als PDF oder Markdown ausgeben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combine images into editable steps and export as PDF or Markdown."
+          }
+        }
+      }
+    },
+    "Text aus Bildern und Bereichen kopieren, Bildinhalte in der Bibliothek durchsuchen.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text aus Bildern und Bereichen kopieren, Bildinhalte in der Bibliothek durchsuchen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy text from images and regions, and search image content in your library."
+          }
+        }
+      }
+    },
+    "Kein Abo. Kein eigenes Konto. Die enthaltenen Pro-Funktionen bleiben dauerhaft freigeschaltet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Abo. Kein eigenes Konto. Die enthaltenen Pro-Funktionen bleiben dauerhaft freigeschaltet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No subscription. No separate account. The included Pro features stay unlocked permanently."
+          }
+        }
+      }
+    },
+    "Bereich, Fenster oder Bildschirm mit Systemton und Mikrofon aufnehmen, trimmen und als MP4 speichern.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereich, Fenster oder Bildschirm mit Systemton und Mikrofon aufnehmen, trimmen und als MP4 speichern."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record a region, window, or display with system audio and microphone, trim, and save as MP4."
+          }
+        }
+      }
+    },
+    "Erweiterte Bildwerkzeuge": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erweiterte Bildwerkzeuge"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced image tools"
+          }
+        }
+      }
+    },
+    "Video mit Ton und Schnitt": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video mit Ton und Schnitt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video with audio and trimming"
+          }
+        }
+      }
+    },
+    "Lange Webseiten und Inhalte in einer Aufnahme festhalten.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lange Webseiten und Inhalte in einer Aufnahme festhalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture long web pages and content in a single image."
+          }
+        }
+      }
+    },
+    "Video bearbeiten · Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video bearbeiten · Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit video · Pro"
+          }
+        }
+      }
+    },
+    "Titelsuche bleibt kostenlos. Pro ergänzt Tags, Sammlungen und OCR. Der erkannte Bildtext bleibt im lokalen Suchcache; Ausschalten entfernt diesen Cache.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titelsuche bleibt kostenlos. Pro ergänzt Tags, Sammlungen und OCR. Der erkannte Bildtext bleibt im lokalen Suchcache; Ausschalten entfernt diesen Cache."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title search stays free. Pro adds tags, collections, and OCR. Recognized image text stays in the local search cache; turning indexing off removes this cache."
+          }
+        }
+      }
+    },
+    "Eigene Stile · Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Stile · Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom styles · Pro"
+          }
+        }
+      }
+    },
+    "Eigene Stilvorlagen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Stilvorlagen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Custom style presets"
+          }
+        }
+      }
+    },
+    "Der Kauf ist im Store gerade nicht verfügbar. Du kannst Snaprivo Free weiter nutzen und den Preis erneut laden.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Kauf ist im Store gerade nicht verfügbar. Du kannst Snaprivo Free weiter nutzen und den Preis erneut laden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purchasing is currently unavailable in the Store. You can keep using Snaprivo Free and reload the price."
+          }
+        }
+      }
+    },
+    "Texterkennung": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texterkennung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text recognition"
+          }
+        }
+      }
+    },
+    "Nach der Einführung: %@ einmalig. Für deinen Kauf fallen später keine weiteren Zahlungen an.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach der Einführung: %@ einmalig. Für deinen Kauf fallen später keine weiteren Zahlungen an."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After launch: %@ one-time purchase. Your purchase will not incur any further payments."
+          }
+        }
+      }
+    },
+    "Pro-Funktion: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro-Funktion: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro feature: %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

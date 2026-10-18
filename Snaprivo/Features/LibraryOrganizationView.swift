@@ -6,11 +6,11 @@ struct LibraryIndexControls: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Toggle(String(localized: "Bildinhalt lokal durchsuchen (OCR)"), isOn: Binding(
-                get: { workspace.preferences.ocrIndexingEnabled }, set: { workspace.preferences.ocrIndexingEnabled = $0 }))
+                get: { workspace.purchases.hasPro && workspace.preferences.ocrIndexingEnabled }, set: { workspace.setOCRIndexing($0) }))
                 .accessibilityIdentifier("library.index.enabled")
-            Text(String(localized: "Titel, Tags und Sammlungen sind immer durchsuchbar. OCR speichert erkannten sichtbaren Bildtext lokal im löschbaren Suchcache; Ausschalten entfernt diesen Cache."))
+            Text(String(localized: "Titelsuche bleibt kostenlos. Pro ergänzt Tags, Sammlungen und OCR. Der erkannte Bildtext bleibt im lokalen Suchcache; Ausschalten entfernt diesen Cache."))
                 .font(.caption).foregroundStyle(.secondary)
-            if workspace.preferences.ocrIndexingEnabled {
+            if workspace.purchases.hasPro && workspace.preferences.ocrIndexingEnabled {
                 HStack {
                     if workspace.search.isIndexing { ProgressView().controlSize(.small) }
                     Text(String(localized: "Suchindex: \(workspace.search.completed) von \(workspace.search.total) Projekten verarbeitet"))

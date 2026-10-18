@@ -3,6 +3,8 @@ import Observation
 import SnagForgeDomain
 
 @MainActor @Observable final class VideoLibraryModel {
+    @ObservationIgnored var requestFeature: @MainActor (ProFeature) -> Bool = { _ in true }
+    @ObservationIgnored var hasProAccess: @MainActor () -> Bool = { true }
     let files: VideoRecordingFiles
     private(set) var items: [VideoRecordingFiles.Item] = []
     private(set) var issues: [String] = []
@@ -37,6 +39,8 @@ import SnagForgeDomain
             let document = try await files.document(id), url = try await files.movieURL(id)
             guard preview == nil else { return }
             preview = VideoEditorModel(document: document, url: url, files: files) { [weak self] in await self?.refresh() }
+            preview?.requestFeature = { [weak self] in self?.requestFeature($0) ?? false }
+            preview?.hasProAccess = { [weak self] in self?.hasProAccess() ?? false }
         } catch { self.error = error.localizedDescription }
     }
     func showPreview(recording url: URL) async {

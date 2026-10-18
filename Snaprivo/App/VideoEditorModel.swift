@@ -9,12 +9,22 @@ enum VideoEditError: LocalizedError {
 }
 
 @MainActor @Observable final class VideoEditorModel: Identifiable {
+    @ObservationIgnored var requestFeature: @MainActor (ProFeature) -> Bool = { _ in true }
+    @ObservationIgnored var hasProAccess: @MainActor () -> Bool = { true }
     let id: UUID
     private(set) var document: VideoDocument
     let files: VideoRecordingFiles
     @ObservationIgnored let player: AVPlayer
-    var start: Double { didSet { updatePlaybackBounds() } }
-    var end: Double { didSet { updatePlaybackBounds() } }
+    private var draftStart: Double
+    private var draftEnd: Double
+    var start: Double {
+        get { draftStart }
+        set { draftStart = hasProAccess() ? newValue : document.effectiveTrim.start; updatePlaybackBounds() }
+    }
+    var end: Double {
+        get { draftEnd }
+        set { draftEnd = hasProAccess() ? newValue : document.effectiveTrim.end; updatePlaybackBounds() }
+    }
     private(set) var position = 0.0
     private(set) var isSaving = false
     private(set) var isExporting = false
@@ -30,7 +40,7 @@ enum VideoEditError: LocalizedError {
 
     init(document: VideoDocument, url: URL, files: VideoRecordingFiles, onSave: @escaping @MainActor () async -> Void = {}) {
         id = document.id; self.document = document; self.files = files; self.onSave = onSave
-        start = document.effectiveTrim.start; end = document.effectiveTrim.end
+        draftStart = document.effectiveTrim.start; draftEnd = document.effectiveTrim.end
         history = [document.trim]; player = AVPlayer(url: url)
         player.actionAtItemEnd = .pause
         observer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: 600), queue: .main) { [weak self] time in
@@ -88,6 +98,7 @@ enum VideoEditError: LocalizedError {
         guard canRedo else { return false }; return await commit(history[historyIndex + 1], historyDestination: historyIndex + 1)
     }
     private func commit(_ trim: VideoTrim?, historyDestination: Int?) async -> Bool {
+        guard requestFeature(.video) else { return false }
         guard !isBusy else { return false }
         isSaving = true; player.pause()
         let task = Task { [self] in

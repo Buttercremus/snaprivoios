@@ -232,7 +232,7 @@ private struct ImageEditorView: View {
     private var toolbarTools: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 0) {
-                EditorToolPalette(selection: $model.tool, size: preferences.toolbarSize, showsBackground: false, order: preferences.visibleToolbarTools) {
+                EditorToolPalette(selection: $model.tool, size: preferences.toolbarSize, showsBackground: false, order: preferences.visibleToolbarTools, hasPro: model.hasProAccess()) {
                     model.endStyleEditing()
                     model.finishTextEditing()
                     model.focusRequest += 1
@@ -310,7 +310,7 @@ private struct ImageEditorView: View {
         case .copy: copyButton
         case .recognizeText:
             Button { model.beginTextRecognition() } label: {
-                EditorToolbarLabel(title: action.title, symbol: action.symbol, size: preferences.toolbarSize, extraWidth: 4)
+                EditorToolbarLabel(title: model.hasProAccess() ? action.title : String(localized: "Text erkennen · Pro"), symbol: action.symbol, size: preferences.toolbarSize, extraWidth: 4)
             }
             .disabled(!model.hasConfirmedImageForToolbar || model.isExporting)
             .help(String(localized: "Text im Bild lokal erkennen (⇧⌘T)"))
@@ -466,7 +466,7 @@ private struct EditorProperties: View {
                         Picker(String(localized: "Zeichenstil"), selection: Binding(
                             get: { model.activeDrawingStyle }, set: { model.updateStyle(drawingStyle: $0) })) {
                             Text(String(localized: "Präzise")).tag(EditorDrawingStyle.precise)
-                            Text(String(localized: "Handgezeichnet")).tag(EditorDrawingStyle.handDrawn)
+                            Text(model.hasProAccess() ? String(localized: "Handgezeichnet") : String(localized: "Handgezeichnet · Pro")).tag(EditorDrawingStyle.handDrawn)
                         }
                         .accessibilityIdentifier("editor.style.drawingStyle")
                     }

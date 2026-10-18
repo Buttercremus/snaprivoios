@@ -4,6 +4,9 @@ import UniformTypeIdentifiers
 import SnagForgeDomain
 
 @MainActor @Observable final class GuideModel {
+    // Low-level models can also be used by isolated renderer/persistence checks.
+    // Workspace installs the live entitlement policy before exposing them to UI.
+    @ObservationIgnored var requestFeature: @MainActor (ProFeature) -> Bool = { _ in true }
     let store: GuideStore
     private(set) var documents: [GuideSummary] = []
     private(set) var document: GuideDocument?
@@ -46,6 +49,7 @@ import SnagForgeDomain
         }
     }
     func create() {
+        guard requestFeature(.guides) else { return }
         run { [self] in
             guard await flush() else { return }
             let value = GuideDocument(title: String(localized: "Neue Anleitung"))
@@ -75,6 +79,7 @@ import SnagForgeDomain
         }
     }
     func edit(_ mutation: (inout GuideDocument) -> Void) {
+        guard requestFeature(.guides) else { return }
         guard !isBusy, !isSuspended, var value = document else { return }
         mutation(&value)
         guard value != document else { return }
@@ -124,6 +129,7 @@ import SnagForgeDomain
     }
     func addProjects(_ ids: [UUID], from projects: ProjectStore, replacing: UUID? = nil,
                      prepare: @escaping @MainActor () async -> Bool) {
+        guard requestFeature(.guides) else { return }
         guard document != nil, !ids.isEmpty else { return }
         run { [self] in
             guard await prepare(), await flush() else { return }
@@ -137,6 +143,7 @@ import SnagForgeDomain
                 }
                 return result
             }.value
+            guard requestFeature(.guides) else { return }
             guard var value = document else { return }
             if let replacing, let index = value.steps.firstIndex(where: { $0.id == replacing }), let step = steps.first {
                 value.steps[index].png = step.png
@@ -225,6 +232,7 @@ import SnagForgeDomain
         await refresh()
     }
     func createFromProjects(_ ids: [UUID], from projects: ProjectStore, prepare: @escaping @MainActor () async -> Bool) {
+        guard requestFeature(.guides) else { return }
         run { [self] in
             guard await prepare(), await flush() else { return }
             guard !ids.isEmpty, ids.count <= 100, Set(ids).count == ids.count else { throw ProjectError.documentTooLarge }
@@ -234,6 +242,7 @@ import SnagForgeDomain
                 for id in ids { result.append(try GuideExporter.snapshot(await projects.load(id), library: key)) }
                 return result
             }.value
+            guard requestFeature(.guides) else { return }
             let value = GuideDocument(title: String(localized: "Neue Anleitung"), style: style, steps: steps)
             try await store.create(value)
             document = value; selectedStep = steps.first?.id; preview = nil

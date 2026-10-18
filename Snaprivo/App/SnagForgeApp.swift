@@ -12,7 +12,11 @@ struct SnagForgeApp: App {
     var body: some Scene {
         Window(String(localized: "Snaprivo"), id: "workspace") {
             WorkspaceView(workspace: workspace)
-                .onAppear { appDelegate.showWorkspace = { AppWindows.show("workspace", using: openWindow) }; appDelegate.workspace = workspace; workspace.preferences.applyAppearance() }
+                .onAppear {
+                    appDelegate.showWorkspace = { AppWindows.show("workspace", using: openWindow) }
+                    workspace.showPaywallWindow = { AppWindows.show("pro", using: openWindow) }
+                    appDelegate.workspace = workspace; workspace.preferences.applyAppearance()
+                }
         }
         .defaultSize(width: 1180, height: 780)
         .commands {
@@ -112,6 +116,12 @@ struct SnagForgeApp: App {
             CaptureSetupView(workspace: workspace)
         }
         .windowResizability(.contentSize)
+
+        Window("Snaprivo Pro", id: "pro") {
+            ProPaywallView(model: workspace.purchases, feature: workspace.requestedProFeature)
+        }
+        .windowResizability(.contentSize)
+        .defaultLaunchBehavior(.suppressed)
 
         Settings {
             SettingsView(workspace: workspace)

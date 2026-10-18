@@ -1,6 +1,14 @@
 import AppKit
 import SnagForgeDomain
 
+@MainActor private final class LibrarySearchProStore: ProStoreClient {
+    func offer() async throws -> ProOffer? { nil }
+    func entitled() async throws -> Bool { true }
+    func purchase() async throws -> ProPurchaseOutcome { .cancelled }
+    func restore() async throws {}
+    func updates() -> AsyncStream<Void> { AsyncStream { $0.finish() } }
+}
+
 actor SearchGate {
     private var continuation: CheckedContinuation<String, Never>?
     private(set) var started = false
@@ -27,7 +35,10 @@ enum LibrarySearchChecks {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("SearchChecks-" + UUID().uuidString)
         let suite = "SearchChecks-" + UUID().uuidString, defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: root) }
-        let workspace = WorkspaceModel(root: root, defaults: defaults)
+        let entitlement = ProPurchaseModel(client: LibrarySearchProStore())
+        await entitlement.start()
+        defer { entitlement.stop() }
+        let workspace = WorkspaceModel(root: root, defaults: defaults, purchases: entitlement)
         let context = CGContext(data: nil, width: 1200, height: 600, bitsPerComponent: 8, bytesPerRow: 0,
                                 space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         context.setFillColor(NSColor.white.cgColor); context.fill(CGRect(x: 0, y: 0, width: 1200, height: 600))
@@ -68,6 +79,17 @@ enum LibrarySearchChecks {
         await restartedCache.finish()
         let persisted = try await restartedCache.matches(query: "private", documents: [document], includeOCR: true)
         precondition(persisted == [document.id])
+        // A returning Pro user must retain the valid cache until receipt loading
+        // and the initial document listing have both finished.
+        let checking = ProPurchaseModel(client: LibrarySearchProStore())
+        let pending = WorkspaceModel(root: root, defaults: defaults, purchases: checking)
+        await pending.refreshLibrary(); await pending.search.finish()
+        precondition(!checking.hasCheckedEntitlement && !pending.search.isIndexing)
+        precondition(FileManager.default.fileExists(atPath: root.appendingPathComponent(".library-search.sqlite").path))
+        await checking.start(); await pending.search.finish()
+        let afterReceipt = try await pending.search.matches(query: "private", documents: [document], includeOCR: true)
+        precondition(afterReceipt == [document.id])
+        checking.stop(); pending.search.cancel()
         let metadataSaved = await workspace.updateProjectMetadata(document.id, tags: ["  Bug ", "BUG"], collections: ["Support Cases", "Inbox"])
         precondition(metadataSaved)
         await workspace.search.finish()

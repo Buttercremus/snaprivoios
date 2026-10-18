@@ -15,6 +15,10 @@ enum CaptureLauncher {
         // Leave native menu tracking before an existing setup view starts selection.
         Task { @MainActor in
             guard workspace.editor?.isShowingImageSize != true, !workspace.screenshot.isBusy, !workspace.isLoading, workspace.pendingCapture == nil else { return }
+            guard workspace.authorizeCapture(scrolling: scrolling, video: video) else {
+                if workspace.showPaywallWindow == nil { AppWindows.show("workspace", using: openWindow) }
+                return
+            }
             workspace.isScrollCapture = scrolling
             workspace.captureConfiguration = action.configuration(using: workspace.preferences.captureConfiguration)
             if video {
@@ -37,6 +41,7 @@ enum CaptureLauncher {
     }
     static func begin(workspace: WorkspaceModel, using openWindow: OpenWindowAction,
                       dismissWindow: DismissWindowAction, requestPermission: Bool = false) {
+        guard workspace.authorizeCapture(scrolling: workspace.isScrollCapture, video: workspace.captureConfiguration.media == .video) else { return }
         if workspace.captureConfiguration.media == .image, let error = workspace.storage.libraryError {
             workspace.importError = error
             AppWindows.show("workspace", using: openWindow)

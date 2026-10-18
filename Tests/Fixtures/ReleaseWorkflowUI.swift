@@ -1,12 +1,30 @@
 import SwiftUI
 import SnagForgeDomain
 
+@MainActor private final class WorkflowUIStore: ProStoreClient {
+    var owns = CommandLine.arguments.contains("--pro")
+    var continuation: AsyncStream<Void>.Continuation?
+    func offer() async throws -> ProOffer? {
+        if CommandLine.arguments.contains("--unavailable-price") { return nil }
+        let regular = CommandLine.arguments.contains("--regular-price")
+        let style = Decimal.FormatStyle.Currency(code: "EUR", locale: Locale(identifier: "de_DE"))
+        let amount = regular ? ProOffer.regularPrice : ProOffer.launchPrice
+        return ProOffer(name: "Snaprivo Pro", price: amount.formatted(style), laterPrice: ProOffer.laterPrice(displayPrice: amount.formatted(style), style: style))
+    }
+    func entitled() async throws -> Bool { owns }
+    func purchase() async throws -> ProPurchaseOutcome { owns = true; continuation?.yield(()); return .purchased }
+    func restore() async throws {}
+    func updates() -> AsyncStream<Void> { AsyncStream { continuation = $0 } }
+}
+
 @main struct ReleaseWorkflowUI: App {
-    @State private var workspace = WorkspaceModel(root: FileManager.default.temporaryDirectory.appendingPathComponent("Snaprivo-WorkflowUI-\(UUID())"), defaults: UserDefaults(suiteName: "Snaprivo-WorkflowUI")!)
+    @Environment(\.openWindow) private var openWindow
+    @State private var workspace = WorkspaceModel(root: FileManager.default.temporaryDirectory.appendingPathComponent("Snaprivo-WorkflowUI-\(UUID())"), defaults: UserDefaults(suiteName: "Snaprivo-WorkflowUI")!, purchases: ProPurchaseModel(client: WorkflowUIStore()))
     @State private var prepared = false
     var body: some Scene {
         Window("Snaprivo · Synthetic Workflow Checks", id: "workspace") {
             WorkspaceView(workspace: workspace).task {
+                workspace.showPaywallWindow = { AppWindows.show("pro", using: openWindow) }
                 guard !prepared else { return }; prepared = true
                 workspace.preferences.completedOnboarding = true
                 workspace.preferences.completedFirstCapture = true
@@ -23,6 +41,9 @@ import SnagForgeDomain
                 workspace.section = .editor
             }
         }.defaultSize(width: 1180, height: 780)
+        Window("Snaprivo Pro", id: "pro") {
+            ProPaywallView(model: workspace.purchases, feature: workspace.requestedProFeature)
+        }.windowResizability(.contentSize).defaultLaunchBehavior(.suppressed)
         Settings { SettingsView(workspace: workspace) }
     }
 }

@@ -7,6 +7,7 @@ struct EditorToolPalette: View {
     var size: EditorToolbarSize = .standard
     var showsBackground = true
     var order: [AnnotationTool] = EditorToolItem.all.map(\.tool)
+    var hasPro = true
     let onSelect: () -> Void
 
     @ViewBuilder
@@ -22,9 +23,15 @@ struct EditorToolPalette: View {
         HStack(spacing: 0) {
             ForEach(order, id: \.rawValue) { tool in
                 if let item = EditorToolItem.all.first(where: { $0.tool == tool }) {
-                    EditorToolButton(item: item, size: size, isSelected: selection == item.tool) {
+                    EditorToolButton(item: item, size: size, isSelected: selection == item.tool, isProLocked: !hasPro && ProFeature.required(for: tool) != nil) {
                         selection = item.tool
                         onSelect()
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if !hasPro, ProFeature.required(for: tool) != nil {
+                            Text("Pro").font(.system(size: 8, weight: .semibold)).foregroundStyle(.tint)
+                                .allowsHitTesting(false).accessibilityHidden(true)
+                        }
                     }
                 }
             }
@@ -39,6 +46,7 @@ private struct EditorToolButton: View {
     let item: EditorToolItem
     let size: EditorToolbarSize
     let isSelected: Bool
+    var isProLocked = false
     let action: () -> Void
 
     var body: some View {
@@ -47,9 +55,9 @@ private struct EditorToolButton: View {
                                extraWidth: item.tool == .crop ? 18 : 0, isSelected: isSelected)
         }
         .buttonStyle(EditorToolbarButtonStyle(isSelected: isSelected))
-        .help(item.hint)
+        .help(isProLocked ? String(localized: "Dieses Werkzeug gehört zu Snaprivo Pro.") : item.hint)
         .accessibilityLabel(item.title)
-        .accessibilityHint(item.hint)
+        .accessibilityHint(isProLocked ? String(localized: "Dieses Werkzeug gehört zu Snaprivo Pro.") : item.hint)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
         .accessibilityIdentifier("editor.tool.\(item.id)")
     }

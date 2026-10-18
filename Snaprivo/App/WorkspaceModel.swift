@@ -13,7 +13,9 @@ final class WorkspaceModel {
     let search: LibrarySearchModel
     let guides: GuideModel
     let videos: VideoLibraryModel
-    let purchases = ProPurchaseModel()
+    let purchases: ProPurchaseModel
+    var requestedProFeature: ProFeature?
+    @ObservationIgnored var showPaywallWindow: (@MainActor () -> Void)?
     var showsPaywall = false
     var quickCapture: EditorModel?
     private(set) var hasOpenedExternalFile = false
@@ -51,8 +53,10 @@ final class WorkspaceModel {
     @ObservationIgnored private let copyCapture: @MainActor (EditorModel) -> Void
 
     init(root: URL? = nil, defaults: UserDefaults = .standard, bookmarkClient: FolderBookmarkClient = .live,
+         purchases: ProPurchaseModel? = nil,
          copyCapture: @escaping @MainActor (EditorModel) -> Void = { $0.copyPNG() }) {
         self.copyCapture = copyCapture
+        self.purchases = purchases ?? ProPurchaseModel()
         preferences = AppPreferences(defaults: defaults)
         let cacheRoot = root ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("SnagForge/Search", isDirectory: true)
         search = LibrarySearchModel(cacheURL: cacheRoot.appendingPathComponent(".library-search.sqlite"))
@@ -66,7 +70,22 @@ final class WorkspaceModel {
             .appendingPathComponent("SnagForge/Projects", isDirectory: true)
         store = ProjectStore(root: storage.libraryURL ?? root)
         preferences.onOCRIndexingChanged = { [weak self] _ in self?.synchronizeSearch() }
+        guides.requestFeature = { [weak self] in self?.requirePro($0) ?? false }
+        videos.requestFeature = { [weak self] in self?.requirePro($0) ?? false }
+        videos.hasProAccess = { [weak self] in self?.purchases.hasPro ?? false }
+        self.purchases.onEntitlementChanged = { [weak self] hasPro in
+            guard let self else { return }
+            if !hasPro {
+                self.editor?.proAccessDidChange()
+                self.quickCapture?.proAccessDidChange()
+                self.videos.preview?.discardDraft()
+            }
+            self.synchronizeSearch()
+        }
         screenshot.videoFiles = videos.files
+        screenshot.authorizeCapture = { [weak self] scrolling, video in
+            self?.authorizeCapture(scrolling: scrolling, video: video) ?? false
+        }
         screenshot.onVideoLibraryChange = { [weak self] in
             guard let self else { return }
             await self.videos.refresh(); self.libraryShowsVideos = true; self.section = .library
@@ -93,8 +112,29 @@ final class WorkspaceModel {
         synchronizeSearch()
     }
     func synchronizeSearch(rebuild: Bool = false, retry: Bool = false) {
+        // Do not erase a returning Pro user's cache while the receipt or initial
+        // library listing is still loading. No recognition starts in this state.
+        guard purchases.hasCheckedEntitlement, !purchases.hasPro || didLoadLibrary else { search.cancel(); return }
         search.synchronize(documents: storage.libraryError == nil ? items.map(\.document) : [], store: store,
-                           enabled: preferences.ocrIndexingEnabled && storage.libraryError == nil, rebuild: rebuild, retry: retry)
+                           enabled: purchases.hasPro && preferences.ocrIndexingEnabled && storage.libraryError == nil, rebuild: rebuild, retry: retry)
+    }
+    func showPro(_ feature: ProFeature? = nil) {
+        requestedProFeature = feature
+        if let showPaywallWindow { showPaywallWindow() }
+        else { showsPaywall = true }
+    }
+    @discardableResult func requirePro(_ feature: ProFeature) -> Bool {
+        guard purchases.hasPro else { showPro(feature); return false }
+        return true
+    }
+    @discardableResult func authorizeCapture(scrolling: Bool, video: Bool) -> Bool {
+        if video { return requirePro(.video) }
+        if scrolling { return requirePro(.scrolling) }
+        return true
+    }
+    func setOCRIndexing(_ enabled: Bool) {
+        guard !enabled || requirePro(.textRecognition) else { return }
+        preferences.ocrIndexingEnabled = enabled
     }
     private func didSave() {
         refreshTask?.cancel()
@@ -169,7 +209,10 @@ final class WorkspaceModel {
         let next = EditorModel(image: image, document: document, generation: generation, store: store,
                     automaticallyFitsImage: preferences.automaticallyFitsImage,
                     pngDirectory: { [storage] in storage.pngFolder }) { [weak self] in self?.didSave() }
+        next.requestFeature = { [weak self] in self?.requirePro($0) ?? false }
+        next.hasProAccess = { [weak self] in self?.purchases.hasPro ?? false }
         if let editor { next.inheritToolSettings(from: editor) }
+        if !purchases.hasPro { next.proAccessDidChange() }
         return next
     }
     private func suspendEditorForImageSwitch() -> EditorModel? {
@@ -241,6 +284,7 @@ final class WorkspaceModel {
         }
     }
     func updateProjectMetadata(_ id: UUID, title: String? = nil, favorite: Bool? = nil, tags: [String]? = nil, collections: [String]? = nil) async -> Bool {
+        guard (tags == nil && collections == nil) || requirePro(.organization) else { return false }
         guard !isLoading, !isUpdatingMetadata, storage.libraryError == nil else { return false }
         isUpdatingMetadata = true
         let task = Task { [self] in
@@ -300,6 +344,7 @@ final class WorkspaceModel {
         return await editor?.finishPendingWork() ?? true
     }
     func addGuideProjects(_ ids: [UUID], replacing: UUID? = nil) {
+        guard requirePro(.guides) else { return }
         guard !isLoading, storage.libraryError == nil else { return }
         guides.addProjects(ids, from: store, replacing: replacing) { [weak self] in
             guard let self else { return false }
@@ -548,6 +593,7 @@ extension WorkspaceModel {
         }
     }
     func createGuide(from ids: [UUID]) {
+        guard requirePro(.guides) else { return }
         guard !isLoading, !ids.isEmpty else { return }
         guides.createFromProjects(ids, from: store) { [weak self] in
             await self?.editor?.finishPendingWork() != false

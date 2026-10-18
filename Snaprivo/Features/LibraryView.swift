@@ -24,6 +24,7 @@ struct LibraryView: View {
         let indexVersion: Int
         let includesOCR: Bool
         let trash: Bool
+        let hasPro: Bool
     }
     private var documents: [ProjectDocument] {
         displayedItems.map { item in
@@ -33,7 +34,7 @@ struct LibraryView: View {
     }
     private var searchInputs: SearchInputs {
         SearchInputs(query: query, revisions: documents.map { "\($0.id):\($0.revision)" },
-                     indexVersion: workspace.search.changeVersion, includesOCR: workspace.preferences.ocrIndexingEnabled && !showsTrash, trash: showsTrash)
+                     indexVersion: workspace.search.changeVersion, includesOCR: workspace.purchases.hasPro && workspace.preferences.ocrIndexingEnabled && !showsTrash, trash: showsTrash, hasPro: workspace.purchases.hasPro)
     }
     private var isSearching: Bool { !LibrarySearch.terms(query).isEmpty && resultKey != searchInputs }
     private func names(_ values: [String]) -> [String] {
@@ -48,8 +49,8 @@ struct LibraryView: View {
         return workspace.preferences.librarySort.ordered(displayedItems.filter { item in
             let document = byID[item.id] ?? item.document
             return (!hasQuery || (!searching && matches.contains(item.id)))
-                && (tagFilter.isEmpty || document.tags.contains { LibrarySearch.fold($0) == tagFilter })
-                && (collectionFilter.isEmpty || document.collections.contains { LibrarySearch.fold($0) == collectionFilter })
+                && (!workspace.purchases.hasPro || tagFilter.isEmpty || document.tags.contains { LibrarySearch.fold($0) == tagFilter })
+                && (!workspace.purchases.hasPro || collectionFilter.isEmpty || document.collections.contains { LibrarySearch.fold($0) == collectionFilter })
                 && (showsTrash || !workspace.preferences.favoritesOnly || document.isFavorite)
         })
     }
@@ -82,7 +83,12 @@ struct LibraryView: View {
                 }
                 Spacer()
             }.padding(.horizontal).padding(.bottom, 10).disabled(showsTrash || workspace.isLoading)
-            organizationFilters.padding(.horizontal).padding(.bottom, 10)
+            if workspace.purchases.hasPro {
+                organizationFilters.padding(.horizontal).padding(.bottom, 10)
+            } else {
+                HStack { Button(String(localized: "Tags und Sammlungen · Pro"), systemImage: "lock") { workspace.showPro(.organization) }; Spacer() }
+                    .padding(.horizontal).padding(.bottom, 10)
+            }
             LibraryIndexControls(workspace: workspace).padding(.horizontal).padding(.bottom, 10)
             if let searchError { Text(searchError).font(.caption).foregroundStyle(.orange).padding(.horizontal) }
             if !issues.isEmpty && workspace.storage.libraryError == nil {
@@ -149,7 +155,10 @@ struct LibraryView: View {
                                         .help(item.document.isFavorite ? String(localized: "Aus Favoriten entfernen") : String(localized: "Zu Favoriten hinzufügen"))
                                     Spacer()
                                     Button(String(localized: "Umbenennen …"), systemImage: "pencil") { renaming = item.document }
-                                    Button { organizing = workspace.editor?.document.id == item.id ? workspace.editor?.document : item.document } label: { Image(systemName: "tag") }
+                                    Button {
+                                        guard workspace.requirePro(.organization) else { return }
+                                        organizing = workspace.editor?.document.id == item.id ? workspace.editor?.document : item.document
+                                    } label: { Image(systemName: "tag") }
                                         .help(String(localized: "Tags und Sammlungen bearbeiten"))
                                         .accessibilityLabel(String(localized: "Tags und Sammlungen bearbeiten"))
                                         .accessibilityIdentifier("library.organize.\(item.id)")
@@ -192,7 +201,12 @@ struct LibraryView: View {
             }
         }
         .task(id: searchInputs) {
-            let input = searchInputs, documents = documents
+            let input = searchInputs
+            let documents = documents.map { document in
+                var value = document
+                if !input.hasPro { value.tags = []; value.collections = [] }
+                return value
+            }
             do {
                 let result = try await workspace.search.matches(query: input.query, documents: documents, includeOCR: input.includesOCR)
                 try Task.checkCancellation()
