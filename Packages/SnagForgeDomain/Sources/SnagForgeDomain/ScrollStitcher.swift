@@ -36,36 +36,68 @@ public enum ScrollStitcher {
         guard difference(a, b, shift: 0) < 0.5 else { throw ScrollStitchError.moving }
     }
     /// Only downward vertical motion with >= 30% overlap is supported in T01.
-    public static func displacement(from a: ScrollFrame, to b: ScrollFrame) throws -> Int {
-        guard a.width == b.width, a.height == b.height else { throw ScrollStitchError.dimensions }
-        if difference(a, b, shift: 0) < 0.5 { throw ScrollStitchError.unchanged }
+    public static func displacement(from first: ScrollFrame, to next: ScrollFrame) throws -> Int {
+        guard first.width == next.width, first.height == next.height else { throw ScrollStitchError.dimensions }
+        if difference(first, next, shift: 0) < 0.5 { throw ScrollStitchError.unchanged }
+        let a = try matchingFrame(first), b = try matchingFrame(next)
         let maximum = a.height * 7 / 10
         // Test every pixel displacement. Coarse shift strides miss sharp text and
         // arbitrary image patterns when the true displacement falls between samples.
-        let ranked = (4...maximum).map { ($0, difference(a, b, shift: $0)) }.sorted { $0.1 < $1.1 }
+        let integerRanked = (4...maximum).map { ($0, difference(a, b, shift: $0)) }.sorted { $0.1 < $1.1 }
+        // Browsers often stop at fractional CSS offsets. Test subpixel phases in
+        // the strongest candidates; only matching is interpolated, never output pixels.
+        let ranked = integerRanked.prefix(8).flatMap { candidate in
+            [-0.5, -0.25, 0, 0.25, 0.5].map { phase in
+                (shift: candidate.0, phase: phase, score: difference(a, b, shift: candidate.0, phase: phase))
+            }
+        }.sorted { $0.score < $1.score }
         guard let best = ranked.first else { throw ScrollStitchError.uncertain }
-        if hasFixedEdge(a, b, shift: best.0) { throw ScrollStitchError.fixedContent }
-        guard best.1 <= 3,
-              !ranked.contains(where: { abs($0.0 - best.0) > 3 && $0.1 < best.1 + 1.5 }) else { throw ScrollStitchError.uncertain }
-        // Recheck at a denser grid before accepting the actual seam.
-        guard difference(a, b, shift: best.0, rows: 240, columns: 128) <= 3 else { throw ScrollStitchError.uncertain }
-        return best.0
+        if hasFixedEdge(first, next, shift: best.shift) { throw ScrollStitchError.fixedContent }
+        guard best.score <= 4,
+              !integerRanked.contains(where: { abs($0.0 - best.shift) > 3 && $0.1 < best.score + 1.5 }) else { throw ScrollStitchError.uncertain }
+        guard difference(a, b, shift: best.shift, rows: 240, columns: 128, phase: best.phase) <= 4 else { throw ScrollStitchError.uncertain }
+        return best.shift
     }
-    private static func difference(_ a: ScrollFrame, _ b: ScrollFrame, shift: Int, rows: Int = 80, columns: Int = 64) -> Double {
+    /// A one-pixel analysis blur reduces font-rasterization differences between
+    /// fractional browser positions. Capture/output pixels are never filtered.
+    private static func matchingFrame(_ frame: ScrollFrame) throws -> ScrollFrame {
+        let weights = [1, 4, 6, 4, 1], width = frame.width, height = frame.height
+        var horizontal = [UInt8](repeating: 0, count: frame.pixels.count)
+        var result = horizontal
+        for y in 0..<height {
+            for x in 0..<width {
+                var value = 0
+                for i in 0..<5 { value += Int(frame.pixels[y * width + max(0, min(width - 1, x + i - 2))]) * weights[i] }
+                horizontal[y * width + x] = UInt8(value / 16)
+            }
+        }
+        for y in 0..<height {
+            for x in 0..<width {
+                var value = 0
+                for i in 0..<5 { value += Int(horizontal[max(0, min(height - 1, y + i - 2)) * width + x]) * weights[i] }
+                result[y * width + x] = UInt8(value / 16)
+            }
+        }
+        return try ScrollFrame(width: width, height: height, pixels: result)
+    }
+    private static func difference(_ a: ScrollFrame, _ b: ScrollFrame, shift: Int, rows: Int = 80, columns: Int = 64, phase: Double = 0) -> Double {
         let overlap = a.height - shift, inset = max(1, a.width / 20)
-        var sum = 0, count = 0
+        var sum: Double = 0
+        var count = 0
         for y in stride(from: 0, to: overlap, by: max(1, overlap / rows)) {
+            let sourceY = y + shift, adjacentY = sourceY + (phase < 0 ? -1 : 1)
+            guard phase == 0 || (0..<a.height).contains(adjacentY) else { continue }
             let span = a.width - 2 * inset, samples = min(columns, span)
             for column in 0..<samples {
                 let x = inset + column * span / samples
-                let ai = (y + shift) * a.width + x, bi = y * b.width + x
-                let av = Int(a.pixels[ai]), bv = Int(b.pixels[bi]), delta = abs(av - bv)
-                // Empty margins must not dilute text differences into a false match.
-                if delta < 2 && abs(av - Int(a.pixels[ai + 1])) < 2 && abs(bv - Int(b.pixels[bi + 1])) < 2 { continue }
+                let ai = sourceY * a.width + x, bi = y * b.width + x
+                let av = Double(a.pixels[ai]) * (1 - abs(phase)) + (phase == 0 ? 0 : Double(a.pixels[adjacentY * a.width + x]) * abs(phase))
+                let bv = Double(b.pixels[bi]), delta = abs(av - bv)
+                if delta < 2 && abs(av - Double(a.pixels[ai + 1])) < 2 && abs(bv - Double(b.pixels[bi + 1])) < 2 { continue }
                 sum += delta; count += 1
             }
         }
-        return Double(sum) / Double(max(1, count))
+        return sum / Double(max(1, count))
     }
     private static func hasFixedEdge(_ a: ScrollFrame, _ b: ScrollFrame, shift: Int) -> Bool {
         guard shift >= 4 else { return false }

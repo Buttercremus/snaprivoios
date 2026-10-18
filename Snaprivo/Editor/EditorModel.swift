@@ -66,6 +66,28 @@ final class EditorModel {
             if group.isSubset(of: selectedIDs) { selectedIDs.subtract(group) } else { selectedIDs.formUnion(group) }
         } else { selectedIDs = group }
     }
+    func selectObjectFromList(_ id: UUID) {
+        guard !isSwitchingImage, !isCanvasGestureActive, cropDraft == nil,
+              history.objects.contains(where: { $0.id == id }) else { return }
+        endStyleEditing(); finishTextEditing(); tool = .selection
+        // A list row targets one object, including members of a group.
+        selectedIDs = [id]
+    }
+    func selectObjectsFromList(_ ids: Set<UUID>) {
+        guard !isSwitchingImage, !isCanvasGestureActive, cropDraft == nil else { return }
+        endStyleEditing(); finishTextEditing(); tool = .selection
+        selectedIDs = ids.intersection(history.objects.map(\.id))
+    }
+    @discardableResult func renameObject(_ id: UUID, name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isSwitchingImage, !isCanvasGestureActive, cropDraft == nil,
+              !trimmed.isEmpty, trimmed.count <= 120,
+              !trimmed.unicodeScalars.contains(where: { $0.value < 32 }),
+              history.objects.contains(where: { $0.id == id }) else { return false }
+        endStyleEditing(); finishTextEditing()
+        commit(history.objects.map { object in var next = object; if next.id == id { next.name = trimmed }; return next })
+        return true
+    }
     func selectAllObjects() {
         guard !isSwitchingImage, !isCanvasGestureActive, cropDraft == nil else { return }
         finishTextEditing(); tool = .selection; selectedIDs = Set(history.objects.map(\.id)); focusRequest += 1

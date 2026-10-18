@@ -2,7 +2,7 @@ import Foundation
 
 /// Source pixels and annotations always use the immutable original's top-left coordinates.
 public struct ProjectDocument: Codable, Equatable, Sendable, Identifiable {
-    public static let currentVersion = 9
+    public static let currentVersion = 10
     public let schemaVersion: Int
     public let id: UUID
     public var favorite: Bool?
@@ -91,6 +91,7 @@ public struct ProjectDocument: Codable, Equatable, Sendable, Identifiable {
             if let height = object.textHeight {
                 guard height.isFinite, (1...1_000_000).contains(height) else { throw ProjectError.invalidDocument }
             }
+            guard object.name.map({ $0.count <= 120 && !$0.unicodeScalars.contains(where: { $0.value < 32 }) }) != false else { throw ProjectError.invalidDocument }
             let values = [object.start.x, object.start.y, object.end.x, object.end.y, object.fontSize, object.lineWidth, object.blurRadius]
             guard values.allSatisfy({ $0.isFinite && abs($0) <= 1_000_000 }),
                   (1...1000).contains(object.fontSize), (0.1...1000).contains(object.lineWidth),
@@ -111,14 +112,15 @@ public struct ProjectDocument: Codable, Equatable, Sendable, Identifiable {
         }
         let value = try decoder.decode(Self.self, from: data)
         if version < currentVersion {
-            // Migrate only in memory; older builds reject v9 instead of silently losing drawing styles.
+            // Migrate in memory. Older builds reject new formats rather than losing fields.
             guard (version >= 3 || value.resizedSize == nil), version != 1 || value.crop == nil else { throw ProjectError.invalidDocument }
             guard version >= 6 || value.objects.allSatisfy({ $0.kind != .highlight && $0.kind != .step && $0.highlightStyle == nil && $0.stepStyle == nil }) else {
                 throw ProjectError.invalidDocument
             }
             guard version >= 7 || (value.tags.isEmpty && value.collections.isEmpty) else { throw ProjectError.invalidDocument }
             guard version >= 8 || value.objects.allSatisfy({ $0.drawingStyle == nil }) else { throw ProjectError.invalidDocument }
-            guard value.objects.allSatisfy({ $0.groupID == nil && $0.imageAsset == nil && $0.kind != .image }) else { throw ProjectError.invalidDocument }
+            guard version >= 10 || value.objects.allSatisfy({ $0.name == nil }) else { throw ProjectError.invalidDocument }
+            guard version >= 9 || value.objects.allSatisfy({ $0.groupID == nil && $0.imageAsset == nil && $0.kind != .image }) else { throw ProjectError.invalidDocument }
             return try Self(id: value.id, title: value.title, pixelSize: value.pixelSize, objects: value.objects,
                             createdAt: value.createdAt, modifiedAt: value.modifiedAt, revision: value.revision, crop: value.crop, resizedSize: value.resizedSize, isFavorite: value.isFavorite, tags: value.tags, collections: value.collections).validated()
         }

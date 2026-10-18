@@ -4,7 +4,7 @@ Native Screenshot- und Bildschirmvideo-App für macOS 26+, von Anfang an für de
 
 ## Projekt öffnen
 
-`Snaprivo.xcodeproj` in Xcode öffnen, Scheme **Snaprivo**, Ziel **My Mac**, dann **⌘R**. Für diesen Arbeitsplatz sind automatische Signierung und das vorhandene Development-Team **Simon Raach (24C8L59PV7)** eingestellt. Auf anderen Rechnern unter Signing & Capabilities das eigene Team wählen. `com.snagforge.app` bleibt die vorläufige Bundle-ID und ist kein reservierter App-Store-Identifier. Anleitung: [Start über Xcode](docs/XCODE-START.md).
+`Snaprivo.xcodeproj` in Xcode öffnen, Scheme **Snaprivo**, Ziel **My Mac**, dann **⌘R**. Für diesen Arbeitsplatz sind automatische Signierung und das vorhandene Development-Team **Simon Raach (24C8L59PV7)** eingestellt. Auf anderen Rechnern unter Signing & Capabilities das eigene Team wählen. Die aktuelle Bundle-ID ist `com.snaprivo.app`. Daten und Bildschirmfreigaben der früheren ID `com.snagforge.app` werden getrennt behandelt; [Übernahme und Identität](docs/RELEASE-WORKFLOWS-ABNAHME.md). Anleitung: [Start über Xcode](docs/XCODE-START.md).
 
 Voraussetzung: Xcode mit macOS-26-SDK oder neuer; Entwicklung derzeit mit Xcode 27. Swift 6. Die App unterstützt macOS 26.0 und neuer. Es gibt keine externen Paketabhängigkeiten.
 
@@ -23,6 +23,9 @@ Voraussetzung: Xcode mit macOS-26-SDK oder neuer; Entwicklung derzeit mit Xcode 
 python3 Tests/VideoValidationAnalysisChecks.py
 ./scripts/test-settings.sh
 ./scripts/test-support.sh
+./scripts/test-release-workflows.sh
+./scripts/test-release-workflows.sh --sandbox
+./scripts/test-storekit.sh
 ./scripts/test-localization.sh
 python3 scripts/check-localization.py
 ./scripts/test-resize.sh
@@ -49,7 +52,14 @@ Die nächste Aufgabe und alle weiteren Schritte bis zur Kaufversion stehen mit C
 
 ## Aktueller Stand
 
-**Sprachen:** Die App unterstützt **Deutsch und Englisch** mit nativer macOS-Sprachauswahl. Das umfasst Menüs, Einstellungen, Editor, Aufnahme-Overlays, Scroll-/Videosteuerung, Bedienungshilfen, eigene Fehlermeldungen, Dateityp-Beschreibungen und den Support-Entwurf. Englisch ist die Rückfallsprache, wenn keine unterstützte bevorzugte Sprache vorliegt. Unter **Systemeinstellungen → Allgemein → Sprache & Region → Apps → Snaprivo** lässt sich die App-Sprache unabhängig vom übrigen Mac wählen; danach Snaprivo neu starten. Projekttitel, eingefügte Bildtexte, gespeicherte Werkzeug-IDs und Bibliotheksordner bleiben unverändert. 758 App-Texte, drei Dateityp-Beschreibungen, der Mikrofon-Berechtigungstext und 13 Domain-Texte sind übersetzt; native Bundle-/Plural-/Zahlenprüfungen bestehen für Deutsch, Englisch und Englisch bei französischer Sprachpräferenz. Die englischen Produktionsansichten wurden mit synthetischen Projekten visuell geprüft, einschließlich 800 Pixel Fensterbreite. Bibliotheks- und Editorleisten passen sich bei Platzmangel an; Werkzeugtexte und Zoom werden nicht mehr gekürzt. [Umsetzung, visuelle Prüfabdeckung und verbleibende Abnahme](docs/LOKALISIERUNG-ABNAHME.md).
+**Ergänzungen vom 18. Oktober 2026:** **Ablage → Alles sichern / Alles wiederherstellen** bündelt Bildprojekte, Videos, beide Papierkörbe und bearbeitbare Anleitungen in `.snaprivoall`. Vollständige Validierung vor Übernahme, additive Kopien und Erhalt der Anleitung/Bild-Verknüpfungen. Unterbrochene Videodaten bleiben als solche gekennzeichnet. Einstellungen → Speicherorte zeigt die Belegung und bietet die ausdrückliche Übernahme eines ausgewählten alten App-Containers an. Video-Papierkorb, Wiederherstellung, bestätigtes endgültiges Löschen und Dateigrößen sind vorhanden. Finder-Öffnen von `.snaprivo`, `.snaprivoguide`, `.snaprivobackup` und `.snaprivoall` nutzt dieselben geprüften Importpfade; es importiert immer eigene Kopien.
+
+In der Bildbibliothek **Bilder auswählen → Anleitung erstellen** wählen. Der Ablauf übernimmt sichtbare Bildstände in Bibliotheksreihenfolge und den Stil der aktuell geöffneten Anleitung (sonst Standard). Die optionale **Schnellvorschau nach der Aufnahme** in Einstellungen → Aufnahme bietet Kopieren, Markieren, Anheften und Verwerfen in den Bildpapierkorb. Schließen erhält die Aufnahme in der Bibliothek. Die erweiterte native **Objektliste** zeigt die Malreihenfolge, unterstützt Mehrfachauswahl, Umbenennen, Ebenenaktionen und Löschen; Namen bleiben mit Format 10 erhalten, alte Formate 1–9 bleiben lesbar. Abdeckungen behalten ihre oberste Ebene.
+
+**Snaprivo Pro** öffnet die vorbereitete Einmalkauf-Paywall. StoreKit prüft Apple-signierte Transaktionen, Neustart, Wiederherstellung und Widerruf. Es gibt keine vorläufigen Funktionssperren: Preis, Free-/Pro-Grenzen und App-Store-Connect-Produkt müssen noch festgelegt werden. Native lokale StoreKit-Tests laufen im getrennten `SnaprivoStoreTests`-Scheme mit einem synthetischen Testpreis; kein echtes Geld und kein Store-Upload. [Bedienung, Sicherungsformat, Identität und Prüfnachweise](docs/RELEASE-WORKFLOWS-ABNAHME.md).
+
+
+**Sprachen:** Die App unterstützt **Deutsch und Englisch** mit nativer macOS-Sprachauswahl. Das umfasst Menüs, Einstellungen, Editor, Aufnahme-Overlays, Scroll-/Videosteuerung, Bedienungshilfen, eigene Fehlermeldungen, Dateityp-Beschreibungen und den Support-Entwurf. Englisch ist die Rückfallsprache, wenn keine unterstützte bevorzugte Sprache vorliegt. Unter **Systemeinstellungen → Allgemein → Sprache & Region → Apps → Snaprivo** lässt sich die App-Sprache unabhängig vom übrigen Mac wählen; danach Snaprivo neu starten. Projekttitel, eingefügte Bildtexte, gespeicherte Werkzeug-IDs und Bibliotheksordner bleiben unverändert. 894 App-Texte, sechs Dateityp-Beschreibungen, der Mikrofon-Berechtigungstext und 13 Domain-Texte sind übersetzt; native Bundle-/Plural-/Zahlenprüfungen bestehen für Deutsch, Englisch und Englisch bei französischer Sprachpräferenz. Die englischen Produktionsansichten wurden mit synthetischen Projekten visuell geprüft, einschließlich 800 Pixel Fensterbreite. Bibliotheks- und Editorleisten passen sich bei Platzmangel an; Werkzeugtexte und Zoom werden nicht mehr gekürzt. [Umsetzung, visuelle Prüfabdeckung und verbleibende Abnahme](docs/LOKALISIERUNG-ABNAHME.md).
 
 Implementiert ist die native App mit Menüleiste, lokaler Projektbibliothek, Aufnahme-Konfiguration, Einstellungen und Bildeditor. PNG, JPEG, TIFF und HEIC lassen sich über einen nativen Dateidialog öffnen. Der Import übernimmt eine eigene Kopie, berücksichtigt die Bildorientierung und verarbeitet die Pixel außerhalb des MainActor. Aktuelle Grenze: 100 Millionen Pixel, maximal 32.768 Pixel pro Kante.
 
@@ -142,7 +152,7 @@ Die Capture-Testmatrix steht in `docs/SCREENSHOT-ABNAHME.md`; Editor-Nachweise u
 
 ## Namensentscheidung – 13. Oktober 2026
 
-Produktname: **Snaprivo**. **snaprivo.com** (Hauptdomain) und **snaprivo.de** sind laut Nutzer gekauft. App, Xcode-Projekt, Scheme und Target heißen jetzt **Snaprivo**. Bundle-ID `com.snagforge.app`, Development-Team und interne Speicherpfade bleiben für bestehende Projekte und Berechtigungen erhalten. Der Quellordner heißt ebenfalls `Snaprivo/`. Nur das Domain-Modul `Packages/SnagForgeDomain` behält vorerst seinen technischen Namen. Diesen Paketordner und bestehende App-Daten bitte nicht löschen. Die sichtbare Umbenennung ist erledigt; finale Icon-/Store-Darstellung und Markenprüfung bleiben unter D05 offen.
+Produktname: **Snaprivo**. **snaprivo.com** (Hauptdomain) und **snaprivo.de** sind laut Nutzer gekauft. App, Xcode-Projekt, Scheme und Target heißen jetzt **Snaprivo**. Die aktuelle Bundle-ID ist `com.snaprivo.app`; das Development-Team bleibt gleich. Interne relative Speicherpfade bleiben kompatibel, der App-Sandbox-Container gehört jedoch zur neuen ID. Vorhandene Daten lassen sich über Einstellungen → Speicherorte → Bisherige Snaprivo-Daten übernehmen als Kopien importieren. Der Quellordner heißt ebenfalls `Snaprivo/`. Nur das Domain-Modul `Packages/SnagForgeDomain` behält vorerst seinen technischen Namen. Diesen Paketordner und bestehende App-Daten bitte nicht löschen. Die sichtbare Umbenennung ist erledigt; finale Icon-/Store-Darstellung und Markenprüfung bleiben unter D05 offen.
 
 E04 ist am 13. Oktober 2026 umgesetzt: Duplizieren mit eigener Objekt-ID, vier Ebenenaktionen, Undo/Redo und Autosave. Unschärfebereiche bleiben unter den Markierungen. Nachweise: [Objekt-Abnahme](docs/OBJEKTE-ABNAHME.md).
 

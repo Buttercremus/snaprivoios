@@ -14505,6 +14505,873 @@
           }
         }
       }
+    },
+    "%lld Bilder, %lld Videos und %lld Anleitungen verarbeitet.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Bilder, %lld Videos und %lld Anleitungen verarbeitet."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processed %lld images, %lld videos, and %lld guides."
+          }
+        }
+      }
+    },
+    "%lld ausgewählt": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ausgewählt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld selected"
+          }
+        }
+      }
+    },
+    "Alle Inhalte": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Inhalte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All Content"
+          }
+        }
+      }
+    },
+    "Alle Inhalte werden geprüft und als neue Kopien ergänzt. Vorhandene Arbeit bleibt erhalten.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Inhalte werden geprüft und als neue Kopien ergänzt. Vorhandene Arbeit bleibt erhalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All content is validated and added as new copies. Existing work is preserved."
+          }
+        }
+      }
+    },
+    "Alles sichern": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles sichern"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back Up Everything"
+          }
+        }
+      }
+    },
+    "Alles sichern …": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles sichern …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back Up Everything…"
+          }
+        }
+      }
+    },
+    "Alles wiederherstellen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles wiederherstellen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore Everything"
+          }
+        }
+      }
+    },
+    "Alles wiederherstellen …": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles wiederherstellen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore Everything…"
+          }
+        }
+      }
+    },
+    "Anleitung erstellen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitung erstellen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create Guide"
+          }
+        }
+      }
+    },
+    "Aufnahme bereit": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufnahme bereit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture Ready"
+          }
+        }
+      }
+    },
+    "Ausgewählt": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selected"
+          }
+        }
+      }
+    },
+    "Beende die bisherige App. Wähle ihren App-Container oder dessen Ordner „Library/Application Support“. Inhalte werden geprüft und als Kopien übernommen.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beende die bisherige App. Wähle ihren App-Container oder dessen Ordner „Library/Application Support“. Inhalte werden geprüft und als Kopien übernommen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit the previous app. Choose its app container or its “Library/Application Support” folder. Content is validated and imported as copies."
+          }
+        }
+      }
+    },
+    "Bilder auswählen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilder auswählen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select Images"
+          }
+        }
+      }
+    },
+    "Bilder einschließlich Papierkorb": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilder einschließlich Papierkorb"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images Including Trash"
+          }
+        }
+      }
+    },
+    "Bilder, Videos, Papierkörbe und Anleitungen in einer Sicherung. Zum Freigeben von Speicherplatz Videos in der Bibliothek entfernen und ihren Papierkorb prüfen.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilder, Videos, Papierkörbe und Anleitungen in einer Sicherung. Zum Freigeben von Speicherplatz Videos in der Bibliothek entfernen und ihren Papierkorb prüfen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images, videos, trash, and guides in one backup. To free storage, remove videos in the library and review their trash."
+          }
+        }
+      }
+    },
+    "Bisherige Snaprivo-Daten übernehmen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bisherige Snaprivo-Daten übernehmen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Previous Snaprivo Data"
+          }
+        }
+      }
+    },
+    "Bisherige Snaprivo-Daten übernehmen …": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bisherige Snaprivo-Daten übernehmen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Previous Snaprivo Data…"
+          }
+        }
+      }
+    },
+    "Das Originalvideo und seine Schnittdaten werden dauerhaft von diesem Mac entfernt.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Originalvideo und seine Schnittdaten werden dauerhaft von diesem Mac entfernt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The original video and its trim settings will be permanently removed from this Mac."
+          }
+        }
+      }
+    },
+    "Der Kauf wartet auf Bestätigung. Pro wird nach erfolgreicher Freigabe aktiviert.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Kauf wartet auf Bestätigung. Pro wird nach erfolgreicher Freigabe aktiviert."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The purchase is pending approval. Pro will activate after approval."
+          }
+        }
+      }
+    },
+    "Der Kaufbeleg konnte nicht geprüft werden. Bitte versuche es erneut.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Kaufbeleg konnte nicht geprüft werden. Bitte versuche es erneut."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The purchase could not be verified. Please try again."
+          }
+        }
+      }
+    },
+    "Dieser Dateityp wird nicht unterstützt.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Dateityp wird nicht unterstützt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file type is not supported."
+          }
+        }
+      }
+    },
+    "Einmal kaufen. Dauerhaft freischalten.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einmal kaufen. Dauerhaft freischalten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One purchase. Lasting access."
+          }
+        }
+      }
+    },
+    "Endgültig löschen …": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endgültig löschen …"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Permanently…"
+          }
+        }
+      }
+    },
+    "Enthält Bilder, Videos, Papierkörbe und bearbeitbare Anleitungen einschließlich Originalen.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enthält Bilder, Videos, Papierkörbe und bearbeitbare Anleitungen einschließlich Originalen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Includes images, videos, trash, and editable guides, including original files."
+          }
+        }
+      }
+    },
+    "Frei am Bildspeicherort": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frei am Bildspeicherort"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free at Image Storage Location"
+          }
+        }
+      }
+    },
+    "Für diesen Apple Account wurde kein Pro-Kauf gefunden.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für diesen Apple Account wurde kein Pro-Kauf gefunden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Pro purchase was found for this Apple Account."
+          }
+        }
+      }
+    },
+    "In der Bibliothek gesichert. Verwerfen verschiebt die Aufnahme in den Papierkorb.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Bibliothek gesichert. Verwerfen verschiebt die Aufnahme in den Papierkorb."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved in the library. Discard moves the capture to Trash."
+          }
+        }
+      }
+    },
+    "In „Alles sichern“ enthalten": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In „Alles sichern“ enthalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Included in Back Up Everything"
+          }
+        }
+      }
+    },
+    "Käufe wiederherstellen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käufe wiederherstellen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore Purchases"
+          }
+        }
+      }
+    },
+    "Lokale Arbeit ohne eigenes Konto. Einmalige Freischaltung über deinen Apple Account.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lokale Arbeit ohne eigenes Konto. Einmalige Freischaltung über deinen Apple Account."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work locally without a separate account. Unlock once with your Apple Account."
+          }
+        }
+      }
+    },
+    "Nach vorn": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach vorn"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bring Forward"
+          }
+        }
+      }
+    },
+    "Objekt umbenennen": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objekt umbenennen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename Object"
+          }
+        }
+      }
+    },
+    "Objekte (%lld)": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objekte (%lld)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objects (%lld)"
+          }
+        }
+      }
+    },
+    "Objektname": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Objektname"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Object Name"
+          }
+        }
+      }
+    },
+    "Preis nicht verfügbar": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preis nicht verfügbar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Price Unavailable"
+          }
+        }
+      }
+    },
+    "Pro freischalten · %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro freischalten · %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock Pro · %@"
+          }
+        }
+      }
+    },
+    "Pro ist aktiviert": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro ist aktiviert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro is active"
+          }
+        }
+      }
+    },
+    "Pro wird vorbereitet. Funktionsumfang und Preis stehen noch nicht fest. In dieser Entwicklungsversion sind alle vorhandenen Funktionen zugänglich; Käufe sind noch deaktiviert.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro wird vorbereitet. Funktionsumfang und Preis stehen noch nicht fest. In dieser Entwicklungsversion sind alle vorhandenen Funktionen zugänglich; Käufe sind noch deaktiviert."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro is being prepared. Features and pricing have not been finalized. All existing features are available in this development version; purchases are disabled."
+          }
+        }
+      }
+    },
+    "Pro wurde wiederhergestellt.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro wurde wiederhergestellt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pro has been restored."
+          }
+        }
+      }
+    },
+    "Schließe zuerst die Videovorschau.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließe zuerst die Videovorschau."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close the video preview first."
+          }
+        }
+      }
+    },
+    "Schnellvorschau nach der Aufnahme": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellvorschau nach der Aufnahme"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick Preview After Capture"
+          }
+        }
+      }
+    },
+    "Schrittnummer": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schrittnummer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Step Number"
+          }
+        }
+      }
+    },
+    "Snaprivo Pro": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snaprivo Pro"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snaprivo Pro"
+          }
+        }
+      }
+    },
+    "Speicherbelegung aktualisieren": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speicherbelegung aktualisieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh Storage Usage"
+          }
+        }
+      }
+    },
+    "Video endgültig löschen?": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video endgültig löschen?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanently Delete Video?"
+          }
+        }
+      }
+    },
+    "Videos einschließlich Papierkorb": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videos einschließlich Papierkorb"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videos Including Trash"
+          }
+        }
+      }
+    },
+    "Videosicherung erstellt. Sie enthält Originale, Schnittdaten, Papierkorb und unterbrochene Aufnahmen.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Videosicherung erstellt. Sie enthält Originale, Schnittdaten, Papierkorb und unterbrochene Aufnahmen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video backup created. It includes originals, trim settings, trash, and interrupted recordings."
+          }
+        }
+      }
+    },
+    "Vorn steht oben. Abdeckungen bleiben über allen anderen Objekten.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorn steht oben. Abdeckungen bleiben über allen anderen Objekten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frontmost objects are at the top. Redactions remain above all other objects."
+          }
+        }
+      }
+    },
+    "Vorschau der neuen Aufnahme": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau der neuen Aufnahme"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview of the New Capture"
+          }
+        }
+      }
+    },
+    "Wiederherstellung unterbrochen. Einige vollständige Kopien können bereits vorhanden sein. Bestehende Inhalte wurden nicht überschrieben.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederherstellung unterbrochen. Einige vollständige Kopien können bereits vorhanden sein. Bestehende Inhalte wurden nicht überschrieben."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore interrupted. Some complete copies may already be present. Existing content was not overwritten."
+          }
+        }
+      }
+    },
+    "„Alles sichern“ enthält auch deine Anleitungen. Einzelne bearbeitbare Kopien kannst du zusätzlich exportieren.": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "„Alles sichern“ enthält auch deine Anleitungen. Einzelne bearbeitbare Kopien kannst du zusätzlich exportieren."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back Up Everything includes your guides. You can also export individual editable copies."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

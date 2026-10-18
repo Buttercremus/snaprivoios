@@ -14,6 +14,7 @@ public struct EditorObject: Identifiable, Equatable, Codable, Sendable {
     public private(set) var id: UUID
     public var imageAsset: EditorImageAsset?
     public var groupID: UUID?
+    public var name: String?
     public var kind: Kind
     public var start: CGPoint
     public var end: CGPoint

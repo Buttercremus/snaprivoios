@@ -13,6 +13,10 @@ final class WorkspaceModel {
     let search: LibrarySearchModel
     let guides: GuideModel
     let videos: VideoLibraryModel
+    let purchases = ProPurchaseModel()
+    var showsPaywall = false
+    var quickCapture: EditorModel?
+    private(set) var hasOpenedExternalFile = false
     var showsOnboarding = false
     var libraryShowsVideos = false
     let storage: StorageLocations
@@ -107,7 +111,7 @@ final class WorkspaceModel {
         openNew(title: url.deletingPathExtension().lastPathComponent) {
             let hasAccess = url.startAccessingSecurityScopedResource()
             defer { if hasAccess { url.stopAccessingSecurityScopedResource() } }
-            let data = try Data(contentsOf: url)
+            let data = try ProjectArchive.readRegularFile(url, limit: 512_000_000)
             guard let source = CGImageSourceCreateWithData(data as CFData, nil),
                   let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
                   let width = properties[kCGImagePropertyPixelWidth] as? Int,
@@ -145,7 +149,9 @@ final class WorkspaceModel {
                 if copyAfterOpen { copyCapture(newEditor) }
                 // Keep a new capture even if the previous editor cannot currently be saved.
                 let previousSaved = await previous?.finishPendingWork() != false
-                if previousSaved {
+                if previousSaved && isScreenshot && preferences.quickPreviewAfterCapture {
+                    quickCapture = newEditor
+                } else if previousSaved {
                     editor = newEditor
                 } else {
                     editor?.notice = String(localized: "Das neue Bild ist in der Bibliothek gesichert. Sichere zuerst die bisherigen Änderungen.")
@@ -154,7 +160,7 @@ final class WorkspaceModel {
                     preferences.completedFirstCapture = true
                     if previousSaved { editor?.notice = String(localized: "Erste Aufnahme gesichert. Werkzeuge oben wählen, anschließend PNG speichern oder kopieren.") }
                 }
-                section = .editor
+                if quickCapture == nil { section = .editor }
                 await refreshLibrary()
             } catch { importError = String(localized: "Das Projekt konnte nicht angelegt werden: \(error.localizedDescription)") }
         }
@@ -306,7 +312,7 @@ enum WorkspaceSection: Hashable { case library, editor, guides }
 
 extension WorkspaceModel {
     var canChangeStorage: Bool {
-        !isLoading && !isUpdatingMetadata && !isChoosingStorageFolder && !screenshot.isBusy && !guides.isBusy && !guides.isSuspended
+        !isLoading && !videos.isBusy && videos.preview == nil && !isUpdatingMetadata && !isChoosingStorageFolder && !screenshot.isBusy && !guides.isBusy && !guides.isSuspended
             && editor?.isCanvasGestureActive != true && editor?.isExporting != true
     }
     func chooseStorageFolder(_ kind: StorageLocations.Kind) {
@@ -402,15 +408,16 @@ extension WorkspaceModel {
 }
 
 extension WorkspaceModel {
-    enum TransferAction { case importProject, exportProject(UUID), backup, restoreBackup }
+    enum TransferAction { case importProject, exportProject(UUID), backup, restoreBackup, completeBackup, restoreComplete, importLegacy }
 
     func chooseTransfer(_ action: TransferAction) {
         guard !isLoading, !isUpdatingMetadata, !screenshot.isBusy, storage.libraryError == nil else { return }
         let panel: NSSavePanel
         switch action {
-        case .importProject, .restoreBackup:
+        case .importProject, .restoreBackup, .restoreComplete, .importLegacy:
             let open = NSOpenPanel()
             open.allowsMultipleSelection = false; open.canChooseDirectories = false
+            if case .importLegacy = action { open.canChooseDirectories = true; open.canChooseFiles = false }
             open.treatsFilePackagesAsDirectories = false
             panel = open
         default: panel = NSSavePanel() }
@@ -423,6 +430,18 @@ extension WorkspaceModel {
             let title = items.first { $0.id == id }?.document.title ?? editor?.name ?? String(localized: "Projekt")
             panel.nameFieldStringValue = title.replacingOccurrences(of: "/", with: "-") + ".snaprivo"
             panel.message = String(localized: "Enthält das unveränderte Original – auch zugeschnittene oder abgedeckte Inhalte. Zum Weitergeben nur sichtbarer Pixel PNG exportieren.")
+        case .importLegacy:
+            panel.title = String(localized: "Bisherige Snaprivo-Daten übernehmen")
+            panel.message = String(localized: "Beende die bisherige App. Wähle ihren App-Container oder dessen Ordner „Library/Application Support“. Inhalte werden geprüft und als Kopien übernommen.")
+        case .completeBackup:
+            panel.title = String(localized: "Alles sichern")
+            panel.allowedContentTypes = [Self.completeBackupType]
+            panel.nameFieldStringValue = "Snaprivo-\(UUID().uuidString.prefix(8)).snaprivoall"
+            panel.message = String(localized: "Enthält Bilder, Videos, Papierkörbe und bearbeitbare Anleitungen einschließlich Originalen.")
+        case .restoreComplete:
+            panel.title = String(localized: "Alles wiederherstellen")
+            panel.allowedContentTypes = [Self.completeBackupType]
+            panel.message = String(localized: "Alle Inhalte werden geprüft und als neue Kopien ergänzt. Vorhandene Arbeit bleibt erhalten.")
         case .backup:
             panel.title = String(localized: "Bibliothek sichern"); panel.allowedContentTypes = [Self.backupType]
             let stamp = Date.now.formatted(.iso8601.year().month().day().dateSeparator(.dash).time(includingFractionalSeconds: false)).replacingOccurrences(of: ":", with: "-")
@@ -437,14 +456,17 @@ extension WorkspaceModel {
             Task { await self?.transfer(action, at: url) }
         }
     }
+    static var completeBackupType: UTType { UTType(exportedAs: "com.snaprivo.complete-backup", conformingTo: .package) }
     static var projectType: UTType { UTType(exportedAs: "com.snaprivo.project", conformingTo: .data) }
     static var backupType: UTType { UTType(exportedAs: "com.snaprivo.backup", conformingTo: .package) }
 
     @discardableResult func transfer(_ action: TransferAction, at url: URL) async -> Bool {
-        guard !isLoading, !isUpdatingMetadata, !screenshot.isBusy, storage.libraryError == nil else { return false }
-        isLoading = true; isTransferring = true
+        guard !isLoading, !isUpdatingMetadata, !screenshot.isBusy, !videos.isBusy, !guides.isBusy, videos.preview == nil, storage.libraryError == nil else { return false }
+        isLoading = true; isTransferring = true; importError = nil; transferNotice = nil
         let task = Task { [self] in
-            defer { isLoading = false; isTransferring = false; transferTask = nil }
+            guides.isSuspended = true; videos.isSuspended = true
+            defer { isLoading = false; isTransferring = false; transferTask = nil; guides.isSuspended = false; videos.isSuspended = false }
+            guard await guides.finishPendingWork(), await videos.finishPendingWork() else { return false }
             guard await editor?.finishPendingWork() != false else { importError = String(localized: "Sichere zuerst die offenen Änderungen."); return false }
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
@@ -464,6 +486,14 @@ extension WorkspaceModel {
                     editor = makeEditor(image: image, document: loaded.document, generation: loaded.generation)
                     section = .editor
                     transferNotice = String(localized: "Projekt als bearbeitbare Kopie importiert.")
+                case .completeBackup, .restoreComplete, .importLegacy:
+                    let service = CompleteBackup(images: store, videos: videos.files, guides: guides.store)
+                    let count: CompleteBackup.Counts
+                    if case .completeBackup = action { count = try await service.backup(to: url) }
+                    else if case .importLegacy = action { count = try await service.importLegacy(from: url) }
+                    else { count = try await service.restore(from: url) }
+                    transferNotice = String(localized: "\(count.images) Bilder, \(count.videos) Videos und \(count.guides) Anleitungen verarbeitet.")
+                    await guides.refresh()
                 case .backup:
                     let count = try await store.backup(to: url)
                     transferNotice = String(localized: "\(count) Projekte einschließlich Papierkorb gesichert.")
@@ -494,5 +524,43 @@ extension WorkspaceModel {
     nonisolated static func archiveThumbnail(_ archive: ProjectArchive) throws -> Data {
         let document = try archive.validatedDocument()
         return try EditorRenderer.thumbnail(image: archiveImage(archive), objects: document.objects, crop: document.crop, resizedSize: document.resizedSize)
+    }
+}
+
+extension WorkspaceModel {
+    func openExternalFile(_ url: URL) async {
+        hasOpenedExternalFile = true; showsOnboarding = false
+        if let metadataTask { _ = await metadataTask.value }
+        if let librarySwitchTask { _ = await librarySwitchTask.value }
+        if let openingTask { await openingTask.value }
+        if let transferTask { _ = await transferTask.value }
+        switch url.pathExtension.lowercased() {
+        case "snaprivo": _ = await transfer(.importProject, at: url)
+        case "snaprivobackup": _ = await transfer(.restoreBackup, at: url)
+        case "snaprivoall": _ = await transfer(.restoreComplete, at: url)
+        case "snaprivoguide":
+            guard !isLoading else { return }
+            await guides.importExternalCopy(url); section = .guides
+        case "png", "jpg", "jpeg", "tif", "tiff", "heic":
+            openImage(at: url)
+            if let openingTask { await openingTask.value }
+        default: importError = String(localized: "Dieser Dateityp wird nicht unterstützt.")
+        }
+    }
+    func createGuide(from ids: [UUID]) {
+        guard !isLoading, !ids.isEmpty else { return }
+        guides.createFromProjects(ids, from: store) { [weak self] in
+            await self?.editor?.finishPendingWork() != false
+        }
+        section = .guides
+    }
+    func editQuickCapture() {
+        guard let value = quickCapture else { return }
+        editor = value; quickCapture = nil; section = .editor
+    }
+    func discardQuickCapture() async {
+        guard let value = quickCapture else { return }
+        do { try await store.moveToTrash(value.document.id); quickCapture = nil; await refreshLibrary() }
+        catch { importError = error.localizedDescription }
     }
 }

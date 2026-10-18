@@ -1,7 +1,9 @@
 import SwiftUI
 import SnagForgeDomain
 
+#if !WORKFLOW_CHECKS
 @main
+#endif
 struct SnagForgeApp: App {
     @NSApplicationDelegateAdaptor(SnagForgeDelegate.self) private var appDelegate
     @State private var workspace = WorkspaceModel()
@@ -10,7 +12,7 @@ struct SnagForgeApp: App {
     var body: some Scene {
         Window(String(localized: "Snaprivo"), id: "workspace") {
             WorkspaceView(workspace: workspace)
-                .onAppear { appDelegate.workspace = workspace; workspace.preferences.applyAppearance() }
+                .onAppear { appDelegate.showWorkspace = { AppWindows.show("workspace", using: openWindow) }; appDelegate.workspace = workspace; workspace.preferences.applyAppearance() }
         }
         .defaultSize(width: 1180, height: 780)
         .commands {
@@ -18,6 +20,9 @@ struct SnagForgeApp: App {
                 Button(String(localized: "Bild öffnen …")) { workspace.isImporting = true }
                     .keyboardShortcut("o")
                 Button(String(localized: "Projekt importieren …")) { workspace.chooseTransfer(.importProject) }.disabled(workspace.isLoading)
+                Divider()
+                Button(String(localized: "Alles sichern …")) { workspace.chooseTransfer(.completeBackup) }.disabled(!workspace.canChangeStorage)
+                Button(String(localized: "Alles wiederherstellen …")) { workspace.chooseTransfer(.restoreComplete) }.disabled(!workspace.canChangeStorage)
                 Divider()
                 Button(String(localized: "Bildbibliothek sichern …")) { workspace.chooseTransfer(.backup) }.disabled(workspace.isLoading)
                 Button(String(localized: "Sicherung wiederherstellen …")) { workspace.chooseTransfer(.restoreBackup) }.disabled(workspace.isLoading)
@@ -166,7 +171,26 @@ enum AppWindows {
 
 @MainActor
 final class SnagForgeDelegate: NSObject, NSApplicationDelegate {
-    weak var workspace: WorkspaceModel?
+    weak var workspace: WorkspaceModel? { didSet { drainOpenFiles() } }
+    var showWorkspace: (() -> Void)?
+    private var pendingFiles: [URL] = []
+    private var openingFiles = false
+    func application(_ application: NSApplication, open urls: [URL]) { Task { await openFiles(urls) } }
+    func openFiles(_ urls: [URL]) async {
+        pendingFiles.append(contentsOf: urls)
+        drainOpenFiles()
+    }
+    private func drainOpenFiles() {
+        guard !openingFiles, let workspace, !pendingFiles.isEmpty else { return }
+        openingFiles = true
+        showWorkspace?()
+        workspace.showsOnboarding = false
+        Task {
+            defer { openingFiles = false }
+            while !pendingFiles.isEmpty { await workspace.openExternalFile(pendingFiles.removeFirst()) }
+            NSApp.activate(ignoringOtherApps: true)
+        }
+    }
     private var awaitingSave = false
     func applicationWillTerminate(_ notification: Notification) {
         workspace?.captureShortcuts.stop()

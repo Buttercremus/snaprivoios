@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion="2700" version="1.3">
+<BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="YES" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="YES"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="7CA28AD7D4104674B9AFA3E2" BuildableName="SnaprivoStoreTests.xctest" BlueprintName="SnaprivoStoreTests" ReferencedContainer="container:Snaprivo.xcodeproj"/></BuildActionEntry></BuildActionEntries></BuildAction>
+<TestAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv="YES"><Testables><TestableReference skipped="NO"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="7CA28AD7D4104674B9AFA3E2" BuildableName="SnaprivoStoreTests.xctest" BlueprintName="SnaprivoStoreTests" ReferencedContainer="container:Snaprivo.xcodeproj"/></TestableReference></Testables></TestAction>
+</Scheme>

@@ -19,7 +19,7 @@ import Testing
     var document = VideoDocument(title: "Video", fileName: "clip.mp4")
     document.schemaVersion = 999
     #expect(throws: ProjectError.self) { try document.validated() }
-    document.schemaVersion = 2; document.duration = .infinity
+    document.schemaVersion = 3; document.duration = .infinity
     #expect(throws: ProjectError.self) { try document.validated() }
     document.duration = 1; document.pixelSize = PixelSize(width: Int.max, height: 1)
     #expect(throws: ProjectError.self) { try document.validated() }
@@ -30,6 +30,6 @@ import Testing
     #expect(try VideoBackup(entries: [entry]).validated().entries.count == 1)
     #expect(throws: ProjectError.self) { try VideoBackup(entries: [entry, entry]).validated() }
     #expect(throws: ProjectError.self) { try VideoBackup(entries: [.init(document: document, sha256: "bad")]).validated() }
-    document.state = .interrupted
+    document.state = .recording
     #expect(throws: ProjectError.self) { try VideoBackup(entries: [.init(document: document, sha256: entry.sha256)]).validated() }
 }

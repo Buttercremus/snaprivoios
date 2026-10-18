@@ -8,6 +8,7 @@ import SnagForgeDomain
     private(set) var issues: [String] = []
     private(set) var didLoad = false
     private(set) var isBusy = false
+    var isSuspended = false
     var error: String?
     var notice: String?
     var preview: VideoEditorModel?
@@ -53,10 +54,21 @@ import SnagForgeDomain
     func rename(_ id: UUID, title: String) async -> Bool {
         await perform { [files] in try await files.rename(id, title: title) }
     }
+    enum TrashAction { case trash, restore, delete }
+    func changeTrash(_ id: UUID, action: TrashAction) async -> Bool {
+        guard preview == nil else { error = String(localized: "Schließe zuerst die Videovorschau."); return false }
+        return await perform { [files] in
+            switch action {
+            case .trash: try await files.moveToTrash(id)
+            case .restore: try await files.restoreFromTrash(id)
+            case .delete: try await files.permanentlyDelete(id)
+            }
+        }
+    }
     func backup(to target: URL) async -> Bool {
         await perform { [self] in
             try await files.backup(to: target)
-            notice = String(localized: "Videosicherung erstellt. Sie enthält die fertigen Originale und ihre Titel.")
+            notice = String(localized: "Videosicherung erstellt. Sie enthält Originale, Schnittdaten, Papierkorb und unterbrochene Aufnahmen.")
         }
     }
     func restore(from source: URL) async -> Bool {
@@ -66,7 +78,7 @@ import SnagForgeDomain
         }
     }
     private func perform(_ action: @escaping @MainActor () async throws -> Void) async -> Bool {
-        guard !isBusy else { return false }
+        guard !isBusy, !isSuspended else { return false }
         isBusy = true
         let task = Task { [self] in
             do { try await action(); await refresh(); return true }
@@ -77,7 +89,7 @@ import SnagForgeDomain
         return result
     }
     func chooseBackup(restoring: Bool) {
-        guard panel == nil, !isBusy else { return }
+        guard panel == nil, !isBusy, !isSuspended else { return }
         let dialog = NSOpenPanel(); dialog.canChooseFiles = false; dialog.canChooseDirectories = true
         dialog.allowsMultipleSelection = false
         dialog.message = restoring ? String(localized: "Wähle den Ordner einer Snaprivo-Videosicherung. Bestehende Videos bleiben erhalten.") : String(localized: "Wähle einen Zielordner. Darin wird eine neue Videosicherung angelegt.")
@@ -93,7 +105,7 @@ import SnagForgeDomain
         }
     }
     func chooseExport(_ id: UUID) {
-        guard panel == nil, !isBusy else { return }
+        guard panel == nil, !isBusy, !isSuspended else { return }
         let dialog = NSSavePanel(); dialog.allowedContentTypes = [.mpeg4Movie]
         dialog.nameFieldStringValue = "Snaprivo-Video.mp4"; panel = dialog
         dialog.begin { [weak self] response in

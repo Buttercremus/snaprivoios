@@ -197,3 +197,10 @@ Die Standard-Signaturprüfung innerhalb der eingeschränkten Tool-Umgebung liefe
 - Finale Release-Signatur mit `codesign --verify --deep --strict` erfolgreich. Lokaler Apple-Development-Build mit Sandbox, benutzergewähltem Dateizugriff und Development-Entitlement `get-task-allow`; kein Store-distribuiertes Archiv. Bei Organizer-Distribution resultierende Signatur/Entitlements erneut prüfen.
 - Fingerprint nach den Code- und Copyright-Korrekturen: `eebda260dbac68b540e70171038b200d25088cb696103b585173b5214c3943af` (SHA-256; produktive Swift-Dateien in App und Domain-Sources plus pbxproj/Info.plist/Entitlements; relative Pfade sortiert, jeweils Pfad + NUL + Inhalt + NUL).
 - Copyright „© 2026 Simon Raach“ nach Nutzerbestätigung eingetragen. Debug-/Release-Builds und Bundle-Prüfung erfolgreich; Release-Signatur gültig. Logs: `/tmp/snaprivo-copyright-debug.log`, `/tmp/snaprivo-copyright-release.log`. Keine App-Store-Connect-Verarbeitung oder Organizer-Validierung durchgeführt.
+
+
+## Nacharbeit – 18. Oktober 2026
+
+§8.1: Finder-Typregistrierung und serialisierte Dateiöffnung implementiert; Projekt-/Guide-/Backup-Import nutzt die vorhandenen validierten Kopierpfade. §8.2: vorhandene einfache Checkboxauswahl durch native, benennbare Objektliste in Malreihenfolge mit Mehrfachauswahl und Ebenenaktionen ersetzt. Eine vollständige VoiceOver- und geometrische Canvas-Abnahme ist weiterhin offen. §5.1: Bildimport prüft jetzt reguläre Datei und 512-MB-Grenze vor dem Einlesen; das ist keine pauschale Abnahme sämtlicher lokalen Paket-/Cache-Reads.
+
+Aktueller Bundle-Identifier `com.snaprivo.app` und alter Container `com.snagforge.app` sind ausdrücklich getrennt dokumentiert. Alte Daten lassen sich nach Ordnerwahl als geprüfte Kopien übernehmen. Ein initialer Git-Snapshot existiert seit diesem Auftrag. Gesamtsicherung, Video-Papierkorb, Aufnahmevorschau und StoreKit-Tests sind unter [Release-Workflows-Abnahme](docs/RELEASE-WORKFLOWS-ABNAHME.md) nachgewiesen; kein Store-Release durch diesen Auftrag.

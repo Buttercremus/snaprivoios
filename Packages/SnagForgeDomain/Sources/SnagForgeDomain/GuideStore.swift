@@ -65,6 +65,13 @@ public actor GuideStore {
             try document.encoded().write(to: url(document.id), options: .atomic)
         }
     }
+    public func removeImported(_ ids: [UUID]) throws {
+        try locked {
+            for id in ids {
+                for file in [url(id), previous(id)] where FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
+            }
+        }
+    }
     public func save(_ document: GuideDocument, expectedRevision: Int) throws -> GuideDocument {
         try locked {
             let current = try loadUnlocked(document.id).document

@@ -247,3 +247,12 @@ Nutzerentscheidung: vier direkte Bildaktionen (Kopieren, Speichern, Texterkennun
 ### Bild/Video-Einstieg und vierstufiges Onboarding
 
 Auswahlleiste mit zwei direkten Buttons „Foto“ und „Video“, ohne Umschalter und ohne zusätzlichen Aufnahmebutton. Foto übernimmt den Ausschnitt direkt; Video startet direkt mit gespeichertem Systemton/Mikrofon aus Einstellungen → Aufnahme und dem eingestellten Vorlauf. Beide Aktionen sind größer und blau. Scroll-Aufnahmen bieten nur die Foto-Aktion. Video-Direktbutton im Hauptfenster. Einführung in vier Schritten: Aufnahmeart und Berechtigungen, Markieren, Ausgabe, optionales Screenshot-Kürzel mit bestehender Konfliktprüfung und globaler Verfügbarkeit. Bereits abgeschlossene Einführungen werden nicht ungefragt erneut angezeigt.
+
+
+## Autorisierte Abläufe und Einmalkauf – 18. Oktober 2026
+
+Nutzerauftrag: gemeinsame Sicherung/Wiederherstellung für Bilder, Videos und Anleitungen; Video-Papierkorb und Speicherübersicht; Finder-Dateiöffnung; direkte Anleitungserstellung aus ausgewählten Bildern; optionale Aufnahme-Schnellvorschau; benennbare, sortierte Objektliste; Abgleich der App-Identität und reproduzierbarer Git-Stand. Diese Abläufe sind implementiert. Anleitung/Bild-Verknüpfungen werden beim Gesamt-Restore auf neue IDs abgebildet. Wiederherstellung ergänzt vorhandene Inhalte; Originale bleiben Bestandteil bearbeitbarer Sicherungen. Papierkorbfreigabe erfolgt erst durch ausdrückliches endgültiges Löschen.
+
+Kaufmodell: einmalige Pro-Freischaltung, kein Start-Abo. StoreKit-2-Adapter, Paywall, Produkt-/Belegprüfung, Wiederherstellen, Widerruf und isolierte Tests sind implementiert. Preis und genaue Free-/Pro-Grenzen bleiben Nutzerentscheidungen; deshalb keine vorläufigen Sperren und kein echter Kauf vor deren Freigabe. Vorgesehene Produkt-ID `com.snaprivo.pro.lifetime` ist erst in App Store Connect einzurichten. Der Testpreis ist keine Preisentscheidung.
+
+Aktuelle App-ID ist bereits `com.snaprivo.app`, frühere ID `com.snagforge.app`. Historische Hinweise auf eine unveränderte ID beschreiben den damaligen Stand. Alte Daten werden ausschließlich nach ausdrücklicher Ordnerwahl übernommen; keine automatische Umgehung anderer Sandbox-Container oder von TCC. Aufnahmeberechtigungen sind für die aktuelle signierte Identität separat abzunehmen. Technische Details und Grenzen: [Release-Workflows-Abnahme](RELEASE-WORKFLOWS-ABNAHME.md).

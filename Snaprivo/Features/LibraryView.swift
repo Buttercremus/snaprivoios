@@ -4,6 +4,8 @@ import SnagForgeDomain
 struct LibraryView: View {
     let workspace: WorkspaceModel
     @Environment(\.openSettings) private var openSettings
+    @State private var selectedProjects = Set<UUID>()
+    @State private var selecting = false
     @State private var showsTrash = false
     @State private var deleting: ProjectDocument?
     private var displayedItems: [ProjectLibraryItem] { showsTrash ? workspace.trashItems : workspace.items }
@@ -69,6 +71,17 @@ struct LibraryView: View {
                     }
                 }
             }.padding()
+            HStack {
+                Toggle(String(localized: "Bilder auswählen"), isOn: $selecting).toggleStyle(.button)
+                if selecting {
+                    Text(String(localized: "\(selectedProjects.count) ausgewählt"))
+                    Button(String(localized: "Anleitung erstellen"), systemImage: "list.number") {
+                        workspace.createGuide(from: filtered.filter { selectedProjects.contains($0.id) }.map(\.id))
+                        selectedProjects = []; selecting = false
+                    }.disabled(selectedProjects.isEmpty || selectedProjects.count > 100 || workspace.guides.isBusy)
+                }
+                Spacer()
+            }.padding(.horizontal).padding(.bottom, 10).disabled(showsTrash || workspace.isLoading)
             organizationFilters.padding(.horizontal).padding(.bottom, 10)
             LibraryIndexControls(workspace: workspace).padding(.horizontal).padding(.bottom, 10)
             if let searchError { Text(searchError).font(.caption).foregroundStyle(.orange).padding(.horizontal) }
@@ -111,7 +124,16 @@ struct LibraryView: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 340), spacing: 20)], spacing: 20) {
                         ForEach(filtered) { item in
                             VStack(spacing: 0) {
-                                Button { if !showsTrash { workspace.openProject(item.id) } } label: { LibraryCard(item: item) }
+                                Button {
+                                    if selecting {
+                                        if selectedProjects.contains(item.id) { selectedProjects.remove(item.id) } else { selectedProjects.insert(item.id) }
+                                    } else if !showsTrash { workspace.openProject(item.id) }
+                                } label: {
+                                    LibraryCard(item: item).overlay(alignment: .topTrailing) {
+                                        if selecting { Image(systemName: selectedProjects.contains(item.id) ? "checkmark.circle.fill" : "circle").font(.title2).foregroundStyle(.tint).padding(12) }
+                                    }
+                                }
+                                .accessibilityValue(selecting && selectedProjects.contains(item.id) ? String(localized: "Ausgewählt") : "")
                                     .buttonStyle(.plain)
                                     .disabled(showsTrash)
                                     .help(showsTrash ? String(localized: "Zum Bearbeiten zuerst wiederherstellen") : String(localized: "Projekt öffnen und weiter bearbeiten"))
@@ -183,7 +205,8 @@ struct LibraryView: View {
                 searchError = String(localized: "Die Inhaltssuche ist gerade nicht verfügbar. Titel, Tags und Sammlungen werden weiter durchsucht.")
             }
         }
-        .onChange(of: showsTrash) { tagFilter = ""; collectionFilter = "" }
+        .onChange(of: showsTrash) { tagFilter = ""; collectionFilter = ""; selectedProjects = []; selecting = false }
+        .onChange(of: selecting) { if !selecting { selectedProjects = [] } }
     }
 
     private var organizationFilters: some View {
@@ -225,6 +248,9 @@ struct LibraryView: View {
     private var fileControls: some View {
         HStack {
             Menu(String(localized: "Dateien"), systemImage: "folder") {
+                Button(String(localized: "Alles sichern …")) { workspace.chooseTransfer(.completeBackup) }
+                Button(String(localized: "Alles wiederherstellen …")) { workspace.chooseTransfer(.restoreComplete) }
+                Divider()
                 Button(String(localized: "Projekt importieren …")) { workspace.chooseTransfer(.importProject) }
                 Button(String(localized: "Bildbibliothek sichern …")) { workspace.chooseTransfer(.backup) }
                 Button(String(localized: "Sicherung wiederherstellen …")) { workspace.chooseTransfer(.restoreBackup) }

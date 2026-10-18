@@ -22,7 +22,7 @@ struct WorkspaceView: View {
             }
             .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 280)
             .safeAreaInset(edge: .bottom) {
-                Text(String(localized: "Snaprivo · Entwicklungsversion"))
+                Button("Snaprivo Pro") { workspace.showsPaywall = true }
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .padding()
@@ -41,7 +41,7 @@ struct WorkspaceView: View {
                         }.pickerStyle(.segmented).frame(maxWidth: 320).padding(.top, 12).padding(.horizontal)
                             .accessibilityIdentifier("library.media")
                         if workspace.libraryShowsVideos {
-                            VideoLibraryView(model: workspace.videos)
+                            VideoLibraryView(model: workspace.videos, allBackup: { workspace.chooseTransfer(.completeBackup) }, allRestore: { workspace.chooseTransfer(.restoreComplete) })
                         } else {
                         if !workspace.preferences.completedFirstCapture {
                             HStack(alignment: .top, spacing: 16) {
@@ -89,13 +89,18 @@ struct WorkspaceView: View {
                 }
             }
         }
+        .task { await workspace.purchases.start() }
         .task {
             await workspace.refreshLibrary()
-            if !workspace.preferences.completedOnboarding && !workspace.preferences.completedFirstCapture
+            if !workspace.hasOpenedExternalFile && !workspace.preferences.completedOnboarding && !workspace.preferences.completedFirstCapture
                 && workspace.items.isEmpty && workspace.videos.items.isEmpty && workspace.videos.preview == nil
                 && workspace.editor == nil && !workspace.screenshot.isBusy {
                 workspace.showsOnboarding = true
             }
+        }
+        .sheet(isPresented: $workspace.showsPaywall) { ProPaywallView(model: workspace.purchases) }
+        .sheet(isPresented: Binding(get: { workspace.quickCapture != nil }, set: { if !$0 { workspace.quickCapture = nil } })) {
+            if let capture = workspace.quickCapture { QuickCaptureView(workspace: workspace, model: capture) }
         }
         .sheet(isPresented: $workspace.showsOnboarding, onDismiss: {
             if captureAfterIntroduction {

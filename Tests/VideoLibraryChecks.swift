@@ -52,19 +52,21 @@ import SnagForgeDomain
         let manifest = backup.appendingPathComponent("manifest.json")
         let snapshot = try Data(contentsOf: manifest)
         let archive = try JSONDecoder().decode(VideoBackup.self, from: snapshot).validated()
-        require(archive.entries.count == 2, "Backup included incomplete recordings")
+        let backupCount = migrated.items.count
+        require(archive.entries.count == backupCount, "Backup lost a finished or interrupted entry")
         do { try await restarted.backup(to: backup); preconditionFailure("Backup replaced an existing target") } catch { }
         require(try Data(contentsOf: manifest) == snapshot)
         let destination = VideoRecordingFiles(root: root.appendingPathComponent("Restored"))
-        require(try await destination.restore(from: backup) == 2)
+        require(try await destination.restore(from: backup) == backupCount)
         let copies = try await destination.list().items
         require(Set(copies.map(\.id)).isDisjoint(with: Set(archive.entries.map { $0.document.id })))
-        require(copies.allSatisfy { $0.document.state == .finished && $0.thumbnail != nil })
-        require(try await destination.restore(from: backup) == 2)
-        require(try await destination.list().items.count == 4)
-        try Data("corrupted second source".utf8).write(to: backup.appendingPathComponent(archive.entries[1].document.fileName))
+        require(copies.filter { $0.document.state == .finished && $0.thumbnail != nil }.count == 2)
+        require(copies.filter { $0.document.state != .finished }.count == backupCount - 2)
+        require(try await destination.restore(from: backup) == backupCount)
+        require(try await destination.list().items.count == backupCount * 2)
+        try Data("corrupted second source".utf8).write(to: backup.appendingPathComponent(archive.entries.first { $0.hasFile != false }!.document.fileName))
         do { _ = try await destination.restore(from: backup); preconditionFailure("Corrupt backup accepted") } catch { }
-        require(try await destination.list().items.count == 4, "Invalid backup partially changed library")
+        require(try await destination.list().items.count == backupCount * 2, "Invalid backup partially changed library")
 
         let unknown = root.appendingPathComponent("Unknown"), unknownStore = VideoRecordingFiles(root: unknown)
         let pending = try await unknownStore.prepare(availableBytes: 1_000_000_000)

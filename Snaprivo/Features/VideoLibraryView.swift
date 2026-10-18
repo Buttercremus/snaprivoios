@@ -3,20 +3,29 @@ import SnagForgeDomain
 
 struct VideoLibraryView: View {
     @Bindable var model: VideoLibraryModel
+    var allBackup: (() -> Void)?
+    var allRestore: (() -> Void)?
     @State private var query = ""
     @State private var renaming: VideoDocument?
+    @State private var showsTrash = false
+    @State private var deleting: VideoDocument?
     @State private var nameOrder = false
+    private var displayed: [VideoRecordingFiles.Item] { model.items.filter { ($0.document.trashedAt != nil) == showsTrash } }
     private var filtered: [VideoRecordingFiles.Item] {
         let terms = LibrarySearch.terms(query)
-        return model.items.filter { item in terms.allSatisfy { LibrarySearch.fold(item.document.title).contains($0) } }
+        return model.items.filter { item in (item.document.trashedAt != nil) == showsTrash && terms.allSatisfy { LibrarySearch.fold(item.document.title).contains($0) } }
             .sorted { nameOrder ? $0.document.title.localizedStandardCompare($1.document.title) == .orderedAscending : $0.document.createdAt > $1.document.createdAt }
     }
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text(String(localized: "\(model.items.count) Videos")).font(.headline)
+                Text(String(localized: "\(displayed.count) Videos")).font(.headline)
                 Spacer()
+                Toggle(String(localized: "Papierkorb"), isOn: $showsTrash).toggleStyle(.button)
                 Menu(String(localized: "Dateien"), systemImage: "folder") {
+                    if let allBackup { Button(String(localized: "Alles sichern …"), action: allBackup) }
+                    if let allRestore { Button(String(localized: "Alles wiederherstellen …"), action: allRestore) }
+                    Divider()
                     Button(String(localized: "Videos sichern …")) { model.chooseBackup(restoring: false) }
                     Button(String(localized: "Videosicherung wiederherstellen …")) { model.chooseBackup(restoring: true) }
                 }
@@ -27,7 +36,7 @@ struct VideoLibraryView: View {
                 Button { Task { await model.refresh() } } label: { Image(systemName: "arrow.clockwise") }
                     .help(String(localized: "Erneut laden")).accessibilityLabel(String(localized: "Erneut laden"))
             }.padding()
-            Text(String(localized: "Videos liegen separat auf diesem Mac. Die Bildbibliothekssicherung enthält keine Videos; „Videos sichern“ erstellt ihre eigene Sicherung."))
+            Text(ByteCountFormatter.string(fromByteCount: model.items.filter { ($0.document.trashedAt != nil) == showsTrash }.reduce(0) { $0 + $1.bytes }, countStyle: .file))
                 .font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal).padding(.bottom, 12)
             if !model.issues.isEmpty {
                 DisclosureGroup(String(localized: "Videobibliothek prüfen")) {
@@ -35,8 +44,8 @@ struct VideoLibraryView: View {
                 }.padding().frame(maxWidth: .infinity, alignment: .leading)
             }
             if !model.didLoad { ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity) }
-            else if model.items.isEmpty {
-                ContentUnavailableView(String(localized: "Noch keine Videos"), systemImage: "video",
+            else if displayed.isEmpty {
+                ContentUnavailableView(showsTrash ? String(localized: "Papierkorb ist leer") : String(localized: "Noch keine Videos"), systemImage: showsTrash ? "trash" : "video",
                     description: Text(String(localized: "Starte im Menü Aufnahme eine Videoaufnahme. Nach erfolgreichem Stop bleibt das Original hier erhalten.")))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if filtered.isEmpty {
@@ -47,16 +56,22 @@ struct VideoLibraryView: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 340), spacing: 20)], spacing: 20) {
                         ForEach(filtered) { item in
                             VStack(alignment: .leading, spacing: 8) {
-                                if item.document.state == .finished {
+                                if item.document.state == .finished && !showsTrash {
                                     Button { Task { await model.showPreview(item.id) } } label: { VideoLibraryCard(item: item) }
                                         .buttonStyle(.plain).accessibilityIdentifier("video.library.open.\(item.id)")
                                 } else {
                                     VideoLibraryCard(item: item).accessibilityIdentifier("video.library.unfinished.\(item.id)")
                                 }
                                 HStack {
+                                    if showsTrash {
+                                        Button(String(localized: "Wiederherstellen"), systemImage: "arrow.uturn.backward") { Task { _ = await model.changeTrash(item.id, action: .restore) } }
+                                        Spacer()
+                                        Button(String(localized: "Endgültig löschen …"), systemImage: "trash", role: .destructive) { deleting = item.document }
+                                    } else {
                                     Button(String(localized: "Umbenennen …"), systemImage: "pencil") { renaming = item.document }
                                         .labelStyle(.iconOnly).help(String(localized: "Umbenennen …"))
                                     Spacer()
+                                    Button(String(localized: "In den Papierkorb"), systemImage: "trash") { Task { _ = await model.changeTrash(item.id, action: .trash) } }.labelStyle(.iconOnly)
                                     Menu {
                                         Button(String(localized: "Video ansehen")) { Task { await model.showPreview(item.id) } }
                                         Button(String(localized: "Original extern öffnen")) { Task { await model.open(item.id) } }
@@ -65,7 +80,9 @@ struct VideoLibraryView: View {
                                     } label: { Image(systemName: "ellipsis.circle") }
                                     .menuStyle(.borderlessButton).fixedSize().disabled(item.document.state != .finished)
                                     .accessibilityLabel(String(localized: "Videoaktionen"))
+                                    }
                                 }.padding(.horizontal, 8)
+                                Text(ByteCountFormatter.string(fromByteCount: item.bytes, countStyle: .file)).font(.caption).foregroundStyle(.secondary)
                             }
                         }
                     }.padding()
@@ -86,6 +103,12 @@ struct VideoLibraryView: View {
         .alert(String(localized: "Dateiaktion abgeschlossen"), isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
             Button("OK") { model.notice = nil }
         } message: { Text(model.notice ?? "") }
+        .alert(String(localized: "Video endgültig löschen?"), isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
+            Button(String(localized: "Endgültig löschen"), role: .destructive) {
+                if let id = deleting?.id { Task { _ = await model.changeTrash(id, action: .delete) } }; deleting = nil
+            }
+            Button(String(localized: "Abbrechen"), role: .cancel) { deleting = nil }
+        } message: { Text(String(localized: "Das Originalvideo und seine Schnittdaten werden dauerhaft von diesem Mac entfernt.")) }
         .task { await model.refresh() }
     }
 }

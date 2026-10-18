@@ -80,6 +80,7 @@ final class AppPreferences {
     var videoMicrophone: Bool { didSet { defaults.set(videoMicrophone, forKey: "capture.videoMicrophone") } }
     var captureDelay: Int { didSet { defaults.set(captureDelay, forKey: "capture.defaultDelay") } }
     var includesCursor: Bool { didSet { defaults.set(includesCursor, forKey: "capture.includesCursor") } }
+    var quickPreviewAfterCapture: Bool { didSet { defaults.set(quickPreviewAfterCapture, forKey: "capture.quickPreview") } }
     var copyAfterCapture: Bool { didSet { defaults.set(copyAfterCapture, forKey: "capture.copyAfterCapture") } }
 
     init(defaults: UserDefaults = .standard) {
@@ -116,6 +117,7 @@ final class AppPreferences {
         let delay = defaults.integer(forKey: "capture.defaultDelay")
         captureDelay = [0, 3, 5].contains(delay) ? delay : 0
         includesCursor = defaults.bool(forKey: "capture.includesCursor")
+        quickPreviewAfterCapture = defaults.bool(forKey: "capture.quickPreview")
         copyAfterCapture = defaults.bool(forKey: "capture.copyAfterCapture")
         // Migrate the previous untouched default; preserve deliberate custom orders.
         if storedToolbarActions.map(\.rawValue) == ["resize", "copy", "savePNG", "recognizeText", "share", "openWith", "pin", "colorPicker", "insertImage", "output"] {

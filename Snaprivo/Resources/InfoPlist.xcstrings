@@ -106,6 +106,57 @@
           }
         }
       }
+    },
+    "Snaprivo Complete Backup": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snaprivo Gesamtsicherung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snaprivo Complete Backup"
+          }
+        }
+      }
+    },
+    "Snaprivo Project": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snaprivo Projekt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snaprivo Project"
+          }
+        }
+      }
+    },
+    "Snaprivo Image Backup": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snaprivo Bildsicherung"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snaprivo Image Backup"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -247,6 +247,12 @@ public actor ProjectStore {
     /// Validate and stage everything before publishing. Existing IDs are preserved unless occupied.
     /// The caller validates image decoding and produces a fresh thumbnail for each entry.
     public func restoreBackup(from source: URL, thumbnail: @Sendable (ProjectArchive) throws -> Data) throws -> Int {
+        try restoreBackupIDs(from: source, thumbnail: thumbnail).count
+    }
+    public func restoreBackupIDs(from source: URL, alwaysCopy: Bool = false, thumbnail: @Sendable (ProjectArchive) throws -> Data) throws -> [UUID] {
+        Array(try restoreBackupMapped(from: source, alwaysCopy: alwaysCopy, thumbnail: thumbnail).values)
+    }
+    public func restoreBackupMapped(from source: URL, alwaysCopy: Bool = false, thumbnail: @Sendable (ProjectArchive) throws -> Data) throws -> [UUID: UUID] {
         try withLibraryLock {
             let index = try LibraryBackupIndex.read(from: source)
             let staging = root.appendingPathComponent(".restoring-" + UUID().uuidString)
@@ -254,14 +260,16 @@ public actor ProjectStore {
             defer { try? files.removeItem(at: staging) }
             var destinations: [(URL, URL)] = []
             var allocated = Set<UUID>()
+            var mapping: [UUID: UUID] = [:]
             for entry in index.entries {
                 let data = try ProjectArchive.readRegularFile(source.appendingPathComponent(entry.file), limit: ProjectArchive.maximumBytes)
                 guard ProjectArchive.hash(data) == entry.digest else { throw ProjectError.invalidDocument }
                 let archive = try PropertyListDecoder().decode(ProjectArchive.self, from: data)
                 let document = try archive.validatedDocument()
+                guard mapping[document.id] == nil else { throw ProjectError.invalidDocument }
                 var id = document.id
-                if allocated.contains(id) || files.fileExists(atPath: package(id).path) || files.fileExists(atPath: trashedPackage(id).path) { id = UUID() }
-                allocated.insert(id)
+                if alwaysCopy || allocated.contains(id) || files.fileExists(atPath: package(id).path) || files.fileExists(atPath: trashedPackage(id).path) { id = UUID() }
+                allocated.insert(id); mapping[document.id] = id
                 let folder = staging.appendingPathComponent(id.uuidString + ".snagforge")
                 try files.createDirectory(at: folder.appendingPathComponent("Revisions"), withIntermediateDirectories: true)
                 try archive.original.write(to: folder.appendingPathComponent("original.png"))
@@ -280,10 +288,17 @@ public actor ProjectStore {
                 for (folder, target) in published.reversed() { try? movePackage(from: target, to: folder) }
                 throw error
             }
-            return destinations.count
+            return mapping
         }
     }
 
+    public func removeImported(_ ids: [UUID]) throws {
+        try withLibraryLock {
+            for id in ids {
+                for url in [package(id), trashedPackage(id)] where files.fileExists(atPath: url.path) { try files.removeItem(at: url) }
+            }
+        }
+    }
     private var trashRoot: URL { root.appendingPathComponent(".Trash", isDirectory: true) }
     private func trashedPackage(_ id: UUID) -> URL { trashRoot.appendingPathComponent(id.uuidString).appendingPathExtension("snagforge") }
     public func moveToTrash(_ id: UUID) throws {

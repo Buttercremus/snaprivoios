@@ -206,18 +206,37 @@ import SnagForgeDomain
             if response == .OK, let url = dialog.url { self.importCopy(url) }
         }
     }
-    func importCopy(_ url: URL) {
+    func importCopy(_ url: URL) { run { [self] in try await readExternalCopy(url) } }
+    func importExternalCopy(_ url: URL) async {
+        if let operation { await operation.value }
+        guard !isBusy, !isSuspended else { return }
+        isBusy = true; defer { isBusy = false }
+        do { try await readExternalCopy(url) } catch { self.error = Self.message(error) }
+    }
+    private func readExternalCopy(_ url: URL) async throws {
+        guard await flush() else { return }
+        let granted = url.startAccessingSecurityScopedResource()
+        defer { if granted { url.stopAccessingSecurityScopedResource() } }
+        var value = try await Task.detached { try GuideExporter.cleanCopy(GuideDocument.read(url)) }.value
+        value.id = UUID(); value.revision = 0; value.modifiedAt = .now
+        for i in value.steps.indices { value.steps[i].sourceProjectID = nil; value.steps[i].sourceLibrary = nil }
+        try await store.create(value)
+        document = value; selectedStep = value.steps.first?.id; preview = nil
+        await refresh()
+    }
+    func createFromProjects(_ ids: [UUID], from projects: ProjectStore, prepare: @escaping @MainActor () async -> Bool) {
         run { [self] in
-            guard await flush() else { return }
-            let granted = url.startAccessingSecurityScopedResource()
-            defer { if granted { url.stopAccessingSecurityScopedResource() } }
-            var value = try await Task.detached {
-                try GuideExporter.cleanCopy(GuideDocument.read(url))
+            guard await prepare(), await flush() else { return }
+            guard !ids.isEmpty, ids.count <= 100, Set(ids).count == ids.count else { throw ProjectError.documentTooLarge }
+            let key = Self.libraryKey(projects), style = document?.style ?? .standard
+            let steps = try await Task.detached(priority: .userInitiated) {
+                var result: [GuideStep] = []
+                for id in ids { result.append(try GuideExporter.snapshot(await projects.load(id), library: key)) }
+                return result
             }.value
-            value.id = UUID(); value.revision = 0; value.modifiedAt = .now
-            for i in value.steps.indices { value.steps[i].sourceProjectID = nil; value.steps[i].sourceLibrary = nil }
+            let value = GuideDocument(title: String(localized: "Neue Anleitung"), style: style, steps: steps)
             try await store.create(value)
-            document = value; selectedStep = value.steps.first?.id; preview = nil
+            document = value; selectedStep = steps.first?.id; preview = nil
             await refresh()
         }
     }

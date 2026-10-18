@@ -59,7 +59,11 @@ private struct ImageEditorView: View {
                         }
                     }
                 Divider()
-                EditorProperties(model: model, preferences: preferences).frame(width: 260)
+                VStack(spacing: 0) {
+                    EditorProperties(model: model, preferences: preferences)
+                    Divider()
+                    EditorObjectList(model: model)
+                }.frame(width: 260)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             ViewThatFits(in: .horizontal) {
@@ -454,20 +458,6 @@ private struct EditorProperties: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 if !model.selectedIDs.isEmpty { EditorObjectActions(model: model) }
-                DisclosureGroup(String(localized: "Objekte")) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Button(String(localized: "Alle auswählen")) { model.selectAllObjects() }
-                        ForEach(model.history.objects) { object in
-                            Toggle(isOn: Binding(get: { model.selectedIDs.contains(object.id) }, set: { _ in
-                                model.tool = .selection; model.select(object.id, extending: true)
-                            })) {
-                                Text(object.text.isEmpty ? objectTitle(object.kind) : String(object.text.prefix(40)))
-                                    .lineLimit(1)
-                            }.toggleStyle(.checkbox)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                }
                 EditorSavedStyles(model: model, preferences: preferences)
                 Divider()
                 if let kind = model.activeKind {

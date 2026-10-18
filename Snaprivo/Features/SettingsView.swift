@@ -58,6 +58,7 @@ struct CaptureClipboardSettings: View {
     @Bindable var preferences: AppPreferences
     var body: some View {
         Section(String(localized: "Nach dem Screenshot")) {
+            Toggle(String(localized: "Schnellvorschau nach der Aufnahme"), isOn: $preferences.quickPreviewAfterCapture)
             Toggle(String(localized: "Screenshot automatisch in die Zwischenablage kopieren"), isOn: $preferences.copyAfterCapture)
                 .accessibilityIdentifier("settings.capture.copy")
             Text(String(localized: "Nach dem Bestätigen der Aufnahme steht das PNG automatisch zum Einfügen bereit. Der Screenshot bleibt zusätzlich als bearbeitbares Projekt im Editor. Gilt auch für Scroll-Aufnahmen; Bildimporte werden nicht kopiert."))
@@ -172,8 +173,26 @@ private struct ToolbarOrderRow<Item: Hashable>: View {
 
 private struct StorageSettings: View {
     let workspace: WorkspaceModel
+    @State private var usage: CompleteBackup.Usage?
+    @State private var usageError: String?
     var body: some View {
         Form {
+            Section(String(localized: "Alle Inhalte")) {
+                if let usage {
+                    LabeledContent(String(localized: "Bilder einschließlich Papierkorb"), value: ByteCountFormatter.string(fromByteCount: usage.images, countStyle: .file))
+                    LabeledContent(String(localized: "Videos einschließlich Papierkorb"), value: ByteCountFormatter.string(fromByteCount: usage.videos, countStyle: .file))
+                    LabeledContent(String(localized: "Anleitungen"), value: ByteCountFormatter.string(fromByteCount: usage.guides, countStyle: .file))
+                    if let available = usage.available { LabeledContent(String(localized: "Frei am Bildspeicherort"), value: ByteCountFormatter.string(fromByteCount: available, countStyle: .file)) }
+                }
+                if let usageError { Text(usageError).foregroundStyle(.secondary) }
+                Button(String(localized: "Speicherbelegung aktualisieren")) { Task { await refreshUsage() } }
+
+                Button(String(localized: "Alles sichern …")) { workspace.chooseTransfer(.completeBackup) }
+                Button(String(localized: "Alles wiederherstellen …")) { workspace.chooseTransfer(.restoreComplete) }
+                Button(String(localized: "Bisherige Snaprivo-Daten übernehmen …")) { workspace.chooseTransfer(.importLegacy) }
+                Text(String(localized: "Bilder, Videos, Papierkörbe und Anleitungen in einer Sicherung. Zum Freigeben von Speicherplatz Videos in der Bibliothek entfernen und ihren Papierkorb prüfen."))
+                    .font(.callout).foregroundStyle(.secondary)
+            }.disabled(!workspace.canChangeStorage)
             Section(String(localized: "PNG-Standardordner")) {
                 LabeledContent(String(localized: "Ordner")) {
                     Text(workspace.storage.path(for: .png) ?? String(localized: "Beim Speichern wählen"))
@@ -206,11 +225,19 @@ private struct StorageSettings: View {
             if let notice = workspace.storageNotice { Text(notice).font(.callout).foregroundStyle(.secondary) }
         }
         .formStyle(.grouped)
+        .task { await refreshUsage() }
         .alert(String(localized: "Speicherort konnte nicht geändert werden"), isPresented: Binding(
             get: { workspace.storageError != nil }, set: { if !$0 { workspace.storageError = nil } })) {
                 Button("OK") { workspace.storageError = nil }
             } message: { Text(workspace.storageError ?? "") }
     }
+    private func refreshUsage() async {
+        do {
+            usage = try await CompleteBackup(images: workspace.store, videos: workspace.videos.files, guides: workspace.guides.store).usage()
+            usageError = nil
+        } catch { usageError = error.localizedDescription }
+    }
+
 }
 
 private struct CaptureSettings: View {

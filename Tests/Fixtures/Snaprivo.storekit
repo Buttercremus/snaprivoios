@@ -1,0 +1,31 @@
+{
+  "identifier": "ef4042a0-4014-4c4f-b5b8-fb90204c971a",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "1.23",
+      "familyShareable": false,
+      "internalID": "1000001",
+      "localizations": [
+        {
+          "description": "Synthetic local StoreKit test product.",
+          "displayName": "Snaprivo Pro Test",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.snaprivo.pro.lifetime",
+      "referenceName": "Snaprivo Pro local tests",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA"
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

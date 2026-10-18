@@ -10,6 +10,7 @@ actor VideoRecordingFiles {
         var document: VideoDocument
         var thumbnail: Data?
         var id: UUID { document.id }
+        var bytes: Int64 = 0
     }
     struct Listing: Sendable { var items: [Item]; var issues: [String] }
     let root: URL
@@ -145,7 +146,8 @@ actor VideoRecordingFiles {
             if document.state == .finished, (try? requireRegularFile(root.appendingPathComponent(document.fileName))) == nil {
                 document.state = .failed; document.failure = String(localized: "Die Videodatei fehlt oder ist nicht zugänglich.")
             }
-            return Item(document: document, thumbnail: document.state == .finished ? try? Data(contentsOf: thumbnailURL(document.id)) : nil)
+            return Item(document: document, thumbnail: document.state == .finished ? try? Data(contentsOf: thumbnailURL(document.id)) : nil,
+                        bytes: Int64((try? root.appendingPathComponent(document.fileName).resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0))
         }.sorted { $0.document.createdAt > $1.document.createdAt }
         return Listing(items: items, issues: issues)
     }
@@ -154,6 +156,31 @@ actor VideoRecordingFiles {
         var document = try readDocument(id)
         document.title = title.trimmingCharacters(in: .whitespacesAndNewlines); document.modifiedAt = .now; document.revision += 1
         try save(document)
+    }
+    func moveToTrash(_ id: UUID) throws {
+        guard !active.contains(id) else { throw ProjectError.staleRevision }
+        var document = try readDocument(id)
+        document.trashedAt = .now; document.revision += 1; document.modifiedAt = .now
+        try save(document)
+    }
+    func restoreFromTrash(_ id: UUID) throws {
+        var document = try readDocument(id)
+        guard document.trashedAt != nil else { throw ProjectError.invalidDocument }
+        document.trashedAt = nil; document.revision += 1; document.modifiedAt = .now
+        try save(document)
+    }
+    func permanentlyDelete(_ id: UUID) throws {
+        let document = try readDocument(id)
+        guard document.trashedAt != nil, !active.contains(id) else { throw ProjectError.invalidDocument }
+        // Keep the trash sidecar until media and cache removal succeeds. A crash
+        // therefore leaves a deletable trash entry, never an adopted legacy movie.
+        for url in [root.appendingPathComponent(document.fileName), thumbnailURL(id)] where FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
+        }
+        try FileManager.default.removeItem(at: recordURL(id))
+    }
+    func removeImported(_ ids: [UUID]) throws {
+        for id in ids { try moveToTrash(id); try permanentlyDelete(id) }
     }
     func document(_ id: UUID) throws -> VideoDocument { try readDocument(id) }
     func setTrim(_ id: UUID, trim: VideoTrim?, expectedRevision: Int) throws -> VideoDocument {
@@ -204,7 +231,7 @@ actor VideoRecordingFiles {
     }
     func movieURL(_ id: UUID) throws -> URL {
         let document = try readDocument(id)
-        guard document.state == .finished else { throw VideoRecordingError.invalidMovie }
+        guard document.state == .finished, document.trashedAt == nil else { throw VideoRecordingError.invalidMovie }
         let url = root.appendingPathComponent(document.fileName); try requireRegularFile(url)
         return url
     }
@@ -271,12 +298,20 @@ actor VideoRecordingFiles {
         try FileManager.default.createDirectory(at: stage, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: stage) }
         var entries: [VideoBackup.Entry] = []
-        for item in listing.items where item.document.state == .finished {
-            let source = try movieURL(item.id), copy = stage.appendingPathComponent(item.document.fileName)
-            try FileManager.default.copyItem(at: source, to: copy)
-            let hash = try checksum(source)
-            guard try checksum(copy) == hash else { throw ProjectError.invalidDocument }
-            entries.append(.init(document: item.document, sha256: hash))
+        guard active.isEmpty else { throw ProjectError.staleRevision }
+        for item in listing.items {
+            let source = root.appendingPathComponent(item.document.fileName)
+            let present = FileManager.default.fileExists(atPath: source.path)
+            guard present || item.document.state != .finished else { throw ProjectError.missingOriginal }
+            var hash = ""
+            if present {
+                try requireRegularFile(source)
+                let copy = stage.appendingPathComponent(item.document.fileName)
+                try FileManager.default.copyItem(at: source, to: copy)
+                hash = try checksum(source)
+                guard try checksum(copy) == hash else { throw ProjectError.invalidDocument }
+            }
+            entries.append(.init(document: item.document, sha256: hash, hasFile: present))
         }
         let backup = try VideoBackup(entries: entries).validated()
         let manifest = try JSONEncoder().encode(backup)
@@ -284,15 +319,17 @@ actor VideoRecordingFiles {
         try manifest.write(to: stage.appendingPathComponent("manifest.json"), options: .atomic)
         try FileManager.default.moveItem(at: stage, to: target)
     }
-    func restore(from source: URL) async throws -> Int {
+    func restore(from source: URL) async throws -> Int { try await restoreIDs(from: source).count }
+    func restoreIDs(from source: URL) async throws -> [UUID] {
         let manifest = source.appendingPathComponent("manifest.json"); try requireRegularFile(manifest)
         guard (try manifest.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max) <= 16_777_216 else { throw ProjectError.invalidDocument }
         let backup = try JSONDecoder().decode(VideoBackup.self, from: Data(contentsOf: manifest)).validated()
         // Validate every source before changing the library. No overwrite: restore
         // always creates new identities, including repeated imports.
-        for entry in backup.entries {
+        for entry in backup.entries where entry.hasFile != false {
             let url = source.appendingPathComponent(entry.document.fileName); try requireRegularFile(url)
             guard try checksum(url) == entry.sha256 else { throw ProjectError.invalidDocument }
+            guard entry.document.state == .finished else { continue }
             let info = try await movieInfo(AVURLAsset(url: url))
             guard info.size == entry.document.pixelSize, abs(info.duration - (entry.document.duration ?? 0)) < 0.05,
                   info.audio == entry.document.hasAudio else { throw ProjectError.invalidDocument }
@@ -303,28 +340,34 @@ actor VideoRecordingFiles {
         defer { try? FileManager.default.removeItem(at: stage) }
         var documents: [VideoDocument] = []
         for entry in backup.entries {
-            var document = entry.document; document.id = UUID(); document.fileName = "\(document.id).mp4"
+            var document = entry.document; document.id = UUID()
+            document.fileName = document.state == .finished ? "\(document.id).mp4" : ".\(document.id).recording.mp4"
             let copy = stage.appendingPathComponent(document.fileName)
-            try FileManager.default.copyItem(at: source.appendingPathComponent(entry.document.fileName), to: copy)
-            guard try checksum(copy) == entry.sha256 else { throw ProjectError.invalidDocument }
+            if entry.hasFile != false {
+                try FileManager.default.copyItem(at: source.appendingPathComponent(entry.document.fileName), to: copy)
+                guard try checksum(copy) == entry.sha256 else { throw ProjectError.invalidDocument }
+            }
             documents.append(document)
         }
         var published: [URL] = []
         do {
             for document in documents {
                 let target = root.appendingPathComponent(document.fileName)
-                try FileManager.default.moveItem(at: stage.appendingPathComponent(document.fileName), to: target); published.append(target)
+                let staged = stage.appendingPathComponent(document.fileName)
+                if FileManager.default.fileExists(atPath: staged.path) {
+                    try FileManager.default.moveItem(at: staged, to: target); published.append(target)
+                }
                 try save(document); published.append(recordURL(document.id))
             }
         } catch {
             for url in published { try? FileManager.default.removeItem(at: url) }; throw error
         }
-        for document in documents {
+        for document in documents where document.state == .finished {
             if let data = try? await makeThumbnail(AVURLAsset(url: root.appendingPathComponent(document.fileName))) {
                 try? data.write(to: thumbnailURL(document.id), options: .atomic)
             }
         }
-        return documents.count
+        return documents.map(\.id)
     }
     private func checksum(_ url: URL) throws -> String {
         let handle = try FileHandle(forReadingFrom: url); defer { try? handle.close() }
