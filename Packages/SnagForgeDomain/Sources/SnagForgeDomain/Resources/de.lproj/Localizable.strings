@@ -1,0 +1,14 @@
+/* Native domain error messages. Keys stay stable across languages. */
+"Das Originalbild des Projekts fehlt." = "Das Originalbild des Projekts fehlt.";
+"Das Projekt ist beschädigt oder enthält ungültige Bilddaten." = "Das Projekt ist beschädigt oder enthält ungültige Bilddaten.";
+"Der Aufnahmebereich wurde verändert oder ist zu groß. Bitte neu beginnen." = "Der Aufnahmebereich wurde verändert oder ist zu groß. Bitte neu beginnen.";
+"Der Inhalt bewegt sich noch. Warte, bis Scrollen und Animationen stillstehen, und versuche es erneut." = "Der Inhalt bewegt sich noch. Warte, bis Scrollen und Animationen stillstehen, und versuche es erneut.";
+"Der Übergang ist nicht eindeutig. Scrolle zurück und dann weniger weit nach unten. Mindestens ein Drittel des bisherigen Inhalts muss sichtbar bleiben." = "Der Übergang ist nicht eindeutig. Scrolle zurück und dann weniger weit nach unten. Mindestens ein Drittel des bisherigen Inhalts muss sichtbar bleiben.";
+"Die Grenze von 20.000 Pixeln Höhe, 40 Millionen Pixeln oder 50 Abschnitten ist erreicht. Öffne das bisherige Ergebnis im Editor." = "Die Grenze von 20.000 Pixeln Höhe, 40 Millionen Pixeln oder 50 Abschnitten ist erreicht. Öffne das bisherige Ergebnis im Editor.";
+"Die Markierungen überschreiten die Projektgrenze von 32 MB. Kürze sehr lange Texte oder entferne Objekte." = "Die Markierungen überschreiten die Projektgrenze von 32 MB. Kürze sehr lange Texte oder entferne Objekte.";
+"Die gewählte Datei überschreitet die unterstützte Dateigröße. Sie wurde nicht übernommen." = "Die gewählte Datei überschreitet die unterstützte Dateigröße. Sie wurde nicht übernommen.";
+"Dieses Projekt benötigt eine andere Snaprivo-Version. Es wird nicht überschrieben." = "Dieses Projekt benötigt eine andere Snaprivo-Version. Es wird nicht überschrieben.";
+"Ein feststehender Kopf- oder Fußbereich stört den Übergang. Bitte neu beginnen und nur den scrollenden Inhalt auswählen." = "Ein feststehender Kopf- oder Fußbereich stört den Übergang. Bitte neu beginnen und nur den scrollenden Inhalt auswählen.";
+"Ein neuerer Projektstand wurde bereits gespeichert. Sichere deine Änderungen als Kopie." = "Ein neuerer Projektstand wurde bereits gespeichert. Sichere deine Änderungen als Kopie.";
+"Endgültiges Löschen noch nicht abgeschlossen: %@: %@" = "Endgültiges Löschen noch nicht abgeschlossen: %@: %@";
+"Noch kein neuer Abschnitt. Scrolle etwas nach unten und füge ihn erneut hinzu." = "Noch kein neuer Abschnitt. Scrolle etwas nach unten und füge ihn erneut hinzu.";
