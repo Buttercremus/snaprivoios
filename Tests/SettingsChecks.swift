@@ -21,11 +21,12 @@ import SnagForgeDomain
         _ = NSApplication.shared
         let suite = "SnagForge-Settings-Test-\(UUID())", defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
+        checkLanguage(defaults: defaults, suite: suite)
         let preferences = AppPreferences(defaults: defaults)
-        precondition(Array(preferences.imageToolbarActions.prefix(4)) == [.copy, .savePNG, .recognizeText, .share])
-        precondition(preferences.extraToolbarTools == [.colorPicker, .insertImage])
+        precondition(Array(preferences.imageToolbarActions.prefix(4)) == [.copy, .savePNG, .share, .pin])
+        precondition(preferences.extraToolbarTools == [.recognizeText, .resize, .colorPicker, .insertImage, .presentation, .transform, .scanCode])
         defaults.set(["resize", "copy", "savePNG", "recognizeText", "share", "openWith", "pin", "colorPicker", "insertImage", "output"], forKey: "editor.toolbarActions.v1")
-        precondition(Array(AppPreferences(defaults: defaults).imageToolbarActions.prefix(4)) == [.copy, .savePNG, .recognizeText, .share])
+        precondition(Array(AppPreferences(defaults: defaults).imageToolbarActions.prefix(4)) == [.copy, .savePNG, .share, .openWith])
         defaults.removeObject(forKey: "editor.toolbarActions.v1")
 
 
@@ -34,20 +35,24 @@ import SnagForgeDomain
         preferences.dismissedEditorHints.insert("selection")
         let restoredIntroduction = AppPreferences(defaults: defaults)
         precondition(restoredIntroduction.completedOnboarding && restoredIntroduction.dismissedEditorHints == ["selection"])
+        restoredIntroduction.dismissedEditorHints.formUnion(["firstAnnotation", "crop", "redaction", "filmstripMultiCopy"])
+        let restoredHints = AppPreferences(defaults: defaults)
+        precondition(restoredHints.completedOnboarding && restoredHints.dismissedEditorHints == ["selection", "firstAnnotation", "crop", "redaction", "filmstripMultiCopy"])
         restoredIntroduction.dismissedEditorHints = []
         precondition(AppPreferences(defaults: defaults).dismissedEditorHints.isEmpty)
         precondition(preferences.toolbarSize == .standard && preferences.captureDelay == 0 && !preferences.copyAfterCapture)
         precondition(preferences.automaticallyFitsImage, "Existing installations must keep fit as their default")
         preferences.automaticallyFitsImage = false
-        precondition(!preferences.videoSystemAudio && !preferences.videoMicrophone)
-        preferences.videoSystemAudio = true; preferences.videoMicrophone = true
+        precondition(!preferences.videoSystemAudio && !preferences.videoMicrophone && !preferences.videoMouseClicks)
+        preferences.videoSystemAudio = true; preferences.videoMicrophone = true; preferences.videoMouseClicks = true
         preferences.toolbarSize = .large; preferences.captureDelay = 5; preferences.includesCursor = true; preferences.copyAfterCapture = true
         let restored = AppPreferences(defaults: UserDefaults(suiteName: suite)!)
-        precondition(restored.videoSystemAudio && restored.videoMicrophone)
+        precondition(restored.videoSystemAudio && restored.videoMicrophone && restored.videoMouseClicks)
         precondition(restored.toolbarSize == .large && restored.captureDelay == 5 && restored.includesCursor && restored.copyAfterCapture)
         precondition(!restored.automaticallyFitsImage, "Actual-pixel opening preference did not survive restart")
         checkToolbarOrder(defaults: defaults, suite: suite)
         checkToolbarVisibility(defaults: defaults, suite: suite)
+        checkGroupedShapesMigration()
         for action in CaptureAction.allCases {
             let config = action.configuration(using: restored.captureConfiguration)
             precondition(config.includesCursor && config.media == .image && config.delaySeconds == (action == .delayedRegion ? 3 : 5))
@@ -56,7 +61,7 @@ import SnagForgeDomain
         let registrar = TestHotKeys(), shortcuts = GlobalCaptureShortcuts(defaults: defaults, registrar: registrar)
         var actions: [CaptureAction] = []
         shortcuts.start { actions.append($0) }
-        precondition(registrar.active.count == 4)
+        precondition(registrar.active.count == CaptureAction.allCases.count)
         let original = shortcuts.bindings[.region]!
         let custom = CaptureShortcut(keyCode: UInt32(kVK_ANSI_R), modifiers: UInt32(controlKey | optionKey | shiftKey))
         shortcuts.beginRecording(.region)
@@ -81,11 +86,11 @@ import SnagForgeDomain
         let loaded = GlobalCaptureShortcuts(defaults: UserDefaults(suiteName: suite)!, registrar: TestHotKeys())
         precondition(loaded.bindings[.region] == custom && loaded.bindings[.window] == nil)
         shortcuts.setEnabled(false); precondition(registrar.active.isEmpty)
-        shortcuts.setEnabled(true); precondition(registrar.active.count == 3)
+        shortcuts.setEnabled(true); precondition(registrar.active.count == CaptureAction.allCases.count - 1)
         registrar.blocked = [custom]; shortcuts.retryRegistration()
         precondition(shortcuts.unavailable == [.region])
         registrar.blocked = []; shortcuts.retryRegistration(); precondition(shortcuts.unavailable.isEmpty)
-        shortcuts.restoreDefaults(); precondition(shortcuts.bindings.count == 4 && shortcuts.bindings[.region] == original)
+        shortcuts.restoreDefaults(); precondition(shortcuts.bindings.count == CaptureAction.allCases.count && shortcuts.bindings[.region] == original)
         // Native recorder: consume protected commands, Escape/Tab cancel, Delete clears.
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 240, height: 80), styleMask: .titled, backing: .buffered, defer: false)
         let recorder = ShortcutRecorderButton(action: .region, shortcuts: shortcuts)
@@ -97,13 +102,13 @@ import SnagForgeDomain
         recorder.beginRecording()
         precondition(recorder.handleRecordingEvent(key(kVK_ANSI_Q, .command)) && shortcuts.recordingAction == .region)
         precondition(shortcuts.bindings[.region] == original && shortcuts.recordingError != nil)
-        recorder.handleRecordingEvent(key(kVK_Escape)); precondition(shortcuts.recordingAction == nil && registrar.active.count == 4)
+        recorder.handleRecordingEvent(key(kVK_Escape)); precondition(shortcuts.recordingAction == nil && registrar.active.count == CaptureAction.allCases.count)
         recorder.beginRecording(); precondition(!recorder.handleRecordingEvent(key(kVK_Tab)))
         precondition(shortcuts.recordingAction == nil)
         recorder.beginRecording(); recorder.handleRecordingEvent(key(kVK_Delete))
-        precondition(shortcuts.bindings[.region] == nil && registrar.active.count == 3)
+        precondition(shortcuts.bindings[.region] == nil && registrar.active.count == CaptureAction.allCases.count - 1)
         recorder.beginRecording(); window.contentView = NSView()
-        precondition(shortcuts.recordingAction == nil && registrar.active.count == 3)
+        precondition(shortcuts.recordingAction == nil && registrar.active.count == CaptureAction.allCases.count - 1)
         shortcuts.restoreDefaults(); shortcuts.stop()
         // Real public API: the second owner must fail, and succeed after release.
         let first = CarbonCaptureHotKeys(), second = CarbonCaptureHotKeys()
@@ -114,10 +119,31 @@ import SnagForgeDomain
         precondition(second.register(rare, for: .region) != noErr, "Exclusive registration conflict was missed")
         first.unregisterAll(); precondition(second.register(rare, for: .region) == noErr)
         second.stop()
+        // Version 1 preserves deliberately cleared bindings and existing key ownership.
+        let legacySuite = "Snaprivo-LegacyShortcuts-\(UUID())", legacyDefaults = UserDefaults(suiteName: legacySuite)!
+        defer { legacyDefaults.removePersistentDomain(forName: legacySuite) }
+        let legacyEntries: [[String: Any]] = [
+            ["action": CaptureAction.display.rawValue, "shortcut": ["keyCode": CaptureAction.display.defaultShortcut.keyCode, "modifiers": CaptureAction.display.defaultShortcut.modifiers]],
+            ["action": CaptureAction.region.rawValue, "shortcut": ["keyCode": CaptureAction.repeatLast.defaultShortcut.keyCode, "modifiers": CaptureAction.repeatLast.defaultShortcut.modifiers]],
+            ["action": CaptureAction.window.rawValue, "shortcut": NSNull()],
+            ["action": CaptureAction.delayedRegion.rawValue, "shortcut": NSNull()]
+        ]
+        legacyDefaults.set(try JSONSerialization.data(withJSONObject: ["version": 1, "entries": legacyEntries]), forKey: "capture.shortcuts.v1")
+        let migrated = GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: TestHotKeys())
+        precondition(migrated.preferencesError == nil && migrated.bindings[.window] == nil && migrated.bindings[.delayedRegion] == nil)
+        precondition(migrated.bindings[.region] == CaptureAction.repeatLast.defaultShortcut && migrated.bindings[.repeatLast] == nil && migrated.bindings[.text] == CaptureAction.text.defaultShortcut)
         // Invalid stored data is reported and never silently rewritten during load.
+        let version2Entries: [[String: Any]] = CaptureAction.allCases.filter { $0 != .code }.map { action in
+            ["action": action.rawValue, "shortcut": action == .text ? NSNull() : ["keyCode": (action == .region ? CaptureAction.code.defaultShortcut : action.defaultShortcut).keyCode,
+                "modifiers": action.defaultShortcut.modifiers]]
+        }
+        legacyDefaults.set(try JSONSerialization.data(withJSONObject: ["version": 2, "entries": version2Entries]), forKey: "capture.shortcuts.v1")
+        let migrated2 = GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: TestHotKeys())
+        precondition(migrated2.preferencesError == nil && migrated2.bindings[.text] == nil && migrated2.bindings[.code] == nil)
+        precondition(migrated2.bindings[.region] == CaptureAction.code.defaultShortcut)
         let broken = Data("broken".utf8); defaults.set(broken, forKey: "capture.shortcuts.v1")
         let corrupt = GlobalCaptureShortcuts(defaults: defaults, registrar: TestHotKeys())
-        precondition(corrupt.preferencesError != nil && corrupt.bindings.count == 4 && defaults.data(forKey: "capture.shortcuts.v1") == broken)
+        precondition(corrupt.preferencesError != nil && corrupt.bindings.count == CaptureAction.allCases.count && defaults.data(forKey: "capture.shortcuts.v1") == broken)
         try await checkCaptureCopy(defaults: defaults)
         try await StorageLocationChecks.run()
         print("Settings checks passed: preference restart, toolbar reorder/restart/repair/reset, hide/show/reorder/all-hidden/restart, capture defaults, shortcut validation/duplicates/reserved keys, transactional registration failure, clear/reset/retry/restart, recorder cancellation, real exclusive Carbon registration and screenshot-only automatic PNG copy, including a blocked previous editor.")
@@ -151,6 +177,36 @@ import SnagForgeDomain
         let reset = AppPreferences(defaults: defaults)
         precondition(reset.toolbarTools == tools && reset.toolbarActions == actions && reset.copyAfterCapture)
     }
+    @MainActor static func checkLanguage(defaults: UserDefaults, suite: String) {
+        let globalLanguages = UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?["AppleLanguages"] as? [String]
+        let preferences = AppPreferences(defaults: defaults, languageDomain: suite)
+        precondition(preferences.language == .system && !preferences.requiresLanguageRestart)
+        precondition(defaults.persistentDomain(forName: suite)?["AppleLanguages"] == nil)
+        defaults.set("preserved", forKey: "language-test.other-setting")
+
+        preferences.language = .english
+        precondition(preferences.requiresLanguageRestart)
+        precondition(defaults.persistentDomain(forName: suite)?["AppleLanguages"] as? [String] == ["en"])
+        let restored = AppPreferences(defaults: UserDefaults(suiteName: suite)!, languageDomain: suite)
+        precondition(restored.language == .english && !restored.requiresLanguageRestart)
+        restored.language = .german
+        precondition(restored.requiresLanguageRestart)
+        precondition(AppPreferences(defaults: defaults, languageDomain: suite).language == .german)
+        restored.language = .english
+        precondition(!restored.requiresLanguageRestart, "Returning to the launch language must clear the restart notice")
+
+        // Adopt an existing native macOS per-app override, including region tags.
+        defaults.set(["de-DE"], forKey: "AppleLanguages")
+        precondition(AppPreferences(defaults: defaults, languageDomain: suite).language == .german)
+        defaults.set(["fr-FR", "en-GB"], forKey: "AppleLanguages")
+        precondition(AppPreferences(defaults: defaults, languageDomain: suite).language == .english)
+        restored.language = .system
+        precondition(defaults.persistentDomain(forName: suite)?["AppleLanguages"] == nil)
+        precondition(AppPreferences(defaults: defaults, languageDomain: suite).language == .system)
+        precondition(defaults.string(forKey: "language-test.other-setting") == "preserved")
+        precondition(UserDefaults.standard.persistentDomain(forName: UserDefaults.globalDomain)?["AppleLanguages"] as? [String] == globalLanguages)
+        defaults.removeObject(forKey: "language-test.other-setting")
+    }
     @MainActor static func checkToolbarVisibility(defaults: UserDefaults, suite: String) {
         let preferences = AppPreferences(defaults: defaults)
         let tools = EditorToolItem.all.map(\.tool), actions = EditorToolbarAction.allCases
@@ -183,6 +239,29 @@ import SnagForgeDomain
         let repaired = AppPreferences(defaults: defaults)
         precondition(repaired.hiddenToolbarTools == [.arrow] && repaired.hiddenToolbarActions == [.share])
         repaired.showAllToolbarItems()
+    }
+    @MainActor static func checkGroupedShapesMigration() {
+        let tools = EditorToolItem.all.map(\.tool)
+        precondition(tools.filter { $0 == .rectangle }.count == 1 && !tools.contains(.ellipse))
+        precondition(AnnotationTool.ellipse.toolbarTool == .rectangle)
+        for oldHidden: [AnnotationTool] in [[], [.rectangle], [.ellipse], [.rectangle, .ellipse]] {
+            let suite = "Snaprivo-GroupedShapes-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+            defer { defaults.removePersistentDomain(forName: suite) }
+            defaults.set(["crop", "ellipse", "arrow", "rectangle", "text"], forKey: "editor.toolbarTools.v1")
+            defaults.set(oldHidden.map(\.rawValue), forKey: "editor.hiddenToolbarTools.v1")
+            let migrated = AppPreferences(defaults: defaults)
+            precondition(Array(migrated.toolbarTools.prefix(4)) == [.crop, .rectangle, .arrow, .text],
+                "Merging the shape entries lost the custom toolbar position")
+            precondition(migrated.hiddenToolbarTools.contains(.rectangle) == (oldHidden.contains(.rectangle) && oldHidden.contains(.ellipse)),
+                "Merging the shape entries lost an available shape tool")
+            precondition(!migrated.toolbarTools.contains(.ellipse) && !migrated.hiddenToolbarTools.contains(.ellipse))
+            // A later deliberate hide must survive restarts after the one-time migration.
+            migrated.hiddenToolbarTools.insert(.rectangle)
+            let reloaded = AppPreferences(defaults: UserDefaults(suiteName: suite)!)
+            precondition(reloaded.hiddenToolbarTools.contains(.rectangle) && reloaded.toolbarTools == migrated.toolbarTools)
+            reloaded.toolbarTools = [.ellipse, .rectangle, .arrow]
+            precondition(Array(reloaded.toolbarTools.prefix(2)) == [.rectangle, .arrow] && Set(reloaded.toolbarTools).count == tools.count)
+        }
     }
     @MainActor static func checkCaptureCopy(defaults: UserDefaults) async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("SnagForge-Settings-\(UUID())")

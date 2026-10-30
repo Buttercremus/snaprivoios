@@ -28,17 +28,30 @@ import SnagForgeDomain
                 guard !prepared else { return }; prepared = true
                 workspace.preferences.completedOnboarding = true
                 workspace.preferences.completedFirstCapture = true
-                for index in 0..<3 {
+                let polish = CommandLine.arguments.contains("--polish")
+                workspace.captureShortcuts.setEnabled(false)
+                for index in 0..<(polish ? 30 : 3) {
                     let context = CGContext(data: nil, width: 1200, height: 800, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-                    context.setFillColor(CGColor(red: 0.12 + Double(index) * 0.1, green: 0.22, blue: 0.38, alpha: 1))
+                    context.setFillColor(CGColor(red: 0.12 + Double(index % 6) * 0.1, green: 0.22, blue: 0.38, alpha: 1))
                     context.fill(CGRect(x: 0, y: 0, width: 1200, height: 800))
                     workspace.openScreenshot(context.makeImage()!)
                     while workspace.isLoading { try? await Task.sleep(for: .milliseconds(10)) }
                     workspace.editor?.commit([EditorObject(kind: .arrow, start: CGPoint(x: 140, y: 220), end: CGPoint(x: 660, y: 440)), EditorObject(kind: .text, start: CGPoint(x: 140, y: 140), text: "Synthetic workflow \(index + 1)", fontSize: 42)])
                     _ = workspace.editor?.renameObject(workspace.editor!.history.objects[0].id, name: "Explanation arrow")
                     _ = await workspace.editor?.flush()
+                    if polish { _ = await workspace.updateProjectMetadata(workspace.editor!.document.id, title: String(format: "Synthetic image %02d", index + 1)) }
                 }
-                workspace.section = .editor
+                if polish {
+                    workspace.guides.create()
+                    while workspace.guides.isBusy { try? await Task.sleep(for: .milliseconds(10)) }
+                    let png = try! EditorRenderer.png(image: workspace.editor!.image, objects: workspace.editor!.history.objects)
+                    workspace.guides.edit {
+                        $0.title = "Synthetic polish guide"
+                        $0.steps = (1...3).map { GuideStep(title: "Synthetic step \($0)", png: png) }
+                    }
+                    _ = await workspace.guides.flush()
+                }
+                workspace.section = polish ? .library : .editor
             }
         }.defaultSize(width: 1180, height: 780)
         Window("Snaprivo Pro", id: "pro") {

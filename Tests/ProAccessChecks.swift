@@ -50,6 +50,17 @@ enum ProAccessChecks {
         workspace.createGuide(from: [id])
         try await ReleaseWorkflowChecks.wait { !workspace.guides.isBusy }
         verify(workspace.guides.document?.steps.count == 1)
+        // A guide capture becomes a library project and the final step without replacing the editor.
+        let guideID = workspace.guides.document!.id, itemsBeforeGuideCapture = workspace.items.count
+        workspace.addCaptureToGuide(image, guide: guideID)
+        try await ReleaseWorkflowChecks.wait { !workspace.isLoading && !workspace.guides.isBusy && workspace.guides.document?.steps.count == 2 }
+        let capturedStep = workspace.guides.document!.steps[1]
+        verify(workspace.editor === editor && workspace.section == .guides && workspace.items.count == itemsBeforeGuideCapture + 1)
+        verify(capturedStep.sourceProjectID != nil && workspace.guideSource(for: capturedStep) != nil)
+        // A capture for a guide that is no longer open stays in the library only.
+        workspace.addCaptureToGuide(image, guide: UUID())
+        try await ReleaseWorkflowChecks.wait { !workspace.isLoading && workspace.items.count == itemsBeforeGuideCapture + 2 }
+        verify(workspace.guides.document?.steps.count == 2 && workspace.guides.notice != nil)
         let guide = workspace.guides.document!
         let partial = try await workspace.videos.files.prepare(availableBytes: 1_000_000_000)
         try await ReleaseWorkflowChecks.movie(at: partial)

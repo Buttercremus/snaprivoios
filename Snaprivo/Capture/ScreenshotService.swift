@@ -14,19 +14,25 @@ struct CaptureWindowRegion: Equatable {
     let frame: CGRect
 }
 
+enum CaptureImageDestination: String, Sendable { case image, text, code }
+
 struct ScreenshotSelection {
     let displayID: CGDirectDisplayID
     let rect: CGRect
     let screenFrame: CGRect
     let windowID: CGWindowID?
     let media: CaptureMedia
+    let isScrolling: Bool
+    let destination: CaptureImageDestination
 
-    init(displayID: CGDirectDisplayID, rect: CGRect, screenFrame: CGRect, windowID: CGWindowID? = nil, media: CaptureMedia = .image) {
+    init(displayID: CGDirectDisplayID, rect: CGRect, screenFrame: CGRect, windowID: CGWindowID? = nil, media: CaptureMedia = .image, isScrolling: Bool = false, destination: CaptureImageDestination = .image) {
         self.displayID = displayID; self.rect = rect; self.screenFrame = screenFrame; self.windowID = windowID; self.media = media
+        self.isScrolling = media == .image && isScrolling
+        self.destination = media == .image && !isScrolling ? destination : .image
     }
-    init(displayID: CGDirectDisplayID, draft: CaptureSelectionDraft, screenFrame: CGRect, media: CaptureMedia) {
+    init(displayID: CGDirectDisplayID, draft: CaptureSelectionDraft, screenFrame: CGRect, media: CaptureMedia, isScrolling: Bool = false, destination: CaptureImageDestination = .image) {
         self.init(displayID: displayID, rect: draft.rect, screenFrame: screenFrame,
-                  windowID: media == .video ? draft.windowID : nil, media: media)
+                  windowID: media == .video ? draft.windowID : nil, media: media, isScrolling: isScrolling, destination: destination)
     }
     var videoSource: CaptureSource { windowID != nil ? .window : rect == screenFrame ? .display : .region }
 }
@@ -137,21 +143,45 @@ struct ScreenshotService {
 
 extension ScreenshotService {
     func scrollFrame(_ selection: ScreenshotSelection) async throws -> CGImage {
-        guard let screen = NSScreen.screens.first(where: { ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32) == selection.displayID }),
-              screen.frame == selection.screenFrame else { throw ScreenshotError.invalidRegion }
-        let content = try await content()
+        let source = try ScrollFrameSource(selection: selection, content: await content())
+        return try await source.capture()
+    }
+}
+
+/// A session reuses its source/filter. Enumerating every window for every sample
+/// adds latency and lets the user scroll past the remaining overlap.
+@MainActor
+final class ScrollFrameSource {
+    private let selection: ScreenshotSelection
+    private let filter: SCContentFilter
+    private let configuration: SCStreamConfiguration
+    private let screenScale: CGFloat
+
+    init(selection: ScreenshotSelection, content: SCShareableContent) throws {
+        self.selection = selection
+        guard let screen = NSScreen.screens.first(where: {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32) == selection.displayID
+        }), screen.frame == selection.screenFrame else { throw ScreenshotError.invalidRegion }
+        screenScale = screen.backingScaleFactor
         guard let display = content.displays.first(where: { $0.displayID == selection.displayID }) else { throw ScreenshotError.noDisplays }
         let own = content.applications.filter { $0.processID == ProcessInfo.processInfo.processIdentifier }
-        let filter = SCContentFilter(display: display, excludingApplications: own, exceptingWindows: [])
-        let scale = CGFloat(filter.pointPixelScale)
-        // Use the same display-sized rendering and crop as the frozen first frame.
-        // A separately scaled SCK sourceRect can resample text at fractional pixels,
-        // preventing an unchanged page from matching its initial display snapshot.
+        filter = SCContentFilter(display: display, excludingApplications: own, exceptingWindows: [])
         let config = SCStreamConfiguration()
+        let scale = CGFloat(filter.pointPixelScale)
         config.width = max(1, Int((filter.contentRect.width * scale).rounded()))
         config.height = max(1, Int((filter.contentRect.height * scale).rounded()))
         config.showsCursor = false; config.captureResolution = .best; config.ignoreShadowsDisplay = true
-        let displayImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        configuration = config
+    }
+
+    func capture() async throws -> CGImage {
+        try Task.checkCancellation()
+        guard let screen = NSScreen.screens.first(where: { ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32) == selection.displayID }),
+              screen.frame == selection.screenFrame, screen.backingScaleFactor == screenScale else { throw ScreenshotError.invalidRegion }
+        // Use the same display-sized rendering and crop as the frozen first frame.
+        // A separately scaled SCK sourceRect can resample text at fractional pixels,
+        // preventing an unchanged page from matching its initial display snapshot.
+        let displayImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
         return try FrozenDisplay(displayID: selection.displayID, screenFrame: selection.screenFrame, image: displayImage).crop(selection.rect)
     }
 }

@@ -10,6 +10,6 @@ xcrun swiftc -swift-version 6 -target "$(uname -m)-apple-macos26.0" -emit-librar
 xcrun swiftc -swift-version 6 -target "$(uname -m)-apple-macos26.0" \
   -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
   -Xlinker -rpath -Xlinker "$validation_dir" \
-  Snaprivo/Editor/ImageOutput.swift Snaprivo/Editor/EditorRenderer.swift \
+  Snaprivo/Editor/PresentationBackground.swift Snaprivo/Editor/PresentationPresets.swift Snaprivo/Editor/ImageOutput.swift Snaprivo/Editor/EditorRenderer.swift \
   Tests/ImageOutputChecks.swift -o "$validation_dir/ImageOutputChecks"
 "$validation_dir/ImageOutputChecks" "$validation_dir/comparison.png"

@@ -1,4 +1,7 @@
 import SwiftUI
+import AppKit
+@preconcurrency import VisionKit
+import Observation
 import SnagForgeDomain
 
 struct TextRecognitionView: View {
@@ -49,6 +52,20 @@ struct TextRecognitionView: View {
                         .disabled(!model.hasResult || model.isBusy)
                         .accessibilityLabel(String(localized: "Erkannten Text korrigieren"))
                         .accessibilityIdentifier("ocr.result")
+                    if !model.codes.isEmpty {
+                        ForEach(model.codes, id: \.self) { code in
+                            HStack {
+                                Text(code).textSelection(.enabled).lineLimit(2)
+                                Spacer()
+                                Button(String(localized: "Kopieren")) {
+                                    NSPasteboard.general.clearContents(); NSPasteboard.general.setString(code, forType: .string)
+                                }
+                                if let url = URL(string: code), ["http", "https"].contains(url.scheme?.lowercased()) {
+                                    Button(String(localized: "URL öffnen")) { NSWorkspace.shared.open(url) }
+                                }
+                            }.font(.caption).padding(6).background(.quaternary, in: .rect(cornerRadius: 5))
+                        }
+                    }
                     Text(String(localized: "Prüfe und korrigiere den Text vor dem Kopieren. OCR kann Zeichen und ganze Zeilen übersehen."))
                         .font(.caption).foregroundStyle(.secondary)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -147,5 +164,173 @@ struct TextRecognitionView: View {
         // Preserve exact drag coordinates; rounding is only for the editable display.
         model.selection = rect
         coordinates = [rect.minX, rect.minY, rect.width, rect.height].map { String(format: "%.2f", Double($0 * 100)) }
+    }
+}
+
+private struct InlineTextAnalysis {
+    let image: CGImage
+    let analysis: ImageAnalysis
+}
+
+@MainActor private enum NativeTextAnalyzer {
+    static let shared = ImageAnalyzer()
+}
+
+@MainActor @Observable
+final class InlineTextRecognitionModel {
+    fileprivate var result: InlineTextAnalysis?
+    private(set) var image: CGImage?
+    var selectedText = ""
+    private(set) var isBusy = false
+    private(set) var error: String?
+    private var requestID = UUID()
+    var transcript: String { result?.analysis.transcript ?? "" }
+    func clear() { requestID = UUID(); result = nil; image = nil; selectedText = ""; error = nil; isBusy = false }
+    func prepare(_ snapshot: EditorPNGShare, canUse: @MainActor () -> Bool) async {
+        clear(); isBusy = true
+        let id = requestID
+        defer { if requestID == id { isBusy = false } }
+        guard ImageAnalyzer.isSupported else { error = String(localized: "Live Text ist auf diesem Mac nicht verfügbar. Nutze die erweiterte Texterkennung."); return }
+        do {
+            let image = try await snapshot.recognitionImage()
+            guard !Task.isCancelled, requestID == id, canUse() else { return }
+            self.image = image
+            // VisionKit schedules its asynchronous analysis internally. Keep its
+            // lifecycle with the native main-actor overlay; rendering is detached.
+            let analysis = try await NativeTextAnalyzer.shared.analyze(image, orientation: .up, configuration: .init([.text]))
+            guard !Task.isCancelled, requestID == id, canUse() else { return }
+            self.result = InlineTextAnalysis(image: image, analysis: analysis)
+        } catch { if !Task.isCancelled, requestID == id { self.error = error.localizedDescription } }
+    }
+    func copySelectionOrAll() {
+        let value = selectedText.isEmpty ? transcript : selectedText
+        guard !value.isEmpty else { return }
+        NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string)
+    }
+}
+
+struct InlineTextRecognitionCanvas: NSViewRepresentable {
+    let editor: EditorModel
+    let recognition: InlineTextRecognitionModel
+    func makeNSView(context: Context) -> LiveTextCanvasView { LiveTextCanvasView(editor: editor, recognition: recognition) }
+    func updateNSView(_ view: LiveTextCanvasView, context: Context) { _ = editor.viewport; _ = recognition.selectedText; view.update() }
+}
+
+@MainActor final class LiveTextCanvasView: NSView, ImageAnalysisOverlayViewDelegate {
+    let editor: EditorModel
+    let recognition: InlineTextRecognitionModel
+    private let imageView = NSImageView()
+    let overlay = ImageAnalysisOverlayView()
+    private var currentAnalysis: ImageAnalysis?
+    private var currentImage: CGImage?
+    override var isFlipped: Bool { true }
+    init(editor: EditorModel, recognition: InlineTextRecognitionModel) {
+        self.editor = editor; self.recognition = recognition
+        super.init(frame: .zero)
+        wantsLayer = true; layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+        imageView.imageScaling = .scaleAxesIndependently
+        imageView.addSubview(overlay); addSubview(imageView)
+        overlay.trackingImageView = imageView; overlay.delegate = self
+        overlay.preferredInteractionTypes = [.textSelection]
+        overlay.autoresizingMask = [.width, .height]
+        setAccessibilityLabel(String(localized: "Text direkt im Bild auswählen"))
+    }
+    required init?(coder: NSCoder) { nil }
+    func update() {
+        if currentImage !== recognition.image {
+            currentImage = recognition.image
+            imageView.image = recognition.image.map { NSImage(cgImage: $0, size: CGSize(width: $0.width, height: $0.height)) }
+        }
+        if currentAnalysis !== recognition.result?.analysis {
+            currentAnalysis = recognition.result?.analysis
+            if let result = recognition.result {
+                overlay.analysis = result.analysis
+                overlay.selectableItemsHighlighted = true
+            } else { overlay.analysis = nil }
+        }
+        needsLayout = true
+    }
+    override func layout() {
+        super.layout()
+        editor.viewportBounds = bounds; editor.viewportBackingScale = window?.backingScaleFactor ?? 2
+        imageView.frame = editor.viewport.imageRect(image: editor.viewportImageSize, in: bounds, backingScale: window?.backingScaleFactor ?? 2)
+        overlay.frame = imageView.bounds
+        overlay.setContentsRectNeedsUpdate()
+    }
+    func textSelectionDidChange(_ overlayView: ImageAnalysisOverlayView) { recognition.selectedText = overlayView.selectedText }
+    override func cancelOperation(_ sender: Any?) {
+        if overlay.hasActiveTextSelection { overlay.resetSelection() }
+        else { editor.isRecognizingTextInPlace = false }
+    }
+    override func magnify(with event: NSEvent) {
+        editor.zoomBy(exp(event.magnification), at: convert(event.locationInWindow, from: nil)); needsLayout = true
+    }
+    override func scrollWheel(with event: NSEvent) {
+        if event.modifierFlags.contains(.command) {
+            editor.zoomBy(exp(event.scrollingDeltaY * (event.hasPreciseScrollingDeltas ? 0.01 : 0.1)), at: convert(event.locationInWindow, from: nil))
+        } else {
+            let speed: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 16
+            editor.panImage(by: CGSize(width: event.scrollingDeltaX * speed, height: event.scrollingDeltaY * speed))
+        }
+        needsLayout = true
+    }
+}
+
+struct InlineTextRecognitionInspector: View {
+    let editor: EditorModel
+    let recognition: InlineTextRecognitionModel
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text(String(localized: "Text erkennen")).font(.headline)
+                    Spacer()
+                    Button(String(localized: "Schließen"), systemImage: "xmark") { editor.isRecognizingTextInPlace = false }
+                        .labelStyle(.iconOnly).buttonStyle(.plain)
+                }
+                Text(String(localized: "Wähle Text direkt im Bild aus. Kopiere ihn mit ⌘C oder über die Schaltfläche.")).font(.callout).foregroundStyle(.secondary)
+                if recognition.isBusy { ProgressView(String(localized: "Text wird erkannt …")) }
+                if let error = recognition.error { Text(error).font(.callout).foregroundStyle(.red) }
+                Button(recognition.selectedText.isEmpty ? String(localized: "Gesamten Text kopieren") : String(localized: "Ausgewählten Text kopieren"), systemImage: "doc.on.doc") {
+                    recognition.copySelectionOrAll()
+                }.disabled(recognition.transcript.isEmpty)
+                if recognition.result != nil && recognition.transcript.isEmpty { Text(String(localized: "Kein Text erkannt")).foregroundStyle(.secondary) }
+                Divider()
+                Button(String(localized: "Erweiterte Texterkennung …")) { editor.beginTextRecognition() }
+                Text(String(localized: "Die Erkennung erfolgt lokal auf deinem Mac. Bild und Text werden nicht hochgeladen oder im Projekt gespeichert."))
+                    .font(.caption).foregroundStyle(.secondary)
+            }.padding(16)
+        }
+    }
+}
+
+struct RecognitionCodeResults: View {
+    let model: QuickImageRecognitionModel
+    var compact = false
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if !compact { Text(String(localized: "QR lesen")).font(.headline) }
+            if model.isBusy { ProgressView(String(localized: "Codes werden erkannt …")) }
+            if let error = model.error { Text(error).foregroundStyle(.red) }
+            if let message = model.message { Text(message).foregroundStyle(.secondary) }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(model.codes, id: \.self) { code in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(code).textSelection(.enabled).lineLimit(compact ? 2 : 6)
+                            HStack {
+                                Button(String(localized: "Kopieren"), systemImage: "doc.on.doc") {
+                                    NSPasteboard.general.clearContents(); NSPasteboard.general.setString(code, forType: .string)
+                                }
+                                if let url = URL(string: code), ["http", "https"].contains(url.scheme?.lowercased()) {
+                                    Button(String(localized: "URL öffnen"), systemImage: "arrow.up.right.square") { NSWorkspace.shared.open(url) }
+                                }
+                            }
+                        }
+                        Divider()
+                    }
+                }
+            }.frame(maxHeight: compact ? 100 : 280)
+        }.font(compact ? .caption : .callout)
     }
 }

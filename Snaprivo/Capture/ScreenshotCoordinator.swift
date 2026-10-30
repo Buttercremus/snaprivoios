@@ -13,7 +13,7 @@ final class ScreenshotCoordinator {
     var needsPermission = false
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var selector: ScreenshotSelector?
-    @ObservationIgnored private var scrollSession: ManualScrollSession?
+    @ObservationIgnored private var scrollSession: ScrollCaptureSession?
     @ObservationIgnored private var videoSession: VideoRecordingSession?
     private(set) var isRecordingVideo = false
     var videoFiles = VideoRecordingFiles()
@@ -23,6 +23,10 @@ final class ScreenshotCoordinator {
     @ObservationIgnored private let requestAccess: @MainActor () -> Bool
     private(set) var permissionWasRequested = false
     private(set) var needsRestart = false
+    private(set) var lastSelection: ScreenshotSelection?
+    private var lastSelectionScale: CGFloat?
+    var hasLastSelection: Bool { lastSelection != nil }
+    @ObservationIgnored var onSelectionConfirmed: (@MainActor (ScreenshotSelection) -> Void)?
 
     init(preflight: @escaping @MainActor () -> Bool = { CGPreflightScreenCaptureAccess() },
          requestAccess: @escaping @MainActor () -> Bool = { CGRequestScreenCaptureAccess() }) {
@@ -56,8 +60,10 @@ final class ScreenshotCoordinator {
         if needsPermission { _ = checkPermission(requestIfNeeded: false) }
     }
 
-    func start(configuration: CaptureConfiguration, requestPermission: Bool = false, scrolling: Bool = false, videoAudio: VideoAudioOptions = .init(),
+    func start(configuration: CaptureConfiguration, requestPermission: Bool = false, scrolling: Bool = false, videoMouseClicks: Bool = false, videoAudio: VideoAudioOptions = .init(), imageOnly: Bool = false, destination: CaptureImageDestination = .image, activatesOnImageCapture: Bool = true,
                onFailure: @escaping @MainActor () -> Void = {},
+               authorizeRecognition: @escaping @MainActor () -> Bool = { false },
+               onRecognitionCapture: @escaping @MainActor (CGImage, Bool) -> Void = { _, _ in },
                onVideoCapture: @escaping @MainActor (URL) async -> Void = { _ in },
                onCapture: @escaping @MainActor (CGImage) -> Void) {
         guard !isBusy else { return }
@@ -88,11 +94,16 @@ final class ScreenshotCoordinator {
                 }
                 try Task.checkCancellation()
                 hiddenWindows = NSApp.windows.filter { $0.isVisible && $0.level.rawValue < NSWindow.Level.statusBar.rawValue }
+                let windowsHiddenAt = ContinuousClock.now
                 hiddenWindows.forEach { $0.orderOut(nil) }
-                // Let the window server remove our windows before source enumeration.
-                try await Task.sleep(for: .milliseconds(180))
                 let service = ScreenshotService()
                 let content = try await service.content()
+                // freeze() excludes this application's windows in its SCK filter.
+                // Wait for order-out only if SCK cannot identify our application.
+                let excludesOwnWindows = content.applications.contains { $0.processID == ProcessInfo.processInfo.processIdentifier }
+                if !hiddenWindows.isEmpty, !excludesOwnWindows {
+                    try await Task.sleep(until: windowsHiddenAt.advanced(by: .milliseconds(180)), clock: .continuous)
+                }
                 try Task.checkCancellation()
                 guard !content.displays.isEmpty else { throw ScreenshotError.noDisplays }
                 let windows = service.windows(in: content)
@@ -102,10 +113,18 @@ final class ScreenshotCoordinator {
                 let selectionUI = ScreenshotSelector()
                 selector = selectionUI
                 status = String(localized: "Fenster oder Bereich auswählen …")
-                guard let selected = try await selectionUI.select(source: scrolling ? .region : configuration.source, windows: windows, desktop: desktop, media: configuration.media, allowsVideoAction: !scrolling) else { return }
+                guard let selected = try await selectionUI.select(source: scrolling ? .region : configuration.source, windows: windows, desktop: desktop, media: configuration.media, allowsVideoAction: !scrolling && !imageOnly, scrolling: scrolling && !imageOnly, allowsScrolling: !imageOnly, destination: destination) else { return }
                 try Task.checkCancellation()
+                guard !imageOnly || (selected.media == .image && !selected.isScrolling) else { throw ScreenshotError.invalidRegion }
+                if selected.destination != .image { guard authorizeRecognition() else { return } }
+                if !imageOnly && selected.media == .image && !selected.isScrolling && selected.destination == .image {
+                    lastSelection = selected
+                    lastSelectionScale = NSScreen.screens.first(where: { ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32) == selected.displayID })?.backingScaleFactor
+                    onSelectionConfirmed?(selected)
+                }
+                let shouldScroll = selected.media == .image && selected.isScrolling
                 // The selection overlay can switch an image request to video.
-                guard authorizeCapture(scrolling, selected.media == .video) else { return }
+                guard authorizeCapture(shouldScroll, selected.media == .video) else { return }
                 status = String(localized: "Auswahl öffnen …")
                 if selected.media == .video {
                     let center = CaptureGeometry.quartzPoint(fromAppKit: CGPoint(x: selected.rect.midX, y: selected.rect.midY),
@@ -118,7 +137,8 @@ final class ScreenshotCoordinator {
                     try await Task.sleep(for: .milliseconds(350))
                     try Task.checkCancellation()
                     guard authorizeCapture(false, true) else { return }
-                    let session = VideoRecordingSession(selection: selected, includesCursor: configuration.includesCursor,
+                    let session = VideoRecordingSession(selection: selected, includesCursor: configuration.includesCursor, showsMouseClicks: videoMouseClicks,
+                                                        selectionOverlay: selectionUI.takeVideoOverlay(),
                                                         delaySeconds: configuration.delaySeconds, audio: videoAudio, files: videoFiles)
                     videoSession = session
                     session.onState = { [weak self] text, recording in self?.status = text; self?.isRecordingVideo = recording }
@@ -136,37 +156,33 @@ final class ScreenshotCoordinator {
                     return
                 }
                 var image = try desktop.crop(selected)
-                if scrolling {
-                    // Closing the frozen selector must return focus to the selected
-                    // content, including a browser in its own full-screen Space.
+                if shouldScroll {
+                    // Keep the selector's shade/frame while releasing its frozen
+                    // desktop and mouse interception. The initial crop preserves
+                    // the top even if scrolling begins immediately after confirming.
                     let center = CaptureGeometry.quartzPoint(fromAppKit: CGPoint(x: selected.rect.midX, y: selected.rect.midY),
                         primaryHeight: NSScreen.screens.first?.frame.height ?? 0)
                     if let target = windows.first(where: { $0.frame.contains(center) })?.processID,
                        let app = NSRunningApplication(processIdentifier: target) {
                         app.activate(options: [])
                     }
-                    try await Task.sleep(for: .milliseconds(350))
-                    // Seed the live session after focus/Space transitions have settled.
-                    // Every accepted section now uses the same live capture path.
-                    image = try await service.scrollFrame(selected)
-                    try await Task.sleep(for: .milliseconds(220))
-                    let first = image, stable = try await service.scrollFrame(selected)
-                    try await Task.detached {
-                        try ScrollStitcher.requireStable(ScrollCaptureProcessor.frame(first), ScrollCaptureProcessor.frame(stable))
-                    }.value
                     try Task.checkCancellation()
-                    let session = ManualScrollSession(selection: selected, first: image)
+                    let source = try ScrollFrameSource(selection: selected, content: content)
+                    let session = ScrollCaptureSession(selection: selected, first: image,
+                        overlay: selectionUI.takeScrollOverlay(), captureFrame: { try await source.capture() })
                     scrollSession = session
-                    status = String(localized: "Manuell scrollen und Abschnitte hinzufügen …")
+                    status = String(localized: "Scrollen und mit Fertig abschließen …")
                     guard let stitched = await session.run() else { return }
                     image = stitched
                     scrollSession = nil
                 }
                 try Task.checkCancellation()
-                hiddenWindows.reversed().forEach { $0.orderFront(nil) }
+                Self.restoreAfterImageCapture(hiddenWindows, opensEditor: selected.destination == .image && activatesOnImageCapture)
                 hiddenWindows.removeAll()
-                NSApp.activate(ignoringOtherApps: true)
-                onCapture(image)
+                if selected.destination == .image {
+                    if activatesOnImageCapture { NSApp.activate(ignoringOtherApps: true) }
+                    onCapture(image)
+                } else { onRecognitionCapture(image, selected.destination == .code) }
             } catch is CancellationError {
                 // Escape and Cancel leave the existing editor image untouched.
             } catch {
@@ -174,6 +190,46 @@ final class ScreenshotCoordinator {
                 NSApp.activate(ignoringOtherApps: true)
                 onFailure()
             }
+        }
+    }
+
+    /// A successful quick preview/recognition must not bring its hidden editor or
+    /// setup host back in front of the user's work. Cancellation still restores
+    /// every original window through the capture task's defer.
+    static func restoreAfterImageCapture(_ windows: [NSWindow], opensEditor: Bool) {
+        for window in windows.reversed() {
+            if opensEditor || (window is NSPanel && window.styleMask.contains(.nonactivatingPanel)) {
+                window.orderFront(nil)
+            } else {
+                // SwiftUI's native window identifiers may differ from scene IDs.
+                // Only floating previews/pins return after a background capture.
+                window.orderOut(nil)
+            }
+        }
+    }
+
+    /// Re-capture the last confirmed rectangle without showing the selector.
+    /// The display frame and backing scale must still match exactly.
+    func repeatLast(configuration: CaptureConfiguration, onFailure: @escaping @MainActor () -> Void = {}, onCapture: @escaping @MainActor (CGImage) -> Void) {
+        repeatSelection(lastSelection, expectedScale: lastSelectionScale, configuration: configuration, onFailure: onFailure, onCapture: onCapture)
+    }
+
+    func repeatSelection(_ requested: ScreenshotSelection?, expectedScale: CGFloat? = nil, configuration: CaptureConfiguration, onFailure: @escaping @MainActor () -> Void = {}, onCapture: @escaping @MainActor (CGImage) -> Void) {
+        guard checkPermission(requestIfNeeded: true) else { onFailure(); return }
+        guard !isBusy, let selection = requested, selection.media == .image,
+              let screen = NSScreen.screens.first(where: { ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32) == selection.displayID }),
+              screen.frame == selection.screenFrame,
+              expectedScale.map({ abs($0 - screen.backingScaleFactor) < 0.001 }) ?? true else { errorMessage = ScreenshotError.invalidRegion.localizedDescription; onFailure(); return }
+        isBusy = true; status = String(localized: "Letzten Bereich aufnehmen …")
+        task = Task { [weak self] in
+            guard let self else { return }
+            defer { isBusy = false; status = ""; task = nil }
+            do {
+                let service = ScreenshotService(); let content = try await service.content()
+                let desktop = try await service.freeze(content, cursor: configuration.includesCursor)
+                try Task.checkCancellation(); let image = try desktop.crop(selection)
+                onCapture(image)
+            } catch is CancellationError { } catch { errorMessage = error.localizedDescription; onFailure() }
         }
     }
 
@@ -212,12 +268,19 @@ enum ScrollCaptureProcessor {
         guard valid else { throw ScrollStitchError.limit }
         return try ScrollFrame(width: image.width, height: image.height, pixels: pixels)
     }
-    static func append(previous: CGImage, next: CGImage, stable: CGImage, accumulated: CGImage, count: Int) throws -> CGImage {
+    static func append(previous: CGImage, next: CGImage, stable: CGImage? = nil, accumulated: CGImage, count: Int, allowsScrolling: Bool = false) throws -> CGImage {
         let a = try frame(previous), b = try frame(next)
-        try ScrollStitcher.requireStable(b, frame(stable))
+        if let stable {
+            let verification = try frame(stable)
+            do { try ScrollStitcher.requireStable(b, verification) }
+            catch ScrollStitchError.moving where allowsScrolling {
+                _ = try ScrollStitcher.displacement(from: b, to: verification)
+            }
+        }
         let delta = try ScrollStitcher.displacement(from: a, to: b)
         let height = accumulated.height + delta
-        try ScrollStitcher.validateSize(width: next.width, height: height, count: count + 1)
+        if allowsScrolling { try ScrollStitcher.validateOutputSize(width: next.width, height: height) }
+        else { try ScrollStitcher.validateSize(width: next.width, height: height, count: count + 1) }
         guard accumulated.width == next.width,
               let strip = next.cropping(to: CGRect(x: 0, y: next.height - delta, width: next.width, height: delta)),
               let context = CGContext(data: nil, width: next.width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
@@ -230,172 +293,286 @@ enum ScrollCaptureProcessor {
 }
 
 @MainActor
-final class ManualScrollSession: NSObject, NSWindowDelegate {
+final class ScrollCaptureSession: NSObject, NSWindowDelegate, NSMenuDelegate {
     private let selection: ScreenshotSelection
     private var previous: CGImage
     private var result: CGImage
+    private var firstFrame: CGImage
     private(set) var count = 1
+    private(set) var isFinishing = false
+    private var captureIssue: String?
+    private var canRetryFinalSample = false
+    private var requiresPartialConfirmation = false
+    private var isChangingInsets = false
     private let captureFrame: @MainActor @Sendable () async throws -> CGImage
-    private let firstFrame: CGImage
+    private var overlay: CaptureSelectionOverlay?
     private var insets = ScrollContentInsets()
-    private var undoState: (previous: CGImage, result: CGImage, count: Int)?
-    private var detailPanel: NSPanel?
-    private var automaticTask: Task<Void, Never>?
-    private let automatic = NSButton(checkboxWithTitle: String(localized: "Abschnitte automatisch ergänzen"), target: nil, action: nil)
-    private let undoSection = NSButton(title: String(localized: "Letzten Abschnitt zurücknehmen"), target: nil, action: nil)
-    private let topInset = NSPopUpButton(frame: .zero, pullsDown: false)
-    private let bottomInset = NSPopUpButton(frame: .zero, pullsDown: false)
     private var continuation: CheckedContinuation<CGImage?, Never>?
+    private var automaticTask: Task<Void, Never>?
     private var captureTask: Task<Void, Never>?
-    private let panel = ScrollCapturePanel(contentRect: CGRect(x: 0, y: 0, width: 360, height: 620), styleMask: [.titled, .closable, .nonactivatingPanel], backing: .buffered, defer: false)
-    private let preview = NSImageView(frame: CGRect(x: 20, y: 394, width: 320, height: 124))
-    private let message = NSTextField(wrappingLabelWithString: "")
-    private let add = NSButton(title: String(localized: "Abschnitt hinzufügen"), target: nil, action: nil)
-    private let done = NSButton(title: String(localized: "Im Editor öffnen"), target: nil, action: nil)
+    private var detailPanel: NSPanel?
+    private let panel = ScrollCapturePanel(contentRect: CGRect(x: 0, y: 0, width: 560, height: CaptureToolbarSurface.barHeight), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    private let previewPanel = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 172, height: 236), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    private let preview = NSImageView(frame: CGRect(x: 8, y: 28, width: 156, height: 200))
+    private let message = NSTextField(labelWithString: "")
+    private let dimensions = NSTextField(labelWithString: "")
+    private let done = CaptureFlatButton(frame: .zero)
+    private let options = CaptureFlatButton(frame: .zero)
 
-    init(selection: ScreenshotSelection, first: CGImage, captureFrame: (@MainActor @Sendable () async throws -> CGImage)? = nil) {
+    init(selection: ScreenshotSelection, first: CGImage, overlay: CaptureSelectionOverlay? = nil, captureFrame: (@MainActor @Sendable () async throws -> CGImage)? = nil) {
         self.captureFrame = captureFrame ?? { try await ScreenshotService().scrollFrame(selection) }
+        self.overlay = overlay
         self.selection = selection; previous = first; result = first; firstFrame = first
         super.init()
     }
     func run() async -> CGImage? {
         await withCheckedContinuation { continuation in
             self.continuation = continuation
-            panel.title = String(localized: "Scroll-Aufnahme · Vorschau")
-            panel.level = .floating; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false; panel.delegate = self
+            panel.title = String(localized: "Scroll-Aufnahme")
+            panel.level = CaptureSelectionOverlay.controlsLevel; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false; panel.delegate = self
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            let body = NSVisualEffectView(frame: CGRect(x: 0, y: 0, width: 360, height: 620))
-            body.material = .hudWindow; body.blendingMode = .behindWindow; body.state = .active
-            panel.contentView = body
-            let instructions = NSTextField(wrappingLabelWithString: String(localized: "Scrolle im gewählten Bereich nach unten, warte kurz und füge den nächsten Abschnitt hinzu. Mindestens ein Drittel Überlappung behalten. Fenster und Bereich nicht verschieben."))
-            instructions.frame = CGRect(x: 20, y: 534, width: 320, height: 76); instructions.font = .systemFont(ofSize: 12)
-            body.addSubview(instructions)
-            preview.imageScaling = .scaleProportionallyDown
-            preview.setAccessibilityLabel(String(localized: "Vorschau der zusammengefügten Aufnahme"))
-            body.addSubview(preview)
-            message.frame = CGRect(x: 20, y: 314, width: 320, height: 72); message.font = .systemFont(ofSize: 12)
+            panel.setAccessibilityIdentifier("scroll.controls")
+            let surface = CaptureToolbarSurface(frame: CGRect(x: 0, y: 0, width: 560, height: CaptureToolbarSurface.barHeight), subdued: true)
+            panel.contentView = surface
+            let body = surface.controls
+            done.frame = CGRect(x: 10, y: 10, width: 88, height: CaptureToolbarSurface.controlHeight)
+            done.title = String(localized: "Fertig")
+            CaptureToolbarSurface.styleFlat(done, prominent: true)
+            done.target = self; done.action = #selector(openEditor); done.keyEquivalent = "\r"
+            done.setAccessibilityIdentifier("scroll.finish"); body.addSubview(done)
+            body.addSubview(CaptureToolbarSurface.divider(frame: CGRect(x: 108, y: 12, width: 1, height: 32)))
+            message.frame = CGRect(x: 120, y: 29, width: 326, height: 17)
+            message.font = .systemFont(ofSize: 12, weight: .medium); message.textColor = .white
+            message.lineBreakMode = .byTruncatingTail
             message.setAccessibilityIdentifier("scroll.status"); body.addSubview(message)
-            for (popup, label, x) in [(topInset, String(localized: "Oben auslassen"), CGFloat(20)), (bottomInset, String(localized: "Unten auslassen"), CGFloat(185))] {
-                let title = NSTextField(labelWithString: label); title.frame = CGRect(x: x, y: 290, width: 155, height: 18); body.addSubview(title)
-                popup.addItems(withTitles: ["0 %", "5 %", "10 %", "15 %", "20 %"])
-                popup.frame = CGRect(x: x, y: 258, width: 155, height: 28); popup.target = self; popup.action = #selector(changeInsets)
-                popup.setAccessibilityLabel(label); body.addSubview(popup)
-            }
-            automatic.frame = CGRect(x: 20, y: 222, width: 320, height: 28); automatic.target = self; automatic.action = #selector(toggleAutomatic); body.addSubview(automatic)
-            undoSection.frame = CGRect(x: 20, y: 184, width: 320, height: 32); undoSection.bezelStyle = .rounded
-            undoSection.target = self; undoSection.action = #selector(undoLastSection); body.addSubview(undoSection)
-            add.frame = CGRect(x: 20, y: 136, width: 320, height: 32); add.target = self; add.action = #selector(addSection)
-            add.bezelStyle = .rounded; add.setAccessibilityIdentifier("scroll.add"); body.addSubview(add)
-            done.frame = CGRect(x: 20, y: 90, width: 320, height: 32); done.target = self; done.action = #selector(openEditor)
-            done.bezelStyle = .rounded; done.keyEquivalent = "\r"; done.keyEquivalentModifierMask = [.command]; done.setAccessibilityIdentifier("scroll.finish"); body.addSubview(done)
-            let cancel = NSButton(title: String(localized: "Abbrechen"), target: self, action: #selector(cancelPressed))
-            cancel.frame = CGRect(x: 20, y: 44, width: 320, height: 32); cancel.bezelStyle = .rounded; cancel.keyEquivalent = "\u{1b}"; body.addSubview(cancel)
-            let inspect = NSButton(title: String(localized: "Vorschau in Originalgröße"), target: self, action: #selector(inspectResult))
-            inspect.frame = CGRect(x: 20, y: 6, width: 320, height: 30); inspect.bezelStyle = .rounded; body.addSubview(inspect)
+            dimensions.frame = CGRect(x: 120, y: 11, width: 326, height: 14)
+            dimensions.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
+            dimensions.textColor = NSColor.white.withAlphaComponent(0.68); body.addSubview(dimensions)
+            body.addSubview(CaptureToolbarSurface.divider(frame: CGRect(x: 452, y: 12, width: 1, height: 32)))
+            options.frame = CGRect(x: 462, y: 10, width: 36, height: CaptureToolbarSurface.controlHeight)
+            CaptureToolbarSurface.styleFlat(options); options.title = ""; options.imagePosition = .imageOnly
+            options.image = NSImage(systemSymbolName: "ellipsis", accessibilityDescription: nil)
+            options.target = self; options.action = #selector(showOptions(_:)); options.menu = NSMenu()
+            options.menu?.delegate = self
+            options.setAccessibilityLabel(String(localized: "Optionen für die Scroll-Aufnahme"))
+            options.setAccessibilityIdentifier("scroll.options"); body.addSubview(options)
+            let cancel = CaptureFlatButton(frame: CGRect(x: 508, y: 10, width: 36, height: CaptureToolbarSurface.controlHeight))
+            cancel.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)
+            cancel.target = self; cancel.action = #selector(cancelPressed)
+            CaptureToolbarSurface.styleFlat(cancel)
+            cancel.keyEquivalent = "\u{1b}"; cancel.toolTip = String(localized: "Abbrechen (Esc)")
+            cancel.setAccessibilityLabel(String(localized: "Abbrechen")); cancel.setAccessibilityIdentifier("scroll.cancel"); body.addSubview(cancel)
+            if overlay == nil { overlay = CaptureSelectionOverlay(selection: selection) }
+            configurePreview()
             updatePreview()
-            // Prefer a location outside the capture rectangle. Own app windows are also excluded by SCK.
             let screen = selection.screenFrame
-            let x = selection.rect.maxX + 380 < screen.maxX ? selection.rect.maxX + 12 : max(screen.minX + 12, selection.rect.minX - 372)
-            panel.setFrameOrigin(CGPoint(x: x, y: min(max(screen.minY + 12, selection.rect.maxY - 650), screen.maxY - 650)))
-            panel.makeKeyAndOrderFront(nil)
-            panel.makeMain()
-            panel.makeFirstResponder(add)
-            panel.orderFrontRegardless()
+            let width = panel.frame.width, height = panel.frame.height
+            let x = min(max(selection.rect.midX - width / 2, screen.minX + 12), screen.maxX - width - 12)
+            let below = selection.rect.minY - height - 12, above = selection.rect.maxY + 12
+            let y = below >= screen.minY + 12 ? below : above + height <= screen.maxY - 12 ? above : screen.minY + 12
+            panel.setFrameOrigin(CGPoint(x: x, y: y))
+            panel.makeKeyAndOrderFront(nil); panel.makeMain(); panel.makeFirstResponder(done)
+            startAutomatic()
+        }
+    }
+    private func configurePreview() {
+        previewPanel.title = String(localized: "Vorschau")
+        previewPanel.level = CaptureSelectionOverlay.controlsLevel; previewPanel.hidesOnDeactivate = false; previewPanel.isReleasedWhenClosed = false
+        previewPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        previewPanel.setAccessibilityIdentifier("scroll.preview")
+        let body = NSView(frame: CGRect(x: 0, y: 0, width: 172, height: 236))
+        body.wantsLayer = true; body.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        body.layer?.cornerRadius = 10; body.layer?.masksToBounds = true
+        preview.imageScaling = .scaleProportionallyDown
+        preview.setAccessibilityLabel(String(localized: "Wachsende Vorschau der Scroll-Aufnahme"))
+        body.addSubview(preview)
+        let title = NSTextField(labelWithString: String(localized: "Vorschau"))
+        title.frame = CGRect(x: 8, y: 6, width: 156, height: 18); title.alignment = .center; title.font = .systemFont(ofSize: 11)
+        body.addSubview(title); previewPanel.contentView = body
+        let screen = selection.screenFrame
+        let right = selection.rect.maxX + 12, left = selection.rect.minX - 184
+        let x = right + 172 <= screen.maxX - 12 ? right : left >= screen.minX + 12 ? left : screen.maxX - 184
+        previewPanel.setFrameOrigin(CGPoint(x: x, y: max(screen.minY + 100, min(selection.rect.minY, screen.maxY - 248))))
+        previewPanel.orderFrontRegardless()
+    }
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        menu.autoenablesItems = false
+        menu.removeAllItems()
+        func item(_ title: String, action: Selector) -> NSMenuItem {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: ""); item.target = self
+            menu.addItem(item); return item
+        }
+        let restart = item(String(localized: "Neu beginnen"), action: #selector(restartCapture))
+        restart.isEnabled = captureTask == nil && !isFinishing
+        for top in [true, false] {
+            let parent = NSMenuItem(title: top ? String(localized: "Oben auslassen") : String(localized: "Unten auslassen"), action: nil, keyEquivalent: "")
+            let submenu = NSMenu()
+            submenu.autoenablesItems = false
+            for value in 0...4 {
+                let choice = NSMenuItem(title: "\(value * 5) %", action: top ? #selector(changeTopInset(_:)) : #selector(changeBottomInset(_:)), keyEquivalent: "")
+                choice.target = self; choice.tag = value * 5
+                choice.state = choice.tag == (top ? insets.topPercent : insets.bottomPercent) ? .on : .off
+                choice.isEnabled = count == 1 && !isChangingInsets && !isFinishing
+                submenu.addItem(choice)
+            }
+            parent.submenu = submenu; menu.addItem(parent)
+        }
+        menu.addItem(.separator())
+        _ = item(String(localized: "Vorschau in Originalgröße"), action: #selector(inspectResult))
+    }
+    @objc private func showOptions(_ sender: NSButton) {
+        options.menu?.popUp(positioning: nil, at: CGPoint(x: sender.frame.minX, y: sender.frame.minY), in: panel.contentView)
+    }
+    @objc private func changeTopInset(_ sender: NSMenuItem) { changeInsets(top: sender.tag, bottom: insets.bottomPercent) }
+    @objc private func changeBottomInset(_ sender: NSMenuItem) { changeInsets(top: insets.topPercent, bottom: sender.tag) }
+    private func changeInsets(top: Int, bottom: Int) {
+        guard count == 1, !isChangingInsets, !isFinishing else { return }
+        let next = ScrollContentInsets(topPercent: top, bottomPercent: bottom)
+        isChangingInsets = true; done.isEnabled = false
+        automaticTask?.cancel(); captureTask?.cancel()
+        Task { [self] in
+            await captureTask?.value
+            defer {
+                isChangingInsets = false
+                if continuation != nil, !isFinishing { done.isEnabled = true; startAutomatic() }
+            }
+            guard continuation != nil, !isFinishing,
+                  let rect = try? next.rect(width: firstFrame.width, height: firstFrame.height),
+                  let cropped = firstFrame.cropping(to: rect) else { return }
+            insets = next; previous = cropped; result = cropped
+            captureIssue = nil; canRetryFinalSample = false; requiresPartialConfirmation = false; done.title = String(localized: "Fertig")
+            updatePreview()
+        }
+    }
+    private func startAutomatic() {
+        automaticTask?.cancel()
+        automaticTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self, continuation != nil, !isFinishing, !isChangingInsets else { return }
+                if captureTask == nil { beginSample() }
+                await captureTask?.value
+                do { try await Task.sleep(for: .milliseconds(60)) } catch { return }
+            }
+        }
+    }
+    private func beginSample() {
+        guard captureTask == nil, continuation != nil else { return }
+        captureTask = Task { [self] in
+            defer { captureTask = nil }
+            do {
+                let capturedNext = try await captureFrame()
+                let rect = try insets.rect(width: capturedNext.width, height: capturedNext.height)
+                guard capturedNext.width == firstFrame.width, capturedNext.height == firstFrame.height,
+                      let next = capturedNext.cropping(to: rect) else { throw ScrollStitchError.dimensions }
+                let prior = previous, accumulated = result, sections = count
+                let stitched = try await Task.detached(priority: .userInitiated) {
+                    try Task.checkCancellation()
+                    // A matched translation of the overlap is the verification.
+                    // Waiting for a second stationary frame loses live scrolling.
+                    return try ScrollCaptureProcessor.append(previous: prior, next: next, accumulated: accumulated, count: sections, allowsScrolling: true)
+                }.value
+                try Task.checkCancellation()
+                guard continuation != nil else { return }
+                previous = next; result = stitched; count += 1; captureIssue = nil; canRetryFinalSample = false; updatePreview()
+            } catch is CancellationError { }
+            catch let issue as ScrollStitchError {
+                guard continuation != nil else { return }
+                captureIssue = issue == .unchanged ? nil : issue.localizedDescription
+                canRetryFinalSample = issue == .uncertain || issue == .moving || issue == .fixedContent
+                guard !isFinishing else { return }
+                switch issue {
+                case .unchanged, .moving:
+                    message.stringValue = String(localized: "Langsam nach unten scrollen · Dann Fertig.")
+                case .uncertain:
+                    message.stringValue = String(localized: "Scrolle etwas zurück und langsamer weiter.")
+                case .fixedContent:
+                    automaticTask?.cancel()
+                    message.stringValue = String(localized: "Feste Kopf- oder Fußzeile: Wähle nur den scrollenden Inhalt.")
+                case .dimensions, .limit:
+                    automaticTask?.cancel(); message.stringValue = issue.localizedDescription
+                }
+            } catch {
+                guard continuation != nil else { return }
+                captureIssue = error.localizedDescription
+                canRetryFinalSample = false
+                guard !isFinishing else { return }
+                automaticTask?.cancel()
+                message.stringValue = String(localized: "Scroll-Aufnahme unterbrochen: \(error.localizedDescription)")
+            }
+        }
+    }
+    private func updatePreview() {
+        preview.image = NSImage(cgImage: result, size: CGSize(width: result.width, height: result.height))
+        dimensions.stringValue = String(localized: "\(result.width) × \(result.height) Pixel · Wird automatisch zusammengefügt")
+        if !isFinishing {
+            message.stringValue = String(localized: "Langsam nach unten scrollen · Dann Fertig.")
+            message.toolTip = nil
+        }
+    }
+    @objc private func restartCapture() {
+        guard captureTask == nil, continuation != nil, !isFinishing else { return }
+        automaticTask?.cancel()
+        captureTask = Task { [self] in
+            defer { captureTask = nil; if continuation != nil { startAutomatic() } }
+            do {
+                let image = try await captureFrame()
+                try Task.checkCancellation()
+                let rect = try insets.rect(width: image.width, height: image.height)
+                guard let cropped = image.cropping(to: rect) else { throw ScrollStitchError.dimensions }
+                firstFrame = image; previous = cropped; result = cropped; count = 1
+                captureIssue = nil; canRetryFinalSample = false; requiresPartialConfirmation = false; done.title = String(localized: "Fertig"); updatePreview()
+            } catch { if continuation != nil { message.stringValue = error.localizedDescription } }
         }
     }
     @objc private func inspectResult() {
         detailPanel?.close()
         let detail = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 800, height: 600), styleMask: [.titled, .closable, .resizable], backing: .buffered, defer: false)
-        detail.title = String(localized: "Scroll-Aufnahme · Originalgröße"); detail.isReleasedWhenClosed = false
-        detail.level = .floating
+        detail.title = String(localized: "Scroll-Aufnahme · Originalgröße"); detail.isReleasedWhenClosed = false; detail.level = CaptureSelectionOverlay.controlsLevel
         let scroll = NSScrollView(); scroll.hasVerticalScroller = true; scroll.hasHorizontalScroller = true
         let image = NSImageView(frame: CGRect(x: 0, y: 0, width: result.width, height: result.height))
         image.image = NSImage(cgImage: result, size: image.frame.size); image.imageScaling = .scaleNone
-        scroll.documentView = image; detail.contentView = scroll; detail.center(); detail.makeKeyAndOrderFront(nil)
-        detailPanel = detail
+        scroll.documentView = image; detail.contentView = scroll; detail.center(); detail.makeKeyAndOrderFront(nil); detailPanel = detail
     }
-    @objc private func changeInsets() {
-        guard count == 1, captureTask == nil else { return }
-        let next = ScrollContentInsets(topPercent: topInset.indexOfSelectedItem * 5, bottomPercent: bottomInset.indexOfSelectedItem * 5)
-        do {
-            let rect = try next.rect(width: firstFrame.width, height: firstFrame.height)
-            guard let cropped = firstFrame.cropping(to: rect) else { throw ScrollStitchError.dimensions }
-            insets = next; previous = cropped; result = cropped; undoState = nil; updatePreview()
-        } catch {
-            topInset.selectItem(at: insets.topPercent / 5); bottomInset.selectItem(at: insets.bottomPercent / 5)
-            message.stringValue = error.localizedDescription
-        }
-    }
-    @objc private func toggleAutomatic() {
-        automaticTask?.cancel(); automaticTask = nil
-        guard automatic.state == .on else { return }
-        automaticTask = Task { [weak self] in
-            while !Task.isCancelled {
-                do { try await Task.sleep(for: .milliseconds(900)) } catch { return }
-                guard let self, continuation != nil else { return }
-                if captureTask == nil { addSection() }
-            }
-        }
-    }
-    @objc private func undoLastSection() {
-        guard captureTask == nil, let state = undoState else { return }
-        automatic.state = .off; toggleAutomatic()
-        previous = state.previous; result = state.result; count = state.count; undoState = nil; updatePreview()
-    }
-    private func updatePreview() {
-        preview.image = NSImage(cgImage: result, size: CGSize(width: result.width, height: result.height))
-        let sections = String(localized: "\(count) Abschnitte")
-        message.stringValue = String(localized: "\(sections) · \(result.width) × \(result.height) Pixel\nPrüfe die Übergänge in der Vorschau.")
-        done.isEnabled = count > 1
-        undoSection.isEnabled = undoState != nil && captureTask == nil
-        topInset.isEnabled = count == 1 && captureTask == nil; bottomInset.isEnabled = topInset.isEnabled
-    }
-    @objc private func addSection() {
-        guard captureTask == nil, continuation != nil else { return }
-        add.isEnabled = false; done.isEnabled = false; undoSection.isEnabled = false; topInset.isEnabled = false; bottomInset.isEnabled = false; message.stringValue = String(localized: "Abschnitt prüfen und zusammenfügen …")
-        captureTask = Task { [self] in
-            defer {
-                captureTask = nil; add.isEnabled = true; done.isEnabled = count > 1
-                undoSection.isEnabled = undoState != nil
-                topInset.isEnabled = count == 1; bottomInset.isEnabled = topInset.isEnabled
-            }
-            do {
-                try await Task.sleep(for: .milliseconds(180))
-                let capturedNext = try await captureFrame()
-                try await Task.sleep(for: .milliseconds(220))
-                let capturedStable = try await captureFrame()
-                let rect = try insets.rect(width: capturedNext.width, height: capturedNext.height)
-                guard let next = capturedNext.cropping(to: rect), let stable = capturedStable.cropping(to: rect),
-                      capturedNext.width == firstFrame.width, capturedNext.height == firstFrame.height,
-                      capturedStable.width == firstFrame.width, capturedStable.height == firstFrame.height else { throw ScrollStitchError.dimensions }
-                let prior = previous, accumulated = result, sections = count
-                let stitched = try await Task.detached(priority: .userInitiated) {
-                    try ScrollCaptureProcessor.append(previous: prior, next: next, stable: stable, accumulated: accumulated, count: sections)
-                }.value
-                try Task.checkCancellation()
-                guard continuation != nil else { return }
-                undoState = (previous, result, count)
-                previous = next; result = stitched; count += 1; updatePreview()
-            } catch is CancellationError { }
-            catch {
-                if automatic.state == .on, let issue = error as? ScrollStitchError, issue == .unchanged || issue == .moving {
-                    if continuation != nil { message.stringValue = String(localized: "Warte auf einen neuen, stillstehenden Abschnitt …") }
-                    return
+    @objc private func openEditor() {
+        guard continuation != nil, !isFinishing, !isChangingInsets else { return }
+        if requiresPartialConfirmation { finish(result); return }
+        isFinishing = true; done.isEnabled = false; options.isEnabled = false
+        message.stringValue = String(localized: "Scroll-Aufnahme abschließen …")
+        automaticTask?.cancel()
+        Task { [self] in
+            await captureTask?.value
+            guard continuation != nil else { return }
+            // A click can arrive during momentum/overscroll or an unsettled
+            // browser repaint. Retry only matching failures, for a bounded time;
+            // unchanged content is already included and completes immediately.
+            for attempt in 0..<4 {
+                if attempt > 0 {
+                    do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
                 }
-                automatic.state = .off; toggleAutomatic()
-                if continuation != nil { message.stringValue = String(localized: "Nicht hinzugefügt: \(error.localizedDescription)") }
+                guard continuation != nil else { return }
+                beginSample(); await captureTask?.value
+                guard captureIssue != nil, canRetryFinalSample else { break }
             }
+            guard continuation != nil else { return }
+            if let captureIssue {
+                isFinishing = false; requiresPartialConfirmation = true
+                done.title = String(localized: "Übernehmen"); done.isEnabled = true; options.isEnabled = true
+                message.stringValue = String(localized: "Ende unklar. Übernehmen öffnet das bisherige Bild.")
+                message.toolTip = captureIssue
+                return
+            }
+            finish(result)
         }
     }
-    @objc private func openEditor() { if captureTask == nil, count > 1 { finish(result) } }
     @objc private func cancelPressed() { cancel() }
     func cancel() { captureTask?.cancel(); finish(nil) }
     func windowShouldClose(_ sender: NSWindow) -> Bool { cancel(); return false }
     private func finish(_ image: CGImage?) {
         guard let continuation else { return }
-        automaticTask?.cancel(); automaticTask = nil
+        self.continuation = nil; automaticTask?.cancel(); automaticTask = nil
         detailPanel?.close(); detailPanel = nil
-        self.continuation = nil; panel.orderOut(nil); panel.close()
+        overlay?.close(); overlay = nil
+        previewPanel.orderOut(nil); previewPanel.close(); panel.orderOut(nil); panel.close()
         continuation.resume(returning: image)
     }
 }

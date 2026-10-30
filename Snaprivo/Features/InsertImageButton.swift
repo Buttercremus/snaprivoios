@@ -10,8 +10,8 @@ struct InsertImageButton: View {
     @State private var busy = false
     var body: some View {
         Button {
-            guard model.hasExportableImage, !busy else { return }
-            guard model.requestFeature(.insertedImages) else { return }
+            guard model.canSwitchEditingTool, !busy, model.requestFeature(.insertedImages),
+                  model.prepareForEditingTool() else { return }
             let panel = NSOpenPanel(); panel.allowedContentTypes = [.png, .jpeg, .tiff, .heic]
             panel.allowsMultipleSelection = false
             guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -46,6 +46,6 @@ struct InsertImageButton: View {
                 } catch { model.error = error.localizedDescription }
             }
         } label: { EditorToolbarLabel(title: String(localized: "Bild einfügen"), symbol: "photo.badge.plus", size: size, extraWidth: 18) }
-        .disabled(busy || !model.hasConfirmedImageForToolbar)
+        .disabled(busy || !model.canSwitchEditingTool)
     }
 }

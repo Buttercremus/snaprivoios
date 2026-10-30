@@ -12,11 +12,12 @@ import SnagForgeDomain
         let document = ProjectDocument(title: "Synthetic selection grips", pixelSize: PixelSize(width: 640, height: 480)!)
         try await store.create(document, original: EditorRenderer.png(image: image, objects: []), thumbnail: nil)
         let model = EditorModel(image: image, document: document, generation: 0, store: store, onSaved: {})
+        model.snapsToObjects = false
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 960, height: 720), styleMask: .borderless, backing: .buffered, defer: false)
         let canvas = CanvasView(model: model); window.contentView = canvas
         canvas.frame.size = CGSize(width: 960, height: 720); canvas.synchronizeViewport()
-        let frame = CGRect(x: 170, y: 120, width: 300, height: 240)
-        let shape = EditorObject(kind: .rectangle, start: frame.origin, end: CGPoint(x: frame.maxX, y: frame.maxY))
+        let referenceFrame = CGRect(x: 170, y: 120, width: 300, height: 240)
+        var frame = referenceFrame
         func projection() -> EditorImageProjection {
             EditorImageProjection(source: model.sourceRect, destination: model.viewport.imageRect(
                 image: model.imageSize, in: canvas.bounds, backingScale: window.backingScaleFactor))
@@ -34,7 +35,9 @@ import SnagForgeDomain
             canvas.cacheDisplay(in: canvas.bounds, to: bitmap)
             let ratio = CGFloat(bitmap.pixelsWide) / canvas.bounds.width
             func white(_ point: CGPoint) -> Bool {
-                let color = bitmap.colorAt(x: Int(point.x * ratio), y: Int(point.y * ratio))!.usingColorSpace(.deviceRGB)!
+                let x = Int(floor(point.x * ratio)), y = Int(floor(point.y * ratio))
+                guard x >= 0, y >= 0, x < bitmap.pixelsWide, y < bitmap.pixelsHigh,
+                      let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB) else { return false }
                 return color.redComponent > 0.95 && color.greenComponent > 0.95 && color.blueComponent > 0.95
             }
             func whiteRun(_ centre: CGPoint, horizontal: Bool) -> CGFloat {
@@ -51,7 +54,9 @@ import SnagForgeDomain
             }
             for handle in EditorResizeHandle.allCases {
                 let centre = projection().viewPoint(handle.point(in: frame))
-                precondition(white(centre), "Editor grip lost its white centre")
+                precondition(canvas.bounds.insetBy(dx: 24, dy: 24).contains(centre),
+                             "Grip \(handle) at \(centre) must be fully inside the test viewport \(canvas.bounds)")
+                precondition(white(centre), "Editor grip \(handle) lost its white centre at \(centre)")
                 let expected: CGSize = switch handle {
                 case .top, .bottom: CGSize(width: 20.5, height: 6.5)
                 case .left, .right: CGSize(width: 6.5, height: 20.5)
@@ -78,7 +83,17 @@ import SnagForgeDomain
         for output in [PixelSize(width: 640, height: 480)!, PixelSize(width: 960, height: 240)!] {
             precondition(model.applyImageSize(output))
             for zoom: CGFloat in [0.5, 1, 4] {
-                model.commit([shape]); model.selection = shape.id; model.tool = .selection; model.setZoom(zoom)
+                model.tool = .selection; model.fitImage(); model.setZoom(zoom)
+                let p = projection()
+                // Keep every grip visible without changing the zoom or output aspect ratio.
+                // At 400%, the original 300 × 240 frame can exceed the test window.
+                let factor = min(1, (canvas.bounds.width - 96) / (referenceFrame.width * p.scaleX),
+                                 (canvas.bounds.height - 96) / (referenceFrame.height * p.scaleY))
+                frame = CGRect(x: referenceFrame.midX - referenceFrame.width * factor / 2,
+                               y: referenceFrame.midY - referenceFrame.height * factor / 2,
+                               width: referenceFrame.width * factor, height: referenceFrame.height * factor)
+                let shape = EditorObject(kind: .rectangle, start: frame.origin, end: CGPoint(x: frame.maxX, y: frame.maxY))
+                model.commit([shape]); model.selection = shape.id
                 try checkPixels(output.width == 640 && zoom == 1 ? "/tmp/Snaprivo-EditorGrips.png" : nil)
                 let png = try EditorRenderer.png(image: image, objects: [shape], resizedSize: model.document.resizedSize)
                 for handle in EditorResizeHandle.allCases {

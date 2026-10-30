@@ -45,5 +45,5 @@ import CoreGraphics
     #expect(history.objects == [target]); history.redo(); #expect(history.objects == [styled])
     var ellipse = arrow; ellipse.kind = .ellipse
     var rectangle = target; rectangle.kind = .rectangle
-    #expect(EditorSavedStyle(object: ellipse).applying(to: rectangle)?.drawingStyle == nil)
+    #expect(EditorSavedStyle(object: ellipse).applying(to: rectangle)?.drawingStyle == .handDrawn)
 }

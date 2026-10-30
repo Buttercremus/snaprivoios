@@ -6,7 +6,7 @@ import SnagForgeDomain
 /// any user library is touched. Restoration is additive with operation-scoped rollback.
 actor CompleteBackup {
     struct Entry: Codable { let path: String; let bytes: Int64; let sha256: String }
-    struct Manifest: Codable { var version = 1; let createdAt: Date; let sourceLibrary: String; let files: [Entry] }
+    struct Manifest: Codable { var version = 2; let createdAt: Date; let sourceLibrary: String; let files: [Entry] }
     struct Counts: Sendable { let images: Int; let videos: Int; let guides: Int }
     private let images: ProjectStore
     private let videos: VideoRecordingFiles
@@ -86,10 +86,15 @@ actor CompleteBackup {
         try fm.createDirectory(at: folder, withIntermediateDirectories: false)
         let listing = try await guides.list()
         guard listing.issues.isEmpty else { throw ProjectError.invalidDocument }
-        for summary in listing.documents {
-            let value = try await guides.load(summary.id).document
+        let removed = try await guides.listTrash()
+        guard removed.issues.isEmpty else { throw ProjectError.invalidDocument }
+        let trashFolder = stage.appendingPathComponent("guide-trash")
+        try fm.createDirectory(at: trashFolder, withIntermediateDirectories: false)
+        for summary in listing.documents + removed.documents {
+            let isTrashed = summary.trashedAt != nil
+            let value = try await guides.load(summary.id, includingTrashed: isTrashed).document
             try GuideExporter.validateImages(value)
-            try value.encoded().write(to: folder.appendingPathComponent("\(value.id).snaprivoguide"), options: .atomic)
+            try value.encoded().write(to: (isTrashed ? trashFolder : folder).appendingPathComponent("\(value.id).snaprivoguide"), options: .atomic)
         }
         let all = try entries(in: stage)
         let data = try JSONEncoder().encode(Manifest(createdAt: .now, sourceLibrary: ProjectArchive.hash(Data(images.root.standardizedFileURL.resolvingSymlinksInPath().path.utf8)), files: all))
@@ -97,12 +102,12 @@ actor CompleteBackup {
         try data.write(to: stage.appendingPathComponent("complete.json"), options: .atomic)
         try fm.moveItem(at: stage, to: target)
         let videoIndex = try JSONDecoder().decode(VideoBackup.self, from: ProjectArchive.readRegularFile(target.appendingPathComponent("videos/manifest.json"), limit: 16_777_216))
-        return Counts(images: count, videos: videoIndex.entries.count, guides: listing.documents.count)
+        return Counts(images: count, videos: videoIndex.entries.count, guides: listing.documents.count + removed.documents.count)
     }
     func restore(from source: URL) async throws -> Counts {
         let fm = FileManager.default
         let manifest = try JSONDecoder().decode(Manifest.self, from: ProjectArchive.readRegularFile(source.appendingPathComponent("complete.json"), limit: 16_777_216))
-        guard manifest.version == 1 else { throw ProjectError.unsupportedVersion }
+        guard (1...2).contains(manifest.version) else { throw ProjectError.unsupportedVersion }
         guard manifest.files.count <= 50_000, Set(manifest.files.map(\.path)).count == manifest.files.count else { throw ProjectError.invalidDocument }
         let temporary = fm.temporaryDirectory.appendingPathComponent("Snaprivo-Restore-\(UUID())")
         try fm.createDirectory(at: temporary, withIntermediateDirectories: true)
@@ -111,7 +116,7 @@ actor CompleteBackup {
         try fm.createDirectory(at: staged, withIntermediateDirectories: false)
         for entry in manifest.files {
             let parts = entry.path.split(separator: "/", omittingEmptySubsequences: false)
-            guard parts.count == 2, ["images", "videos", "guides"].contains(String(parts[0])),
+            guard parts.count == 2, ["images", "videos", "guides", "guide-trash"].contains(String(parts[0])),
                   parts.allSatisfy({ VideoDocument.isSafeFileName(String($0)) }), entry.bytes >= 0 else { throw ProjectError.invalidDocument }
             let folder = source.appendingPathComponent(String(parts[0]))
             let info = try folder.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
@@ -125,19 +130,21 @@ actor CompleteBackup {
             try fm.copyItem(at: file, to: copy)
             guard try checksum(copy) == entry.sha256 else { throw ProjectError.invalidDocument }
         }
-        for name in ["images", "videos", "guides"] { try fm.createDirectory(at: staged.appendingPathComponent(name), withIntermediateDirectories: true) }
+        for name in ["images", "videos", "guides", "guide-trash"] { try fm.createDirectory(at: staged.appendingPathComponent(name), withIntermediateDirectories: true) }
         // Full validation, including image decoding and MP4 media facts, happens here.
         let testImages = ProjectStore(root: temporary.appendingPathComponent("validated-images"))
         _ = try await testImages.restoreBackup(from: staged.appendingPathComponent("images"), thumbnail: WorkspaceModel.archiveThumbnail)
         let testVideos = VideoRecordingFiles(root: temporary.appendingPathComponent("validated-videos"))
         _ = try await testVideos.restore(from: staged.appendingPathComponent("videos"))
-        var values: [GuideDocument] = []
-        for file in try fm.contentsOfDirectory(at: staged.appendingPathComponent("guides"), includingPropertiesForKeys: nil) {
-            guard file.pathExtension == "snaprivoguide" else { throw ProjectError.invalidDocument }
-            var value = try GuideDocument.read(file)
-            try GuideExporter.validateImages(value)
-            value.id = UUID(); value.revision = 0
-            values.append(value)
+        var values: [(document: GuideDocument, trashed: Bool)] = []
+        for folder in ["guides", "guide-trash"] {
+            for file in try fm.contentsOfDirectory(at: staged.appendingPathComponent(folder), includingPropertiesForKeys: nil) {
+                guard file.pathExtension == "snaprivoguide" else { throw ProjectError.invalidDocument }
+                var value = try GuideDocument.read(file)
+                try GuideExporter.validateImages(value)
+                value.id = UUID(); value.revision = 0
+                values.append((value, folder == "guide-trash"))
+            }
         }
         var imageIDs: [UUID] = [], videoIDs: [UUID] = [], guideIDs: [UUID] = []
         do {
@@ -145,14 +152,18 @@ actor CompleteBackup {
             imageIDs = Array(mapping.values)
             videoIDs = try await videos.restoreIDs(from: staged.appendingPathComponent("videos"))
             let targetLibrary = ProjectArchive.hash(Data(images.root.standardizedFileURL.resolvingSymlinksInPath().path.utf8))
-            for var value in values {
+            for entry in values {
+                var value = entry.document
                 for i in value.steps.indices {
                     if value.steps[i].sourceLibrary == manifest.sourceLibrary,
                        let old = value.steps[i].sourceProjectID, let next = mapping[old] {
                         value.steps[i].sourceProjectID = next; value.steps[i].sourceLibrary = targetLibrary
-                    } else { value.steps[i].sourceProjectID = nil; value.steps[i].sourceLibrary = nil }
+                        // Restored image projects start a new local revision history.
+                        value.steps[i].sourceRevision = nil
+                    } else { value.steps[i].sourceProjectID = nil; value.steps[i].sourceLibrary = nil; value.steps[i].sourceRevision = nil }
                 }
                 try await guides.create(value); guideIDs.append(value.id)
+                if entry.trashed { try await guides.moveToTrash(value.id, expectedRevision: 0) }
             }
         } catch {
             let original = error

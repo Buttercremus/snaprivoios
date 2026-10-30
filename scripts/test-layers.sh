@@ -8,7 +8,7 @@ xcrun swiftc -swift-version 6 -emit-library -emit-module -module-name SnagForgeD
   Packages/SnagForgeDomain/Sources/SnagForgeDomain/*.swift \
   -emit-module-path "$validation_dir/SnagForgeDomain.swiftmodule" -o "$validation_dir/libSnagForgeDomain.dylib"
 xcrun swiftc -swift-version 6 -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
-  Snaprivo/Features/SelectionGrips.swift \
+  Snaprivo/Features/SelectionGrips.swift Snaprivo/Features/EditorQuickOptions.swift \
   -Xlinker -rpath -Xlinker "$validation_dir" \
   Snaprivo/Editor/EditorRenderer.swift Snaprivo/Editor/EditorModel.swift Snaprivo/Editor/EditorCanvas.swift \
   Tests/LayerChecks.swift -o "$validation_dir/LayerChecks"

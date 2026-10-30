@@ -28,8 +28,11 @@ struct EditorView: View {
 private struct ImageEditorView: View {
     @Bindable var model: EditorModel
     let preferences: AppPreferences
+    @State private var inlineRecognition = InlineTextRecognitionModel()
+    @State private var codeRecognition = QuickImageRecognitionModel()
+    @State private var showsCodes = false
     @State private var showsOutput = false
-    @State private var showsColorPicker = false
+    @State private var colorPicker = ImageColorPickerState()
     @State private var isRenaming = false
     @State private var isCustomizingToolbar = false
     @State private var showsSwitchProgress = false
@@ -38,7 +41,7 @@ private struct ImageEditorView: View {
     var body: some View {
         VStack(spacing: 0) {
             commandBar.padding(.top, 8)
-            EditorLearningHint(tool: model.tool, preferences: preferences)
+            EditorLearningHint(model: model, preferences: preferences)
             if let error = model.saveError {
                 HStack {
                     Label(String(localized: "Speichern fehlgeschlagen"), systemImage: "exclamationmark.triangle").foregroundStyle(.red)
@@ -49,18 +52,41 @@ private struct ImageEditorView: View {
                 }.font(.caption).padding(.horizontal).padding(.bottom, 8)
             }
             HStack(spacing: 0) {
-                EditorCanvas(model: model)
-                    .onAppear { model.focusRequest += 1 }
-                    .id(ObjectIdentifier(model))
-                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                    .overlay(alignment: .topTrailing) {
-                        if showsSwitchProgress && model.isSwitchingImage {
-                            ProgressView().controlSize(.small).padding(12)
-                        }
+                if model.isRecognizingTextInPlace {
+                    ZStack {
+                        if inlineRecognition.image == nil { EditorCanvas(model: model).allowsHitTesting(false) }
+                        InlineTextRecognitionCanvas(editor: model, recognition: inlineRecognition).opacity(inlineRecognition.image == nil ? 0 : 1)
                     }
+                } else if model.isEditingPresentation {
+                    EditorPresentationPreview(model: model, interactive: true)
+                } else {
+                    EditorCanvas(model: model, colorPicking: colorPicker.isActive ? EditorCanvasColorPicking(
+                        sample: { colorPicker.sample($0, fixed: $1) }, move: { colorPicker.move($0) },
+                        cancel: { colorPicker.end(); model.focusRequest += 1 }) : nil)
+                        .onAppear { model.focusRequest += 1 }
+                        .transaction { $0.animation = nil }
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                        .overlay(alignment: .topTrailing) {
+                            if showsSwitchProgress && model.isSwitchingImage { ProgressView().controlSize(.small).padding(12) }
+                        }
+                }
                 Divider()
                 VStack(spacing: 0) {
-                    EditorProperties(model: model, preferences: preferences)
+                    ZStack(alignment: .topLeading) {
+                    if colorPicker.isActive {
+                        ImageColorPicker(model: model, picker: colorPicker)
+                    } else if model.isRecognizingTextInPlace {
+                        InlineTextRecognitionInspector(editor: model, recognition: inlineRecognition).transition(.opacity)
+                    } else if model.isEditingPresentation {
+                        EditorPresentationInspector(model: model)
+                            .transition(.opacity)
+                    } else {
+                        EditorProperties(model: model, preferences: preferences)
+                            .transition(.opacity)
+                    }
+                    }
+                    .animation(EditorMotion.panel(reduceMotion: reduceMotion), value: model.isEditingPresentation)
+                    .animation(EditorMotion.panel(reduceMotion: reduceMotion), value: model.isRecognizingTextInPlace)
                     Divider()
                     EditorObjectList(model: model)
                 }.frame(width: 260)
@@ -87,14 +113,30 @@ private struct ImageEditorView: View {
                 .padding(.horizontal, 16).padding(.vertical, 4)
         }
         .allowsHitTesting(!model.isSwitchingImage)
+        .onChange(of: model.copyState) { _, state in
+            if state == .copied {
+                preferences.dismissedEditorHints.formUnion(["firstAnnotation", "output"])
+            }
+        }
         .task(id: model.isSwitchingImage) {
             showsSwitchProgress = false
             guard model.isSwitchingImage else { return }
             do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
             showsSwitchProgress = true
         }
+        .task(id: "\(model.document.id)-\(model.isRecognizingTextInPlace)-\(model.document.revision)-\(model.isSwitchingImage)") {
+            codeRecognition.cancel()
+            guard model.isRecognizingTextInPlace, let snapshot = model.pngShareItemForToolbar else { inlineRecognition.clear(); return }
+            let revision = model.document.revision
+            await inlineRecognition.prepare(snapshot, canUse: { model.hasProAccess() && model.document.revision == revision })
+        }
+        .sheet(isPresented: $showsCodes) { RecognitionCodeResults(model: codeRecognition).padding(24).frame(width: 420, height: 360)
+            Button(String(localized: "Schließen")) { showsCodes = false }.padding(.bottom).keyboardShortcut(.cancelAction)
+        }
         .sheet(isPresented: $showsOutput) { ImageOutputView(model: model) }
-        .sheet(isPresented: $showsColorPicker) { ImageColorPicker(model: model) }
+        .task(id: "\(model.document.id)-\(model.document.revision)-\(colorPicker.isActive)") {
+            if colorPicker.isActive { await colorPicker.prepare(model) }
+        }
         .sheet(isPresented: $isRenaming) {
             ProjectRenameSheet(title: model.name) { title in
                 guard model.updateMetadata(title: title) else { return false }
@@ -107,18 +149,27 @@ private struct ImageEditorView: View {
         .sheet(isPresented: $model.isShowingImageSize, onDismiss: { model.focusRequest += 1 }) { EditorResizeView(model: model) }
         .sheet(isPresented: $model.isShowingTextRecognition, onDismiss: { model.focusRequest += 1 }) {
             TextRecognitionView(snapshot: TextRecognitionSnapshot(image: model.image, objects: model.history.objects,
-                                                                 crop: model.history.crop, resizedSize: model.history.resizedSize))
+                                                                 crop: model.history.crop, resizedSize: model.history.resizedSize, canvasRect: model.history.canvasRect, transform: model.history.transform))
         }
-        .onDisappear { model.endStyleEditing(); if model.cropDraft != nil { model.cancelCrop() } }
-        .onChange(of: model.tool) { _, new in
+        .sheet(isPresented: $model.isShowingRedactionSuggestions, onDismiss: { model.focusRequest += 1 }) { RedactionSuggestionView(editor: model) }
+        .onDisappear { colorPicker.end(); codeRecognition.cancel(); inlineRecognition.clear(); model.endPresentationEditing(); model.endStyleEditing(); if model.cropDraft != nil { model.cancelCrop() } }
+        .onChange(of: model.document.id) { colorPicker.end() }
+        .onChange(of: model.selectedIDs) { colorPicker.end() }
+        .onChange(of: model.isEditingPresentation) { _, active in if active { colorPicker.end() } }
+        .onChange(of: model.isRecognizingTextInPlace) { _, active in if active { colorPicker.end() } }
+        .onChange(of: model.tool) { old, new in
+            // Crop cancellation can activate an accessory in the same action.
+            // Model tool changes already end presentation editing synchronously.
+            if old != .crop || new != .selection { colorPicker.end() }
             model.endStyleEditing()
-            if new != .selection { model.selection = nil }
+            if new != .selection && old.toolbarTool != new.toolbarTool { model.selection = nil }
         }
         .onChange(of: preferences.automaticallyFitsImage) { _, enabled in
             model.setAutomaticallyFitsImage(enabled)
         }
         .onChange(of: preferences.hiddenToolbarTools) { previous, hidden in
-            if hidden.subtracting(previous).contains(model.tool) {
+            if hidden.subtracting(previous).contains(model.tool.toolbarTool) {
+                model.endPresentationEditing(); model.isEditingPresentation = false
                 model.endStyleEditing()
                 model.finishTextEditing()
                 model.tool = .selection
@@ -138,6 +189,7 @@ private struct ImageEditorView: View {
     private func navigationBar(compactHint: Bool, compactHistory: Bool) -> some View {
         HStack(spacing: 8) {
             EditorZoomControls(model: model, preferences: preferences).fixedSize()
+            EditorSavedStyles(model: model, preferences: preferences, compact: true).fixedSize()
             Spacer(minLength: 0)
             if compactHint {
                 Button { showsInteractionHint.toggle() } label: {
@@ -156,6 +208,7 @@ private struct ImageEditorView: View {
                     .accessibilityIdentifier("editor.interactionHint")
             }
             Spacer(minLength: 0)
+            EditorObjectActions(model: model).fixedSize()
             if compactHistory {
                 historyButtons.labelStyle(.iconOnly).fixedSize()
             } else {
@@ -208,19 +261,33 @@ private struct ImageEditorView: View {
     }
 
     private func toolbarRow(actionLimit: Int, minimumToolWidth: CGFloat) -> some View {
-        HStack(spacing: 4) {
-            if !preferences.visibleToolbarTools.isEmpty || preferences.visibleToolbarActions.contains(where: \.isEditingTool) {
-                toolbarTools.frame(minWidth: minimumToolWidth, idealWidth: minimumToolWidth, maxWidth: .infinity)
-                if !imageActions.isEmpty { toolbarSeparator }
-            }
-            if !imageActions.isEmpty {
-                toolbarActions(limit: actionLimit)
-            } else if preferences.visibleToolbarTools.isEmpty && !preferences.visibleToolbarActions.contains(where: \.isEditingTool) {
-                Button(String(localized: "Symbole einblenden …")) { isCustomizingToolbar = true }
-                    .accessibilityIdentifier("editor.toolbar.customize")
-                Spacer(minLength: 0)
+        let tools = preferences.visibleToolbarTools
+        let editingActions = preferences.visibleToolbarActions.filter(\.isEditingTool)
+        return Group {
+            if (!tools.isEmpty || !editingActions.isEmpty) && !imageActions.isEmpty {
+                EditorToolbarGroupsLayout(itemWidths: EditorToolOverflowLayout.itemWidths(tools: tools, actions: editingActions, size: preferences.toolbarSize),
+                    toolCount: tools.count, moreWidth: EditorToolOverflowLayout.moreWidth(size: preferences.toolbarSize),
+                    minimumToolWidth: minimumToolWidth, height: preferences.toolbarSize.buttonHeight) {
+                    toolbarTools
+                    toolbarSeparator
+                    toolbarActions(limit: actionLimit)
+                }
+            } else if !tools.isEmpty || !editingActions.isEmpty {
+                toolbarTools
+            } else if !imageActions.isEmpty {
+                HStack { toolbarActions(limit: actionLimit); Spacer(minLength: 0) }
+            } else {
+                HStack {
+                    Button(String(localized: "Symbole einblenden …")) { isCustomizingToolbar = true }
+                        .accessibilityIdentifier("editor.toolbar.customize")
+                    Spacer(minLength: 0)
+                }
             }
         }
+    }
+
+    private var transformMenu: some View {
+        EditorTransformButton(model: model, size: preferences.toolbarSize)
     }
 
     private var toolbarSeparator: some View {
@@ -230,19 +297,21 @@ private struct ImageEditorView: View {
     }
 
     private var toolbarTools: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: 0) {
-                EditorToolPalette(selection: $model.tool, size: preferences.toolbarSize, showsBackground: false, order: preferences.visibleToolbarTools, hasPro: model.hasProAccess()) {
-                    model.endStyleEditing()
-                    model.finishTextEditing()
-                    model.focusRequest += 1
-                }
-                ForEach(preferences.visibleToolbarActions.filter(\.isEditingTool)) { action in toolbarAction(action) }
-            }.buttonStyle(EditorToolbarButtonStyle())
-
-        }
-        .scrollIndicators(.hidden)
-        .frame(height: preferences.toolbarSize.buttonHeight)
+        EditorAdaptiveToolPalette(selection: $model.tool, size: preferences.toolbarSize,
+            order: preferences.visibleToolbarTools,
+            actions: preferences.visibleToolbarActions.filter(\.isEditingTool), hasPro: model.hasProAccess(), toolsAreActive: !colorPicker.isActive && !model.isEditingPresentation && !model.isRecognizingTextInPlace,
+            activeAction: colorPicker.isActive ? .colorPicker : nil) {
+                colorPicker.end()
+                model.endPresentationEditing(); model.isEditingPresentation = false; model.isRecognizingTextInPlace = false
+                model.endStyleEditing()
+                model.finishTextEditing()
+                model.focusRequest += 1
+            } action: { action in
+                toolbarAction(action)
+            } overflowAction: { action in
+                overflowAction(action)
+            }
+            .buttonStyle(EditorToolbarButtonStyle())
     }
 
     private var imageActions: [EditorToolbarAction] {
@@ -269,6 +338,8 @@ private struct ImageEditorView: View {
     }
     @ViewBuilder private func overflowAction(_ action: EditorToolbarAction) -> some View {
         switch action {
+        case .transform:
+            Menu(action.title, systemImage: action.symbol) { EditorTransformCommands(model: model) }.disabled(!model.canSwitchEditingTool)
         case .openWith:
             Menu(action.title) {
                 ForEach(EditorPNGApplication.available(), id: \.url) { app in
@@ -290,11 +361,27 @@ private struct ImageEditorView: View {
     }
     @ViewBuilder private func toolbarAction(_ action: EditorToolbarAction) -> some View {
         switch action {
+        case .presentation:
+            Button {
+                model.togglePresentationTool()
+            } label: { EditorToolbarLabel(title: action.title, symbol: action.symbol, size: preferences.toolbarSize) }
+                .buttonStyle(EditorToolbarButtonStyle(isSelected: model.isEditingPresentation))
+                .disabled(!model.canSwitchEditingTool).accessibilityIdentifier("editor.background.open")
+        case .transform: transformMenu
+        case .scanCode:
+            Button {
+                guard model.canSwitchEditingTool, model.requestFeature(.textRecognition), model.prepareForEditingTool(),
+                      let snapshot = model.pngShareItemForToolbar else { return }
+                showsCodes = true
+                let revision = model.document.revision
+                codeRecognition.recognize(snapshot, codesOnly: true, canUse: { model.hasProAccess() && model.document.revision == revision })
+            } label: { EditorToolbarLabel(title: action.title, symbol: action.symbol, size: preferences.toolbarSize) }
+                .disabled(!model.canSwitchEditingTool).accessibilityIdentifier("editor.qr.open")
         case .resize:
             Button { model.beginImageResize() } label: {
                 EditorToolbarLabel(title: action.title, symbol: action.symbol, size: preferences.toolbarSize)
             }
-            .disabled(model.cropDraft != nil || model.isCanvasGestureActive || model.isExportingPNG || model.isOpeningExternally)
+            .disabled(!model.canSwitchEditingTool)
             .help(String(localized: "Bildauflösung ändern"))
             .accessibilityIdentifier("editor.resize.open")
         case .output:
@@ -302,25 +389,37 @@ private struct ImageEditorView: View {
                 EditorToolbarLabel(title: action.title, symbol: action.symbol, size: preferences.toolbarSize)
             }.disabled(!model.hasConfirmedImageForToolbar)
         case .colorPicker:
-            Button { model.endStyleEditing(); model.finishTextEditing(); showsColorPicker = true } label: {
+            Button {
+                guard model.prepareForEditingTool() else { return }
+                if colorPicker.isActive { colorPicker.end() }
+                else {
+                    model.endPresentationEditing(); model.endStyleEditing(); model.finishTextEditing()
+                    model.isEditingPresentation = false; model.isRecognizingTextInPlace = false
+                    colorPicker.activate()
+                }
+                model.focusRequest += 1
+            } label: {
                 EditorToolbarLabel(title: action.title, symbol: action.symbol, size: preferences.toolbarSize)
-            }.disabled(!model.hasConfirmedImageForToolbar)
+            }.disabled(!model.canSwitchEditingTool)
+                .buttonStyle(EditorToolbarButtonStyle(isSelected: colorPicker.isActive))
+                .accessibilityIdentifier("editor.colorPicker.open")
         case .insertImage: InsertImageButton(model: model, size: preferences.toolbarSize)
         case .pin: PinImageButton(model: model, size: preferences.toolbarSize)
         case .copy: copyButton
         case .recognizeText:
-            Button { model.beginTextRecognition() } label: {
+            Button { model.beginInlineTextRecognition() } label: {
                 EditorToolbarLabel(title: model.hasProAccess() ? action.title : String(localized: "Text erkennen · Pro"), symbol: action.symbol, size: preferences.toolbarSize, extraWidth: 4)
             }
-            .disabled(!model.hasConfirmedImageForToolbar || model.isExporting)
-            .help(String(localized: "Text im Bild lokal erkennen (⇧⌘T)"))
+            .disabled(!model.canSwitchEditingTool)
+            .buttonStyle(EditorToolbarButtonStyle(isSelected: model.isRecognizingTextInPlace))
+            .help(String(localized: "Text direkt im Bild auswählen"))
             .accessibilityIdentifier("editor.ocr.open")
         case .savePNG:
             Button { model.exportPNG() } label: {
                 EditorToolbarLabel(title: action.title, symbol: action.symbol, size: preferences.toolbarSize, extraWidth: 4)
             }
             .disabled(model.isExportingPNG || !model.hasConfirmedImageForToolbar)
-            .help(String(localized: "Bearbeitetes Bild als PNG speichern (⇧⌘E)"))
+            .help(String(localized: "Bearbeitetes Bild als PNG exportieren (⇧⌘E)"))
             .accessibilityIdentifier("editor.export.png")
         case .share: shareButton
         case .openWith: EditorOpenWithButton(model: model, size: preferences.toolbarSize)
@@ -369,17 +468,22 @@ private struct ImageEditorView: View {
         }
     }
     private var instruction: String {
-        switch model.tool {
+        if colorPicker.isActive { return String(localized: "Maus bewegen: Farbe ansehen · Klicken: Farbe festhalten · Pfeiltasten: Pixel wählen · Esc: beenden") }
+        return switch model.tool {
         case .crop: String(localized: "Rahmen aufziehen oder an Griffen ändern · Innen ziehen: verschieben · ⌥ ziehen: neuer Rahmen · Eingabe: übernehmen · Esc: abbrechen")
-        case .arrow: String(localized: "Pfeil aufziehen · Umschalt: Richtung in 45°-Schritten")
-        case .text, .callout: String(localized: "Klicken oder Textfeld aufziehen · Doppelklick: Wort markieren · ⌘A: alles · Esc: fertig")
+        case .arrow: String(localized: "Pfeil aufziehen · Mittleren Griff ziehen: biegen · Umschalt: 45°-Schritte")
+        case .callout: String(localized: "Sprechblase aufziehen, dann Text eingeben · Spitze ziehen: Ziel ändern")
+        case .pen: String(localized: "Ziehen: frei zeichnen · Farbe, Breite und Glättung rechts ändern")
+        case .spotlight: String(localized: "Fokusbereich aufziehen · Weitere Bereiche ergänzen · Intensität rechts ändern")
+        case .magnifier: String(localized: "Kreis aufziehen: vergrößern · Vergrößerung rechts ändern")
+        case .text: String(localized: "Klicken oder Textfeld aufziehen · Doppelklick: Wort markieren · ⌘A: alles · Esc: fertig")
         case .rectangle, .ellipse: String(localized: "Form aufziehen · Umschalt: Quadrat oder Kreis")
         case .redact: String(localized: "Bereich deckend abdecken · Bearbeitbare Projekte behalten das Original.")
         case .highlight: model.activeHighlightStyle.mode == .freehand ? String(localized: "Ziehen: freihändig markieren · Farbe, Breite und Deckkraft rechts ändern") : String(localized: "Rechteck aufziehen: markieren · Modus, Farbe und Deckkraft rechts ändern")
         case .steps: String(localized: "Klicken: nächste Marke \(model.nextStepLabel) setzen · Form, Farben und Typ rechts ändern")
         case .blur: String(localized: "Bereich aufziehen · Unschärfe ist keine sichere Schwärzung.")
         default:
-            if model.selectedObject?.kind == .arrow { String(localized: "Spitze oder Anfang ziehen · Umschalt: 45°-Schritte · Schaft: verschieben · ⌘Z / ⇧⌘Z") }
+            if model.selectedObject?.kind == .arrow { String(localized: "Mittleren Griff ziehen: biegen · Endpunkte ziehen · Schaft: verschieben · ⌘Z / ⇧⌘Z") }
             else if let kind = model.selectedObject?.kind, kind.isShape || kind == .callout {
                 String(localized: "Griffe ziehen: Größe ändern · Umschalt: Quadrat/Kreis bzw. Proportionen · Doppelklick: Text bearbeiten")
             }
@@ -446,6 +550,10 @@ private struct EditorZoomControls: View {
 private struct EditorProperties: View {
     @Bindable var model: EditorModel
     let preferences: AppPreferences
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    private var context: String {
+        model.cropDraft != nil ? "crop" : model.isSourceImageSelected ? "source" : model.selectedIDs.count > 1 ? "multiple" : model.activeKind?.rawValue ?? "empty"
+    }
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -454,28 +562,59 @@ private struct EditorProperties: View {
                 } else {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title).font(.headline)
-                    Text(model.selectedIDs.count > 1 ? String(localized: "Mehrere Objekte ausgewählt") : model.activeKind == nil ? String(localized: "Kein Objekt ausgewählt") : model.selectedObject == nil ? String(localized: "Für neue Objekte") : String(localized: "Ausgewähltes Objekt"))
+                    Text(model.isSourceImageSelected ? String(localized: "Bild") : model.selectedIDs.count > 1 ? String(localized: "Mehrere Objekte ausgewählt") : model.activeKind == nil ? String(localized: "Kein Objekt ausgewählt") : model.selectedObject == nil ? String(localized: "Für neue Objekte") : String(localized: "Ausgewähltes Objekt"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                if !model.selectedIDs.isEmpty { EditorObjectActions(model: model) }
-                EditorSavedStyles(model: model, preferences: preferences)
                 Divider()
-                if let kind = model.activeKind {
+                if model.isSourceImageSelected {
+                    EditorSourceImageFrameControls(model: model)
+                } else if let kind = model.activeKind {
                     if kind.isShape { EditorShapeOptions(model: model) }
-                    if kind == .arrow || kind == .ellipse {
-                        Picker(String(localized: "Zeichenstil"), selection: Binding(
-                            get: { model.activeDrawingStyle }, set: { model.updateStyle(drawingStyle: $0) })) {
-                            Text(String(localized: "Präzise")).tag(EditorDrawingStyle.precise)
-                            Text(model.hasProAccess() ? String(localized: "Handgezeichnet") : String(localized: "Handgezeichnet · Pro")).tag(EditorDrawingStyle.handDrawn)
+                    if kind == .arrow || kind.isShape {
+                        EditorDrawingStylePicker(model: model)
+                        if kind == .arrow {
+                            Text(String(localized: "Mittleren Griff ziehen, um den Pfeil zu biegen.")).font(.caption).foregroundStyle(.secondary)
+                            if model.selectedObject != nil {
+                                EditorArrowBendControl(model: model)
+                                Button(String(localized: "Pfeil begradigen")) { model.straightenArrow() }
+                                    .accessibilityIdentifier("editor.arrow.straighten")
+                            }
                         }
-                        .accessibilityIdentifier("editor.style.drawingStyle")
                     }
                     if kind == .highlight || kind == .step {
                         EditorInstructionOptions(model: model)
+                    } else if kind == .spotlight {
+                        EditorSpotlightOptions(model: model)
+                    } else if kind == .pen {
+                        colorPicker(String(localized: "Farbe"), color: Binding(get: { model.activeColor }, set: { model.updateStyle(color: $0) }))
+                        lineWidthControl(String(localized: "Linienbreite"))
+                        Toggle(String(localized: "Strich glätten"), isOn: Binding(get: { model.activePenSmoothed }, set: { model.updatePenSmoothed($0) }))
                     } else if kind == .redact {
                         colorPicker(String(localized: "Deckfarbe"), color: Binding(get: { model.activeColor }, set: { model.updateStyle(color: $0) }))
+                        Button(String(localized: "Sensible Daten finden …"), systemImage: "eye.slash") { model.beginRedactionSuggestions() }
+                            .accessibilityIdentifier("editor.redaction.suggest")
                         Text(String(localized: "Immer vollständig deckend und über allen Markierungen. PNG und Zwischenablage enthalten hier nur die Deckfarbe. Bearbeitbare Projekte und Sicherungen behalten das Original.")).font(.caption).foregroundStyle(.secondary)
+                    } else if kind == .magnifier {
+                        Picker(String(localized: "Lupenart"), selection: Binding(
+                            get: { model.activeMagnifierOffset }, set: { model.updateMagnifierOffset($0) })) {
+                            Text(String(localized: "Normal")).tag(false)
+                            Text(String(localized: "Versetzt")).tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("editor.magnifier.mode")
+                        EditorPropertySlider(title: String(localized: "Vergrößerung"), identifier: "magnification", value: Binding(
+                            get: { Double(model.activeMagnification * 100) }, set: { model.updateMagnification(CGFloat($0) / 100) }),
+                            range: 150...500, unit: "%", onEditingChanged: { active in
+                                if active { model.beginStyleEditing() } else { model.endStyleEditing() }
+                            })
+                        colorPicker(String(localized: "Randfarbe"), color: Binding(get: { model.activeColor }, set: { model.updateStyle(color: $0) }))
+                        lineWidthControl(String(localized: "Linienbreite"))
+                        Text(model.activeMagnifierOffset
+                             ? String(localized: "Auf ein Detail drücken und die Lupe daneben ziehen. Quelle und Lupe getrennt verschieben.")
+                             : String(localized: "Kreis direkt über dem Detail aufziehen. Griffe ändern die Größe."))
+                            .font(.caption).foregroundStyle(.secondary)
                     } else if kind == .image {
+                        EditorSelectedImageFrameControls(model: model)
                         Text(String(localized: "Bild verschieben oder an den Griffen skalieren. Umschalt erhält die Proportionen.")).font(.caption)
                     } else if kind != .blur {
                         if kind.isShape {
@@ -502,10 +641,8 @@ private struct EditorProperties: View {
                                 set: { model.updateStyle(corner: $0) }), range: 0...100)
                         }
                     } else {
-                        propertySlider(String(localized: "Unschärfe"), id: "blur", value: Binding(
-                            get: { model.selectedObject?.blurRadius ?? model.defaultBlurRadius },
-                            set: { model.updateStyle(blur: $0) }), range: 2...60)
-                        Text(String(localized: "Unschärfe ist keine sichere Schwärzung.")).font(.caption).foregroundStyle(.secondary)
+                        EditorBlurControls(model: model)
+                        Text(String(localized: "Weichzeichnen und Verpixeln sind keine sichere Schwärzung. Nutze dafür Abdecken.")).font(.caption).foregroundStyle(.secondary)
                     }
                 } else if model.selectedIDs.count > 1 {
                     Text(String(localized: "Umschalt-Klick ergänzt die Auswahl. Ziehen verschiebt alle ausgewählten Objekte.")).font(.caption)
@@ -518,6 +655,7 @@ private struct EditorProperties: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .animation(EditorMotion.panel(reduceMotion: reduceMotion), value: context)
         }
         .background(.background)
         .accessibilityIdentifier("editor.properties")
@@ -533,6 +671,9 @@ private struct EditorProperties: View {
         case .diamond: String(localized: "Raute")
         case .star: String(localized: "Stern")
         case .callout: String(localized: "Callout")
+        case .pen: String(localized: "Stift")
+        case .spotlight: String(localized: "Spotlight")
+        case .magnifier: String(localized: "Lupe")
         case .blur: String(localized: "Unschärfe")
         case .redact: String(localized: "Abdecken")
         case .highlight: String(localized: "Markieren")
@@ -550,6 +691,9 @@ private struct EditorProperties: View {
         case .diamond: String(localized: "Raute")
         case .star: String(localized: "Stern")
         case .callout: String(localized: "Callout")
+        case .pen: String(localized: "Stift")
+        case .spotlight: String(localized: "Spotlight")
+        case .magnifier: String(localized: "Lupe")
         case .blur: String(localized: "Unschärfe")
         case .redact: String(localized: "Abdecken")
         case .highlight: String(localized: "Markieren")
@@ -641,12 +785,11 @@ extension EditorLayerMove {
 private struct EditorObjectActions: View {
     let model: EditorModel
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        Menu {
             Button(String(localized: "Duplizieren"), systemImage: "plus.square.on.square") { model.duplicateSelection() }
-                .frame(maxWidth: .infinity, alignment: .leading).disabled(!model.canDuplicateSelection)
+                .disabled(!model.canDuplicateSelection)
                 .help(String(localized: "Ausgewähltes Objekt duplizieren (⌘D)")).accessibilityIdentifier("editor.object.duplicate")
             if model.selectedIDs.count > 1 {
-                Text(String(localized: "Mehrere Objekte ausgewählt")).font(.caption)
                 Button(String(localized: "Gruppieren")) { model.groupSelection() }
                     .disabled(!model.canActOnSelection)
             }
@@ -656,31 +799,21 @@ private struct EditorObjectActions: View {
             }
             Button(String(localized: "Auswahl löschen")) { model.removeSelection() }
                 .disabled(!model.canActOnSelection)
-            Text(String(localized: "Anordnen")).font(.caption).foregroundStyle(.secondary)
-            Grid(horizontalSpacing: 6, verticalSpacing: 6) {
-                GridRow { moveButton(.forward); moveButton(.backward) }
-                GridRow { moveButton(.front); moveButton(.back) }
-            }
-            if model.selectedObject?.kind == .redact {
-                Text(String(localized: "Abdeckungen bleiben über allen anderen Objekten.")).font(.caption).foregroundStyle(.secondary)
-            }
-            if model.selectedObject?.kind == .blur {
-                Text(String(localized: "Unschärfe wirkt auf das Original unter den Markierungen. Anordnen ändert die Reihenfolge mehrerer Unschärfebereiche."))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
             if model.history.objects.count >= 10_000 {
                 Text(String(localized: "Die Projektgrenze von 10.000 Objekten ist erreicht.")).font(.caption).foregroundStyle(.secondary)
             }
-        }.buttonStyle(.bordered).controlSize(.small)
+        } label: { Label(String(localized: "Objektaktionen"), systemImage: "ellipsis.circle") }
+        .labelStyle(.iconOnly).menuStyle(.borderlessButton).fixedSize()
+        .disabled(!model.canActOnSelection)
+        .help(String(localized: "Duplizieren, gruppieren oder löschen"))
+        .accessibilityIdentifier("editor.object.actions")
     }
-    private func moveButton(_ direction: EditorLayerMove) -> some View {
-        Button { model.moveSelection(direction) } label: {
-            Label(direction.shortTitle, systemImage: direction.symbol)
-                .font(.caption).lineLimit(1).minimumScaleFactor(0.85).frame(maxWidth: .infinity)
-        }
-        .disabled(!model.canMoveSelection(direction))
-        .help(direction.title).accessibilityLabel(direction.title)
-        .accessibilityIdentifier("editor.object.\(direction.identifier)")
+}
+
+@MainActor private enum EditorMotion {
+    static func panel(reduceMotion: Bool) -> Animation? {
+        guard !reduceMotion, let event = NSApp.currentEvent?.type, event == .leftMouseDown || event == .leftMouseUp else { return nil }
+        return .smooth(duration: 0.18, extraBounce: 0)
     }
 }
 
@@ -717,12 +850,12 @@ private struct EditorCropProperties: View {
             Spacer()
             TextField(title, value: Binding(get: { Double(value) }, set: { new in
                 guard new.isFinite, var rect = model.cropDraft else { return }
-                let size = model.document.pixelSize
+                let area = model.fullCanvasRect
                 switch id {
-                case "x": rect.origin.x = min(CGFloat(size.width) - rect.width, max(0, CGFloat(new).rounded()))
-                case "y": rect.origin.y = min(CGFloat(size.height) - rect.height, max(0, CGFloat(new).rounded()))
-                case "width": rect.size.width = min(CGFloat(size.width) - rect.minX, max(1, CGFloat(new).rounded()))
-                default: rect.size.height = min(CGFloat(size.height) - rect.minY, max(1, CGFloat(new).rounded()))
+                case "x": rect.origin.x = min(area.maxX - rect.width, max(area.minX, CGFloat(new).rounded()))
+                case "y": rect.origin.y = min(area.maxY - rect.height, max(area.minY, CGFloat(new).rounded()))
+                case "width": rect.size.width = min(area.maxX - rect.minX, max(1, CGFloat(new).rounded()))
+                default: rect.size.height = min(area.maxY - rect.minY, max(1, CGFloat(new).rounded()))
                 }
                 model.cropDraft = rect
             }), format: .number.precision(.fractionLength(0)))

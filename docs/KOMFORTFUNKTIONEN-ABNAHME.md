@@ -6,7 +6,7 @@ Stand: 16. Oktober 2026. Auf Nutzerauftrag nacheinander implementiert. Keine Ver
 | --- | --- | --- |
 | Anheften | Editor → Anheften; schwebendes Fenster verschieben, skalieren, schließen | Native Fensterprüfung: sichtbar, floating, nonactivating, Bildinhalt, Schließen. Zusätzlich Bildstand und Schließen in isolierter App tatsächlich geprüft. |
 | Mehrfachauswahl/Gruppen | Umschalt-Klick oder Eigenschaften → Objekte; ⌘A, ⌘G, ⇧⌘G | Auswahl, Gruppierung, unabhängige Duplikatgruppen, Auflösen, Löschen, Undo/Redo, Speichern/Laden; Checkboxen und Gruppierung tatsächlich bedient. |
-| Pipette/Pixellupe | Editor → Pipette; Bild anklicken oder X/Y eingeben | sRGB-Primärfarbe, Alpha, ungültige Koordinaten geprüft; Koordinatenwechsel, HEX/RGB und Lupe in der Testoberfläche geprüft. Sichtbare X-/Y-Labels nach visueller Prüfung ergänzt und gebaut. |
+| Pipette/Pixellupe | Editor → Pipette direkt auf der Bildfläche; Daten rechts. Bewegen zeigt live, Klick hält fest; X/Y oder Pfeiltasten wählen Pixel. | 232 native Koordinaten-/Farbproben mit allen acht Bildtransformationen, Zuschnitt, ungleichmäßiger Skalierung, Zoom/Schwenken und freier Drehung; Hintergrund, sRGB/Alpha, Festhalten, Leertaste-Ziehen, Fokus/Escape und unverändertes Dokument geprüft. Kompakte rechte Seitenleiste und Werkzeugwechsel sichtbar im synthetischen Editor geprüft. |
 | Eingefügte Bilder | Editor → Bild einfügen; Griffe zum Skalieren, Umschalt für Proportionen | Getrennte Assets, kompakte Revisionen, Wiederöffnen, Archivimport, Backup/Wiederherstellung, gerenderte Pixel. Synthetisches PNG über echten Dateidialog als ausgewähltes Bildobjekt eingefügt. |
 | PNG/JPEG/PDF | Editor → Bildausgabe | PNG-Alpha, deckendes JPEG, PDF-Seitengröße/eine Seite/kein verborgener Text; Dateiausgabe wird beim Abschluss ausstehender Arbeit abgewartet. |
 | Ausgabe-Gestaltung | Bildausgabe → Hintergrund, Abstand & Schatten | Pixelmaße mit Abstand geprüft; Präsentationsvorlage, Schatten, runde Ecken und PDF-Vorschau visuell geprüft. Appweite Einstellungen, keine Änderung des gespeicherten Bildprojekts. |
@@ -74,3 +74,20 @@ Isolierte deutsche Test-App: größere Foto-/Video-Symbole und beide blauen Akti
 Foto/Video verwenden eine gemeinsame Symbolbox (26 pt) und einen festen Textabstand (6 pt). Neu auswählen/Abbrechen haben 20-pt-Symbole in 36 × 36 pt großen Buttons. Native NSButton-Aktionen, Tastatur und Accessibility bleiben erhalten. Hover blendet eine dezente Tönung in 140 ms ein/aus (Neu auswählen blau, Abbrechen rot, Foto/Video heller). Bei „Bewegung reduzieren“ erfolgt der Wechsel ohne Animation. Build und bestehende Capture-Regression bestanden.
 
 Isolierte deutsche Test-App mit synthetischem Desktop: finale Symbolgrößen und gleichmäßige Foto-/Video-Abstände visuell geprüft; blaue Hover-Tönung bei Neu auswählen und rote bei Abbrechen sichtbar. Anschließend per Escape geschlossen und Test-App beendet.
+
+## Ersetzter Scroll-Ablauf – 19. Oktober 2026
+
+Die frühere optionale automatische Abschnittsübernahme mit Hinzufügen/Rücknahme wurde auf Nutzerwunsch durch den direkten Foto-/Aufnahmepfeil und den Ablauf „selbst scrollen → automatisch zusammensetzen → Fertig“ ersetzt. Feste Ränder und Originalgrößenvorschau liegen unter Optionen. Die historischen Nachweise oben beschreiben die damalige Oberfläche; aktueller Stand und verbleibende echte Website-Abnahme stehen in [SCROLL-ABNAHME.md](SCROLL-ABNAHME.md).
+
+
+## Pipette im Editor – 27. Oktober 2026
+
+Der bisherige Dialog mit zweiter Bildansicht entfällt. Eine native Eingabeebene auf der unveränderten Editorfläche zeigt den Pipettenzeiger und fängt Farbauswahl ab. Koordinaten werden über den tatsächlichen Darstellungsrahmen in die exakten Pixel der flachen Ausgabe abgebildet. Auswahlgriffe und Objekt-Kurzoptionen sind währenddessen ausgeblendet; das gewählte Werkzeug und die Objektauswahl bleiben für die Farbübernahme erhalten. Die rechte Seitenleiste zeigt eine 11×11-Pixellupe mit markiertem Pixel, X/Y, Farbmuster, HEX, RGB, Alpha und Aktionen. Nach Klick bleibt die Farbe beim Wegbewegen zum Kopierbutton erhalten; Live-Vorschau aktiviert die laufende Anzeige erneut. Escape, Schließen, erneutes Anklicken und Werkzeugwechsel beenden den Modus.
+
+Prüfungen am 27. Oktober 2026:
+- `./scripts/build.sh -derivedDataPath build/ColorPickerBuild`: erfolgreich.
+- `./scripts/test-color-picker.sh`: 232 native Hover-/Klickproben ohne Koordinatentoleranz; alle acht Symmetrien, Zuschnitt, ungleichmäßige Skalierung, drei Zoomstufen, Schwenken, freie Drehung/Gestaltung, zusätzliche Hintergrundproben, festgehaltene Werte, Pipetten-Cursorzuordnung, Leertaste-Ziehen mit Fokus, Pfeiltasten, Escape/Fokusrückgabe, unverändertes Dokument, sRGB/Alpha und abgebrochene Vorbereitung bestanden.
+- `./scripts/test.sh`: 173 Swift-Testing- und zwei XCTest-Tests bestanden.
+- `./scripts/test-editor-toolbar.sh`: native Größen-/Überlaufprüfungen in Deutsch und Englisch bestanden.
+- `python3 scripts/check-localization.py build/ColorPickerBuild`: 1253 App-Texte mit vollständiger Compilerabdeckung und passenden Formatargumenten. Native Sprach- und Neustartprüfungen über `scripts/test-localization.sh` bestanden.
+- Sichtbare Bedienprüfung in der isolierten deutschen CleanShot-Test-App mit synthetischem Dashboard bei 1180×780: Öffnen über Mehr, unveränderte Bildfläche, kompakte rechte Seitenleiste mit sämtlichen Farbwerten und Aktionen ohne Scrollen, Klick zum Festhalten, Pfeiltaste, Rückkehr zur Live-Vorschau, Escape und direkter Wechsel zum Pfeilwerkzeug. Der erste zu hohe Inspektor wurde nach dieser Prüfung kompakter angeordnet. Keine Bildschirmaufnahme/Berechtigungsabnahme für diese Funktion nötig; vollständige VoiceOver-Abnahme bleibt manuell.

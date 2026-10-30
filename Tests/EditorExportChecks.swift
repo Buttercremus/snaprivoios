@@ -143,6 +143,30 @@ private actor PNGWriteGate {
     let switchQuitResult = await switchQuit.value
     precondition(switchQuitResult && workspace.editor?.document.id == next.document.id)
     assertCovered(try Data(contentsOf: switchTarget))
+    // A screenshot can be persisted while the outgoing editor still owns a
+    // running export. Replacement and Quit must wait for that owner to finish.
+    let captureGate = PNGWriteGate()
+    let capturePrevious = try await makeEditor { data, url in
+        await captureGate.pause(); try await EditorModel.writePNGData(data, to: url)
+    }
+    workspace.editor = capturePrevious
+    await workspace.refreshLibrary()
+    let knownIDs = Set(workspace.items.map(\.id)), captureTarget = root.appendingPathComponent("capture-switch.png")
+    precondition(capturePrevious.exportPNG(to: captureTarget)); try await waitForWriter(captureGate)
+    capturePrevious.commit([large])
+    workspace.openScreenshot(image)
+    for _ in 0..<500 where Set(workspace.items.map(\.id)) == knownIDs { try await Task.sleep(for: .milliseconds(10)) }
+    let pendingCapture = workspace.items.first { !knownIDs.contains($0.id) }
+    precondition(pendingCapture != nil && workspace.isLoading && workspace.editor === capturePrevious,
+                 "Capture lost its persisted image or replaced an editor with an active export")
+    let persistedCapture = try await workspace.store.load(pendingCapture!.id)
+    precondition(persistedCapture.original == original)
+    let captureQuit = Task { await workspace.flushBeforeQuitting() }
+    await captureGate.release()
+    let captureQuitResult = await captureQuit.value
+    precondition(captureQuitResult && workspace.editor?.document.id == pendingCapture!.id && !capturePrevious.isDirty)
+    let outgoing = try await workspace.store.load(capturePrevious.document.id)
+    precondition(outgoing.document.objects == [large] && FileManager.default.fileExists(atPath: captureTarget.path))
     // Inject the application boundary: verify files and lifetime without launching another app.
     let application = root.appendingPathComponent("Synthetic.app")
     let openRoot = root.appendingPathComponent("open-with")

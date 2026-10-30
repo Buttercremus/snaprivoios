@@ -1,11 +1,22 @@
 import AppKit
 import SnagForgeDomain
 
+private final class GeometryResults: @unchecked Sendable {
+    let lock = NSLock()
+    var values: [CGSize] = []
+}
+
 /// An offscreen, synthetic AppKit canvas. No input is sent to the user's apps.
 @main
 struct CanvasChecks {
     @MainActor static func main() async throws {
         _ = NSApplication.shared
+        if CommandLine.arguments.contains("--annotation-tools-only") {
+            try await DrawingWorkflowChecks.run()
+        try await EditorArrangementChecks.run()
+        try await AnnotationToolsChecks.run()
+            return
+        }
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("SnagForge-Canvas-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
         let context = CGContext(data: nil, width: 240, height: 160, bitsPerComponent: 8, bytesPerRow: 0,
@@ -16,6 +27,7 @@ struct CanvasChecks {
         let document = ProjectDocument(title: "Canvas Test", pixelSize: PixelSize(width: 240, height: 160)!)
         try await store.create(document, original: EditorRenderer.png(image: image, objects: []), thumbnail: nil)
         let model = EditorModel(image: image, document: document, generation: 0, store: store, onSaved: {})
+        model.snapsToObjects = false
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 480, height: 320), styleMask: .borderless, backing: .buffered, defer: false)
         let canvas = CanvasView(model: model)
         model.focusRequest += 1
@@ -107,8 +119,8 @@ struct CanvasChecks {
         model.undo(); precondition(model.history.objects == [rotatedArrow])
         model.redo(); precondition(model.history.objects == [movedStart])
         model.selection = movedStart.id
-        canvas.mouseDown(with: event(.leftMouseDown, CGPoint(x: 90, y: 115)))
-        canvas.mouseDragged(with: event(.leftMouseDragged, CGPoint(x: 100, y: 120)))
+        canvas.mouseDown(with: event(.leftMouseDown, CGPoint(x: 75, y: 102.5)))
+        canvas.mouseDragged(with: event(.leftMouseDragged, CGPoint(x: 85, y: 107.5)))
         let translated = movedStart.translated(by: CGSize(width: 10, height: 5)), shaftPreview = model.preview!.first!
         precondition(hypot(shaftPreview.start.x - translated.start.x, shaftPreview.start.y - translated.start.y) < 0.001 &&
                      hypot(shaftPreview.end.x - translated.end.x, shaftPreview.end.y - translated.end.y) < 0.001,
@@ -116,7 +128,7 @@ struct CanvasChecks {
         let cancelDrag = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
             windowNumber: window.windowNumber, context: nil, characters: "\u{1B}", charactersIgnoringModifiers: "\u{1B}", isARepeat: false, keyCode: 53)!
         canvas.keyDown(with: cancelDrag)
-        canvas.mouseUp(with: event(.leftMouseUp, CGPoint(x: 100, y: 120)))
+        canvas.mouseUp(with: event(.leftMouseUp, CGPoint(x: 85, y: 107.5)))
         precondition(model.preview == nil && model.history.objects == [movedStart], "Escape committed a cancelled gesture")
         // Directly grabbing an unselected tip also edits the endpoint.
         model.selection = nil
@@ -353,7 +365,40 @@ struct CanvasChecks {
         let final = await model.flush(); precondition(final)
         let restored = try await store.load(document.id)
         precondition(abs((restored.document.objects.last?.textWidth ?? 0) - 140) < 0.001, "Text width lost after save/reload")
-        let groupA = EditorObject(kind: .rectangle, start: CGPoint(x: 20, y: 20), end: CGPoint(x: 80, y: 60))
+
+        // Renderer audit: long text measurements are cached by content/width/style,
+        // remain safe under concurrent reads, and invalidate when the content changes.
+        var longText = boxObject
+        longText.text = String(repeating: "Langer Beispieltext ", count: 8_000)
+        longText.textWidth = 180
+        EditorRenderer.resetTextGeometryCacheStatistics()
+        let coldSize = EditorRenderer.textRect(longText).size
+        let warmSize = EditorRenderer.textRect(longText).size
+        precondition(coldSize == warmSize && coldSize.height > 100, "Long text geometry cache changed the measured result")
+        var translatedGeometry = longText
+        translatedGeometry.start.x += 240
+        translatedGeometry.end.x += 240
+        precondition(EditorRenderer.textRect(translatedGeometry).size == coldSize, "Translated text did not reuse invariant geometry")
+        var invalidated = longText
+        invalidated.text = "Kurz"
+        precondition(EditorRenderer.textRect(invalidated).size != coldSize, "Text content did not invalidate geometry")
+        let geometryStats = EditorRenderer.textGeometryCacheStatistics
+        precondition(geometryStats.misses >= 2 && geometryStats.hits >= 1, "Text geometry cache did not record expected hit/miss invalidation")
+        let concurrentText = longText
+        let parallelResults = GeometryResults()
+        DispatchQueue.concurrentPerform(iterations: 8) { _ in
+            let measured = EditorRenderer.textRect(concurrentText).size
+            parallelResults.lock.lock(); parallelResults.values.append(measured); parallelResults.lock.unlock()
+        }
+        precondition(parallelResults.values.count == 8 && parallelResults.values.allSatisfy { $0 == coldSize }, "Concurrent text measurements disagreed")
+        let smallEstimate = EditorRenderer.rasterMemoryEstimate(image: image, maxDimension: 32)
+        let fullEstimate = EditorRenderer.rasterMemoryEstimate(image: image)
+        precondition(smallEstimate < fullEstimate && EditorRenderer.rasterBudgetSnapshot.reserved == 0,
+                     "Raster budget estimate or release is invalid")
+        _ = try EditorRenderer.render(image: image, objects: [])
+        precondition(EditorRenderer.rasterBudgetSnapshot.reserved == 0, "Raster budget reservation was not released")
+        var groupA = EditorObject(kind: .rectangle, start: CGPoint(x: 20, y: 20), end: CGPoint(x: 80, y: 60))
+        groupA.fill = EditorFill(isEnabled: true)
         let groupB = EditorObject(kind: .rectangle, start: CGPoint(x: 100, y: 80), end: CGPoint(x: 160, y: 120))
         model.commit([groupA, groupB]); model.tool = .selection
         model.select(groupA.id); model.select(groupB.id, extending: true); model.groupSelection()
@@ -366,10 +411,16 @@ struct CanvasChecks {
         model.undo(); precondition(model.history.objects == beforeGroupMove)
         print("Group canvas checks passed: dragging translates both selected objects and one undo restores both.")
         print("Canvas checks passed: all eight shape handles, reverse geometry, grab offset, live fill, Shift press/release and arrow snapping; callout frame/reflow, opposite anchor, resize undo/reload/PNG; existing arrow handles, cancel/no-op and native text editing.")
+        try await DrawingWorkflowChecks.run()
+        try await EditorArrangementChecks.run()
+        try await AnnotationToolsChecks.run()
         try await ZoomCanvasChecks.run()
         try await CropCanvasChecks.run()
         try await RepeatedToolCanvasChecks.run()
         try await InstructionToolChecks.run()
         try await SelectionGripChecks.run()
+        try await CanvasExpansionChecks.run()
+        try await HollowShapeCanvasChecks.run()
+        try await KeyboardEditingChecks.run()
     }
 }

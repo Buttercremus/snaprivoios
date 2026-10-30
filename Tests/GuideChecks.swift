@@ -5,7 +5,7 @@ import SnagForgeDomain
 
 @main struct GuideChecks {
     @MainActor static func main() async throws {
-        func require(_ value: Bool, _ message: String = "Guide check failed") { precondition(value, message) }
+        func require(_ value: Bool, _ message: String = "Guide check failed", file: StaticString = #file, line: UInt = #line) { precondition(value, message, file: file, line: line) }
         _ = NSApplication.shared
         func wait(_ model: GuideModel) async throws {
             for _ in 0..<1000 { if !model.isBusy { return }; try await Task.sleep(for: .milliseconds(10)) }
@@ -75,8 +75,9 @@ import SnagForgeDomain
         for style in GuideStyle.allCases {
             doc.style = style
             let pdf = try GuideExporter.pdf(doc), parsed = PDFDocument(data: pdf)!
-            require(parsed.pageCount == 3 && parsed.string!.contains("Grüße München"))
-            require(parsed.page(at: 1)!.string!.contains("FIRST_STEP") && parsed.page(at: 2)!.string!.contains("SECOND_STEP"))
+            require(parsed.pageCount == (style == .standard ? 3 : 2) && parsed.string!.contains("Grüße München"))
+            require(parsed.page(at: 1)!.string!.contains("FIRST_STEP"))
+            require(parsed.page(at: style == .standard ? 2 : 1)!.string!.contains("SECOND_STEP"))
             for secret in ["ALPHA", "BETA", "OUTSIDE_CROP", projects.root.path, steps[0].sourceProjectID!.uuidString] {
                 require(!parsed.string!.contains(secret) && !String(decoding: pdf, as: UTF8.self).contains(secret))
             }
@@ -102,6 +103,13 @@ import SnagForgeDomain
                 try pdf.write(to: URL(fileURLWithPath: output).appendingPathComponent("guide-\(style.rawValue).pdf"))
             }
         }
+        doc.includesCover = false
+        let noCover = PDFDocument(data: try GuideExporter.pdf(doc))!
+        require(noCover.pageCount == 2 && noCover.page(at: 0)!.string!.contains("FIRST_STEP"))
+        doc.style = .standard
+        let noCoverStandard = PDFDocument(data: try GuideExporter.pdf(doc))!
+        require(noCoverStandard.pageCount == 2 && noCoverStandard.page(at: 0)!.string!.contains("Synthetic guide"))
+        doc.includesCover = true; doc.style = .compact
         // Pagination must retain all text, including the last paragraph and long unbroken words.
         doc.introduction = String(repeating: "A long introduction with line wrapping. ", count: 180) + "INTRO_END"
         doc.steps[0].caption = String(repeating: "Paragraph with descriptive text and line breaks.\n", count: 140) + "CAPTION_END"
@@ -140,7 +148,11 @@ import SnagForgeDomain
 
         let model = GuideModel(root: root.appendingPathComponent("Guides"))
         model.create(); try await wait(model)
-        require(model.document != nil && model.error == nil)
+        require(model.document != nil && model.error == nil && model.focusesTitle)
+        // Creating again reuses the untouched new guide and only refocuses its title.
+        let untouched = model.document!.id; model.focusesTitle = false
+        model.create(); try await wait(model)
+        require(model.document!.id == untouched && model.documents.count == 1 && model.focusesTitle)
         model.addProjects(steps.compactMap(\.sourceProjectID), from: projects, prepare: { true }); try await wait(model)
         require(model.document!.steps.count == 2 && !model.isDirty)
         let guideID = model.document!.id, first = model.document!.steps[0].id
@@ -177,6 +189,139 @@ import SnagForgeDomain
         require(!(await reopen.finishPendingWork()) && reopen.isDirty && reopen.error != nil)
         reopen.edit { $0.title = "Recovered title" }
         require(await reopen.finishPendingWork())
+        // Every structural edit survives autosave and is reversible using the current revision.
+        let historyModel = GuideModel(root: root.appendingPathComponent("History"))
+        historyModel.createFromProjects(steps.compactMap(\.sourceProjectID), from: projects, prepare: { true }); try await wait(historyModel)
+        let initialHistory = historyModel.document!, firstID = initialHistory.steps[0].id
+        let provider = NSItemProvider(object: "\(initialHistory.id):\(firstID)" as NSString)
+        let dragPayload: String = try await withCheckedThrowingContinuation { continuation in
+            _ = provider.loadObject(ofClass: NSString.self) { object, error in
+                if let text = object as? String { continuation.resume(returning: text) }
+                else { continuation.resume(throwing: error ?? ProjectError.invalidDocument) }
+            }
+        }
+        require(historyModel.moveStep(payload: dragPayload, documentID: initialHistory.id, before: nil) == firstID)
+        require(historyModel.document!.steps.last?.id == firstID)
+        historyModel.undo(); require(historyModel.document!.steps == initialHistory.steps)
+        let beforeRejectedDrop = historyModel.document!
+        for payload in ["../../outside", "\(UUID()):\(firstID)", "\(initialHistory.id):\(UUID())"] {
+            require(historyModel.moveStep(payload: payload, documentID: initialHistory.id, before: nil) == nil)
+        }
+        require(historyModel.moveStep(payload: dragPayload, documentID: UUID(), before: nil) == nil)
+        require(historyModel.moveStep(payload: dragPayload, documentID: initialHistory.id, before: UUID()) == nil)
+        historyModel.requestFeature = { _ in false }
+        require(historyModel.moveStep(payload: dragPayload, documentID: initialHistory.id, before: nil) == nil)
+        require(historyModel.document == beforeRejectedDrop)
+        historyModel.requestFeature = { _ in true }
+        historyModel.edit { $0.moveStep(firstID, before: nil) }; require(await historyModel.flush())
+        historyModel.undo(); require(historyModel.document!.steps == initialHistory.steps)
+        require(await historyModel.flush())
+        historyModel.redo(); require(historyModel.document!.steps.last?.id == firstID)
+        historyModel.removeStep(firstID); require(historyModel.document!.steps.count == 1)
+        historyModel.undo(); require(historyModel.document!.steps.count == 2)
+        historyModel.edit(textGroup: "title") { $0.title = "Typed" }
+        historyModel.edit(textGroup: "title") { $0.title = "Typed together" }
+        historyModel.undo(); require(historyModel.document!.title == initialHistory.title)
+        historyModel.redo(); require(historyModel.document!.title == "Typed together")
+        let replacementTarget = historyModel.document!.steps[0]
+        historyModel.addProjects([wideDoc.id], from: projects, replacing: replacementTarget.id, prepare: { true }); try await wait(historyModel)
+        require(historyModel.document!.steps[0].png != replacementTarget.png)
+        historyModel.undo(); require(historyModel.document!.steps[0] == replacementTarget)
+        require(await historyModel.flush())
+        let duplicatedFrom = historyModel.document!
+        historyModel.duplicate(); try await wait(historyModel)
+        require(historyModel.document!.id != duplicatedFrom.id && historyModel.document!.steps == duplicatedFrom.steps)
+        let copyID = historyModel.document!.id
+        historyModel.moveToTrash(copyID); try await wait(historyModel)
+        require(historyModel.document == nil && historyModel.trash.count == 1)
+        historyModel.restore(copyID); try await wait(historyModel)
+        historyModel.open(copyID); try await wait(historyModel)
+        require(historyModel.document!.steps == duplicatedFrom.steps)
+        let failedExport = root.appendingPathComponent("Blocked.pdf")
+        try FileManager.default.createDirectory(at: failedExport, withIntermediateDirectories: false)
+        historyModel.export(.pdf, to: failedExport); try await wait(historyModel)
+        require(historyModel.error != nil && historyModel.failureContext == .output(.pdf))
+        require(await historyModel.flush()); require(historyModel.error != nil, "Unrelated save erased an export error")
+        try FileManager.default.removeItem(at: failedExport)
+        historyModel.export(.pdf, to: failedExport); try await wait(historyModel)
+        require(historyModel.error == nil && PDFDocument(url: failedExport) != nil)
+
+        // Individual step actions keep image snapshots, sources, history and disk state coherent.
+        let actionModel = GuideModel(root: root.appendingPathComponent("StepActions"))
+        let actionDocument = GuideDocument(title: "Searchable workflow", introduction: "Office network", steps: steps)
+        try await actionModel.store.create(actionDocument)
+        actionModel.open(actionDocument.id); try await wait(actionModel)
+        actionModel.duplicateStep(steps[0].id)
+        let copiedStep = actionModel.document!.steps[1]
+        require(copiedStep.id != steps[0].id && copiedStep.png == steps[0].png && copiedStep.sourceProjectID == steps[0].sourceProjectID)
+        require(actionModel.selectedStep == copiedStep.id && actionModel.stepToReveal == copiedStep.id)
+        require(await actionModel.flush())
+        require(try await actionModel.store.load(actionDocument.id).document.steps.count == 3)
+        actionModel.undo(); require(actionModel.document!.steps == steps)
+        actionModel.redo(); require(actionModel.document!.steps[1] == copiedStep)
+        actionModel.addProjects([steps[1].sourceProjectID!], from: projects, at: .before(steps[0].id), prepare: { true })
+        try await wait(actionModel)
+        require(actionModel.document!.steps[1] == steps[0])
+        actionModel.addProjects([steps[0].sourceProjectID!], from: projects, at: .after(copiedStep.id), prepare: { true })
+        try await wait(actionModel)
+        require(actionModel.document!.steps[3].id == actionModel.selectedStep)
+        let beforeInvalid = actionModel.document!
+        actionModel.addProjects([steps[0].sourceProjectID!], from: projects, at: .after(UUID()), prepare: { true })
+        try await wait(actionModel)
+        require(actionModel.document == beforeInvalid && actionModel.error != nil)
+        actionModel.requestFeature = { _ in false }
+        actionModel.duplicateStep(steps[0].id); require(actionModel.document == beforeInvalid)
+        actionModel.requestFeature = { _ in true }
+        // Search must see text before the delayed autosave, including its stable jump target.
+        actionModel.editStep(copiedStep.id) { $0.caption = "Unsaved UNIQUE_NEEDLE" }
+        actionModel.searchQuery = "unique_needle"
+        for _ in 0..<500 { if !actionModel.isSearching { break }; try await Task.sleep(for: .milliseconds(10)) }
+        let hit = actionModel.searchResults.first!
+        require(hit.stepID == copiedStep.id && hit.documentID == actionDocument.id)
+        actionModel.open(hit.documentID, revealing: hit.stepID, fromSearch: true)
+        require(actionModel.selectedStep == copiedStep.id && actionModel.stepToReveal == copiedStep.id)
+        actionModel.stepToReveal = nil
+        actionModel.open(hit.documentID, revealing: hit.stepID, fromSearch: true)
+        require(actionModel.stepToReveal == copiedStep.id, "Repeated search hit did not request another reveal")
+        actionModel.searchQuery = "office network"
+        for _ in 0..<500 { if !actionModel.isSearching { break }; try await Task.sleep(for: .milliseconds(10)) }
+        require(actionModel.searchResults.first?.stepID == nil)
+        require(await actionModel.finishPendingWork())
+
+        // 100 large visible images: text saves write only small manifests and leave assets untouched.
+        let largeStore = GuideStore(root: root.appendingPathComponent("Large"))
+        let largePNGs = try await Task.detached {
+            var bytes = [UInt8](repeating: 255, count: 640 * 480 * 4)
+            var seed: UInt64 = 42
+            for i in stride(from: 0, to: bytes.count, by: 4) {
+                for channel in 0..<3 { seed = seed &* 6364136223846793005 &+ 1; bytes[i + channel] = UInt8(truncatingIfNeeded: seed >> 32) }
+            }
+            var images: [Data] = []
+            for index in 0..<100 {
+                bytes[0] = UInt8(index)
+                let png = try bytes.withUnsafeMutableBytes { buffer in
+                    let context = CGContext(data: buffer.baseAddress, width: 640, height: 480, bitsPerComponent: 8, bytesPerRow: 640 * 4,
+                        space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+                    return try EditorRenderer.png(image: context.makeImage()!, objects: [])
+                }
+                images.append(png)
+            }
+            return images
+        }.value
+        var large = GuideDocument(title: "100 large images", steps: largePNGs.enumerated().map { GuideStep(title: "Step \($0.offset)", png: $0.element) })
+        try await largeStore.create(large)
+        let assetFolder = largeStore.root.appendingPathComponent(".assets/\(large.id)")
+        let assets = try FileManager.default.contentsOfDirectory(at: assetFolder, includingPropertiesForKeys: nil)
+        require(assets.count == 100)
+        let modifications = try assets.map { try $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }
+        let started = ContinuousClock.now
+        for i in 0..<10 { large.steps[0].caption = "Text revision \(i)"; large = try await largeStore.save(large, expectedRevision: large.revision) }
+        let elapsed = started.duration(to: .now)
+        let manifestSize = try Data(contentsOf: largeStore.root.appendingPathComponent("\(large.id).snaprivoguide")).count
+        require(manifestSize < 64_000)
+        require(try assets.map { try $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate } == modifications)
+        require(try await GuideStore(root: largeStore.root).load(large.id).document == large)
+        print("Large guide: \(largePNGs.reduce(0) { $0 + $1.count }) image bytes; \(manifestSize)-byte manifest; 10 text saves \(elapsed), images unchanged.")
         print("Guide checks passed: flattened crop/resize/redaction, both PDF styles, Unicode/pagination/page bounds, Markdown assets/escaping/atomic failures/cancellation, autosave/reopen/update/import/export/save recovery.")
     }
 }

@@ -6,20 +6,23 @@ import SwiftUI
 
 /// Both capture variants intentionally launch the same automatic window/region selector.
 enum CaptureAction: UInt32, CaseIterable, Codable, Sendable {
-    case display = 1, region, window, delayedRegion
+    case display = 1, region, window, delayedRegion, repeatLast, text, code
     var title: String {
         switch self {
         case .display: String(localized: "Bildschirm aufnehmen")
         case .region: String(localized: "Neue Aufnahme")
         case .window: String(localized: "Neue Aufnahme (alternativ)")
         case .delayedRegion: String(localized: "Aufnahme mit 3 Sekunden Vorlauf")
+        case .repeatLast: String(localized: "Letzten Bereich erneut aufnehmen")
+        case .text: String(localized: "Text direkt erfassen")
+        case .code: String(localized: "QR-Code scannen")
         }
     }
     var symbol: String {
-        switch self { case .display: "display"; case .region: "viewfinder"; case .window: "viewfinder"; case .delayedRegion: "timer" }
+        switch self { case .display: "display"; case .region: "viewfinder"; case .window: "viewfinder"; case .delayedRegion: "timer"; case .repeatLast: "arrow.clockwise"; case .text: "text.viewfinder"; case .code: "qrcode.viewfinder" }
     }
     var defaultShortcut: CaptureShortcut {
-        let key = switch self { case .display: kVK_ANSI_1; case .region: kVK_ANSI_2; case .window: kVK_ANSI_3; case .delayedRegion: kVK_ANSI_5 }
+        let key = switch self { case .display: kVK_ANSI_1; case .region: kVK_ANSI_2; case .window: kVK_ANSI_3; case .delayedRegion: kVK_ANSI_5; case .repeatLast: kVK_ANSI_6; case .text: kVK_ANSI_7; case .code: kVK_ANSI_8 }
         return CaptureShortcut(keyCode: UInt32(key), modifiers: UInt32(controlKey | shiftKey))
     }
     func configuration(using previous: CaptureConfiguration) -> CaptureConfiguration {
@@ -179,8 +182,10 @@ final class GlobalCaptureShortcuts {
         if let data = defaults.data(forKey: Self.storageKey) {
             do {
                 let stored = try JSONDecoder().decode(Stored.self, from: data)
-                guard stored.version == 1, stored.entries.count == CaptureAction.allCases.count,
-                      Set(stored.entries.map(\.action)).count == stored.entries.count else { throw CocoaError(.coderReadCorrupt) }
+                let expected: Set<CaptureAction> = stored.version == 1 ? [.display, .region, .window, .delayedRegion] : stored.version == 2 ? [.display, .region, .window, .delayedRegion, .repeatLast, .text] : Set(CaptureAction.allCases)
+                guard (1...3).contains(stored.version),
+                      Set(stored.entries.map(\.action)) == expected,
+                      stored.entries.count == expected.count else { throw CocoaError(.coderReadCorrupt) }
                 var decoded: [CaptureAction: CaptureShortcut] = [:]
                 for entry in stored.entries {
                     if let value = entry.shortcut {
@@ -189,6 +194,10 @@ final class GlobalCaptureShortcuts {
                     }
                 }
                 bindings = decoded
+                // Preserve deliberate removals and user keys while adding new actions.
+                for action in CaptureAction.allCases where !expected.contains(action) && !bindings.values.contains(action.defaultShortcut) {
+                    bindings[action] = action.defaultShortcut
+                }
             } catch { preferencesError = String(localized: "Gespeicherte Tastenkürzel konnten nicht gelesen werden. Es gelten die Standardkürzel, bis du sie neu festlegst.") }
         }
     }
@@ -243,7 +252,7 @@ final class GlobalCaptureShortcuts {
     func retryRegistration() { rebuildRegistrations() }
     func stop() { recordingAction = nil; registrar.stop(); unavailable = [] }
     private func persist() {
-        let stored = Stored(version: 1, entries: CaptureAction.allCases.map { .init(action: $0, shortcut: bindings[$0]) })
+        let stored = Stored(version: 3, entries: CaptureAction.allCases.map { .init(action: $0, shortcut: bindings[$0]) })
         do { defaults.set(try JSONEncoder().encode(stored), forKey: Self.storageKey); preferencesError = nil }
         catch { preferencesError = String(localized: "Die Tastenkürzel konnten nicht gespeichert werden.") }
     }

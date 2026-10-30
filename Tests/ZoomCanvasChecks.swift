@@ -23,6 +23,7 @@ import SnagForgeDomain
         let document = ProjectDocument(title: "Zoom-Abnahme (synthetisch)", pixelSize: PixelSize(width: 3840, height: 2160)!)
         try await store.create(document, original: png, thumbnail: nil)
         let model = EditorModel(image: image, document: document, generation: 0, store: store, onSaved: {})
+        model.snapsToObjects = false
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 800, height: 600), styleMask: .borderless, backing: .buffered, defer: false)
         let canvas = CanvasView(model: model)
         window.contentView = canvas; canvas.frame = CGRect(x: 0, y: 0, width: 800, height: 600)
@@ -136,6 +137,7 @@ import SnagForgeDomain
         let blur = EditorObject(kind: .blur, start: CGPoint(x: 1950, y: 200), end: CGPoint(x: 2100, y: 300))
         let document = ProjectDocument(title: "4K-Unschärfe (synthetisch)", pixelSize: PixelSize(width: width, height: height)!, objects: [blur])
         let model = EditorModel(image: image, document: document, generation: 0, store: store, automaticallyFitsImage: false, onSaved: {})
+        model.snapsToObjects = false
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 801, height: 603), styleMask: .borderless, backing: .buffered, defer: false)
         let canvas = CanvasView(model: model); window.contentView = canvas
         canvas.synchronizeViewport(); canvas.refreshComposition()
@@ -187,6 +189,7 @@ import SnagForgeDomain
         let document = ProjectDocument(title: "Pixelraster (synthetisch)", pixelSize: PixelSize(width: width, height: height)!)
         try await store.create(document, original: EditorRenderer.png(image: image, objects: []), thumbnail: nil)
         let model = EditorModel(image: image, document: document, generation: 0, store: store, onSaved: {})
+        model.snapsToObjects = false
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 801, height: 603), styleMask: .borderless, backing: .buffered, defer: false)
         let canvas = CanvasView(model: model); window.contentView = canvas
         for size in [CGSize(width: 801, height: 603), CGSize(width: 923, height: 701)] {

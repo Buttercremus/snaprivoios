@@ -15,10 +15,20 @@ struct CaptureSetupView: View {
             Label(workspace.screenshot.hasPermission ? String(localized: "Bildschirmzugriff bereit") : String(localized: "Bildschirmzugriff erforderlich"),
                   systemImage: workspace.screenshot.hasPermission ? "checkmark.circle" : "lock")
                 .font(.callout).accessibilityIdentifier("capture.permission.status")
-            Text(workspace.isScrollCapture ? String(localized: "Wähle nur den scrollenden Inhalt ohne feste Kopfzeile. Danach manuell nach unten scrollen und Abschnitte hinzufügen.") : sourceDescription)
+            Text(workspace.isScrollCapture ? String(localized: "Wähle den scrollenden Inhalt. Scrolle anschließend langsam nach unten und klicke auf Fertig. Snaprivo setzt die Aufnahme automatisch zusammen.") : sourceDescription)
                 .foregroundStyle(.secondary)
                 .frame(minHeight: 44, alignment: .topLeading)
 
+            if configuration.media == .image && !workspace.isScrollCapture {
+                HStack {
+                    Button(String(localized: "Nur Text kopieren"), systemImage: "text.viewfinder") {
+                        workspace.captureText(using: openWindow, dismissWindow: dismissWindow)
+                    }.accessibilityIdentifier("capture.copyText")
+                    Button(String(localized: "QR-Code scannen"), systemImage: "qrcode.viewfinder") {
+                        workspace.captureText(using: openWindow, dismissWindow: dismissWindow, codesOnly: true)
+                    }.accessibilityIdentifier("capture.scanCode")
+                }.disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
+            }
             Form {
                 Picker(configuration.media == .video ? String(localized: "Vorlauf vor Video") : String(localized: "Vorlauf vor Auswahl"), selection: Binding(get: { workspace.captureConfiguration.delaySeconds }, set: {
                     workspace.captureConfiguration.delaySeconds = $0; workspace.preferences.captureDelay = $0
@@ -30,6 +40,11 @@ struct CaptureSetupView: View {
                 Toggle(String(localized: "Mauszeiger aufnehmen"), isOn: Binding(get: { workspace.captureConfiguration.includesCursor }, set: {
                     workspace.captureConfiguration.includesCursor = $0; workspace.preferences.includesCursor = $0
                 }))
+                if configuration.media == .video {
+                    Toggle(String(localized: "Mausklicks im Video hervorheben"), isOn: Binding(
+                        get: { workspace.preferences.videoMouseClicks },
+                        set: { workspace.preferences.videoMouseClicks = $0 }))
+                }
                 if configuration.media == .image {
                     Toggle(String(localized: "Screenshot automatisch kopieren"), isOn: Binding(
                         get: { workspace.preferences.copyAfterCapture }, set: { workspace.preferences.copyAfterCapture = $0 }

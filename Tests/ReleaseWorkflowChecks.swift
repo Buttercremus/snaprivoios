@@ -63,6 +63,24 @@ import SnagForgeDomain
         workspace.guides.edit { $0.style = .compact }; let guideSaved = await workspace.guides.flush(); verify(guideSaved)
         workspace.createGuide(from: [originalID]); try await wait { !workspace.guides.isBusy }
         verify(workspace.guides.document?.style == .compact)
+        // Editing a source preserves the guide snapshot until explicitly accepted.
+        let guideBeforeEditing = workspace.guides.document!, guideStep = guideBeforeEditing.steps[0]
+        await workspace.editGuideImage(guideStep.id)
+        verify(workspace.section == .editor && workspace.guideImageReturn?.step == guideStep.id)
+        workspace.editor!.commit(workspace.editor!.history.objects + [EditorObject(kind: .rectangle, start: CGPoint(x: 280, y: 100), end: CGPoint(x: 380, y: 200))])
+        await workspace.returnToGuide(applyingChanges: false)
+        verify(workspace.section == .guides && workspace.guides.document!.steps[0].png == guideStep.png)
+        verify(workspace.guideSource(for: guideStep)!.document.revision != guideStep.sourceRevision)
+        await workspace.editGuideImage(guideStep.id)
+        await workspace.returnToGuide(applyingChanges: true)
+        verify(workspace.section == .guides && workspace.guides.document!.steps[0].png != guideStep.png)
+        verify(workspace.guides.document!.steps[0].id == guideStep.id)
+        workspace.guides.undo(); verify(workspace.guides.document!.steps[0] == guideStep)
+        verify(await workspace.guides.flush())
+        let trashedGuide = GuideDocument(title: "Deleted guide retained in complete backup", steps: [guideStep])
+        try await workspace.guides.store.create(trashedGuide)
+        try await workspace.guides.store.moveToTrash(trashedGuide.id, expectedRevision: 0)
+        await workspace.guides.refresh()
         _ = await workspace.changeTrash(secondID, action: .trash)
         let partial = try await workspace.videos.files.prepare(availableBytes: 1_000_000_000)
         try await movie(at: partial)
@@ -85,7 +103,7 @@ import SnagForgeDomain
         if !restored { FileHandle.standardError.write(Data((target.importError ?? "No error").utf8)) }
         verify(restored)
         verify(target.items.count == 1 && target.trashItems.count == 1)
-        verify(target.guides.documents.count == 2 && target.videos.items.count == 2)
+        verify(target.guides.documents.count == 2 && target.guides.trash.count == 1 && target.videos.items.count == 2)
         let restoredGuide = try await target.guides.store.load(target.guides.documents.first { $0.stepCount == 2 }!.id).document
         let allIDs = Set((target.items + target.trashItems).map(\.id))
         verify(restoredGuide.steps.allSatisfy { $0.sourceProjectID.map(allIDs.contains) == true })
@@ -98,7 +116,7 @@ import SnagForgeDomain
         verify(!FileManager.default.fileExists(atPath: target.videos.files.root.appendingPathComponent(restoredVideo.document.fileName).path))
         // Repeated restore appends fresh identities and retains existing contents.
         verify(await target.transfer(.restoreComplete, at: backup))
-        verify(target.items.count == 2 && target.trashItems.count == 2 && target.guides.documents.count == 4)
+        verify(target.items.count == 2 && target.trashItems.count == 2 && target.guides.documents.count == 4 && target.guides.trash.count == 2)
         // Tampering must reject the whole backup before touching any destination store.
         let guideFolder = backup.appendingPathComponent("guides")
         let guideFile = try FileManager.default.contentsOfDirectory(at: guideFolder, includingPropertiesForKeys: nil)[0]
@@ -146,7 +164,7 @@ import SnagForgeDomain
         verify(workspace.quickCapture == nil && workspace.trashItems.contains { $0.id == discardedID })
         workspace.openScreenshot(image); try await wait { !workspace.isLoading }
         let quickID = workspace.quickCapture!.document.id
-        workspace.editQuickCapture(); verify(workspace.editor?.document.id == quickID && workspace.quickCapture == nil)
+        workspace.editQuickCapture(); while workspace.isLoading { try await Task.sleep(for: .milliseconds(10)) }; verify(workspace.editor?.document.id == quickID && workspace.quickCapture == nil)
         try await purchases()
         try await ProAccessChecks.run(image: image)
         print("PASS: complete backup/restore, trash, bytes, interrupted media, corruption rejection, Finder routing, guides, object names/undo, quick preview, purchase states")

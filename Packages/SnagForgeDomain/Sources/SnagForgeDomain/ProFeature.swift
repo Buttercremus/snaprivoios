@@ -6,7 +6,7 @@ public enum ProFeature: String, CaseIterable, Sendable {
 
     public static func required(for kind: EditorObject.Kind) -> Self? {
         switch kind {
-        case .callout, .highlight, .step, .triangle, .diamond, .star: .advancedEditing
+        case .pen, .spotlight, .magnifier, .callout, .highlight, .step, .triangle, .diamond, .star: .advancedEditing
         case .image: .insertedImages
         default: nil
         }
@@ -14,12 +14,12 @@ public enum ProFeature: String, CaseIterable, Sendable {
 
     public static func required(for tool: AnnotationTool) -> Self? {
         switch tool {
-        case .callout, .highlight, .steps: .advancedEditing
+        case .pen, .spotlight, .magnifier, .callout, .highlight, .steps: .advancedEditing
         default: nil
         }
     }
 
     public static func required(for object: EditorObject) -> Self? {
-        required(for: object.kind) ?? (object.effectiveDrawingStyle == .handDrawn ? .advancedEditing : nil)
+        required(for: object.kind) ?? (object.effectiveDrawingStyle != .precise ? .advancedEditing : nil)
     }
 }

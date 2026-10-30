@@ -1,0 +1,37 @@
+# Stift, Spotlight, Anordnen, Schwärzungshilfe und GIF
+
+Stand: 20. Oktober 2026. Nutzerumfang: Punkte 1, 2, 3 und 6 der Editor-Empfehlung sowie GIF/Klickanzeige. Stapelexport und Bildvergleich bleiben ausgenommen. Keine neue Paketabhängigkeit, Netzwerkverarbeitung oder Berechtigung.
+
+## Bedienung
+
+**Stift** in der Werkzeugleiste auswählen, frei ziehen oder für einen Punkt klicken. Farbe, Breite und Glättung stehen im Eigenschaftenbereich und in den Schnelloptionen. Die Rohpunkte bleiben gespeichert; Glättung ist jederzeit veränderbar. Ein Strich besteht aus höchstens 10.000 Punkten; danach eine weitere Markierung beginnen. Stift folgt der Pro-Grenze für erweiterte Werkzeuge.
+
+**Spotlight** live als Rechteck oder Ellipse aufziehen, danach verschieben und an acht Griffen skalieren. Die Abdunklung ist zwischen 0 und 95 % einstellbar. Weitere Fokusflächen ergänzen die hellen Bereiche; auch Überlappungen bleiben hell. Für die gemeinsame Umgebung gilt die stärkste eingestellte Abdunklung. Unschärfe wird davor angewendet, gewöhnliche Markierungen und deckende Masken bleiben darüber. Leere Gesten erzeugen kein ungültiges Objekt. Pro-Werkzeug.
+
+**Anordnen:** Zwei oder mehr Objekte auswählen. In der Objektliste stehen sechs Ausrichtungen und gemeinsame Breite/Höhe bereit. Ab drei Objekten sind gleiche horizontale/vertikale Abstände verfügbar; die Verteilung verwendet die äußeren Grenzen der Auswahl. Gemeinsame acht Auswahlgriffe skalieren alle gewählten Objekte einschließlich Biegepunkten, Callout-Zielen und Freihandpfaden. Umschalt erhält die Proportionen. Stilgrößen werden innerhalb der vorhandenen Projektgrenzen mitskaliert. Die numerischen Maße beziehen sich wie die übrigen Objekteigenschaften auf Originalbildkoordinaten.
+
+Beim **Verschieben** rasten Auswahlkanten und Mittelpunkte an anderen Objekten und Bildgrenzen/-mitten ein. Der Fangabstand beträgt unabhängig von Zoom und Ausgabeskalierung sechs Ansichtspunkte. Temporäre pinke Hilfslinien zeigen den Fangpunkt. ⌥ umgeht den Fang für die Geste; der Schalter Einrasten in der Objektliste deaktiviert ihn insgesamt. Diese Ansichtseinstellung und die Hilfslinien werden nicht exportiert. Ausrichten/Verteilen oder eine Skaliergeste bildet jeweils einen Undo-Schritt.
+
+**Sensible Daten finden …** steht beim Werkzeug Abdecken. Der schnelle öffentliche Pfad der bestehenden lokalen Vision-Erkennung analysiert den sichtbaren bearbeiteten Bildstand, einschließlich Zuschnitt, Ausgabegröße und bereits vorhandener Masken. Erkennungsregeln suchen E-Mail-, Telefon-, IPv4-, Karten- und IBAN-ähnliche Angaben, einschließlich üblicher Leerzeichen bei Nummern. Die Liste enthält Kategorien statt erkannter sensibler Texte. Vorschau und Auswahl zeigen, welche vollständigen OCR-Zeilen abgedeckt würden. Erst Auswahl abdecken erzeugt normale schwarze Masken, gemeinsam rückgängig machbar. Vorschläge sind keine Vollständigkeitsgarantie und können Fehlalarme enthalten. OCR-Zeilen und Vorschläge bleiben flüchtig; Projekt/Backup behalten wie bisher das Original. Die Funktion folgt der Pro-Grenze für OCR.
+
+Abbrechen verwirft späte Ergebnisse. Eine Wiederholung wartet das Ende eines abgebrochenen Auftrags ab und verwendet dann den aktuellen Bildstand. Hat sich das Projekt seit der Analyse geändert, bleibt die Übernahme gesperrt, bis die Prüfung wiederholt wird. Detektoranalyse und Bildverarbeitung laufen außerhalb des MainActor.
+
+**GIF exportieren …** im Videoeditor sichert einen gültigen Schnittentwurf und öffnet den nativen Speicherdialog. Die Ausgabe enthält den gespeicherten Schnitt, keinen Ton: 12 Bilder/s, höchstens 720 Pixel längste Kante und 15 Sekunden. Längere Schnitte werden mit einem Kürzungshinweis abgelehnt. Vorhandene Zieldateien werden erst nach vollständiger Kodierung und erneuter Abbruchprüfung ersetzt. Originale und Bibliotheksdateien sind als Exportziel gesperrt. GIF und MP4 verwenden denselben Pro-Videozugang.
+
+**Mausklicks im Video hervorheben** ist in Einstellungen → Aufnahme und in der Video-Konfiguration separat einschaltbar, zunächst aus. ScreenCaptureKit zeichnet die Klicks über seine öffentliche `showMouseClicks`-Eigenschaft im BGRA-Modus in die Aufnahme. Cursor und Klickanzeige sind getrennte Optionen. Die Hervorhebungen sind anschließend Teil der Videopixel; nachträgliches Entfernen und Ändern ist nicht implementiert.
+
+## Speicherung und Nachweise
+
+Format 13 erhält Stiftpunkte/Glättung und Spotlight-Form/Deckkraft. Formate 1–12 einschließlich erweiterter Zeichenfläche bleiben lesbar. Vorlagen übernehmen Stilparameter, keine Pfad- oder Fokuskoordinaten. [Details](PROJEKTFORMAT.md#format-13-stift-und-spotlight).
+
+- `./scripts/build.sh -derivedDataPath "$PWD/build/AnnotationBuild"`: vollständiger App-Build erfolgreich.
+- `./scripts/test.sh`: 148 Swift-Testing-Tests sowie zwei XCTest-Geometrieprüfungen erfolgreich, einschließlich Formatmigration, Pfad-/Stilvalidierung, Einrasten/Skalierung und Erkennungsregeln.
+- `./scripts/test-canvas.sh`: vollständige Suite erfolgreich. Neue native Prüfungen decken echte Mausgesten, Stiftpunkte/Glättung, live rückwärts gezogene Fokusflächen, helle Überlappungen, Maskenreihenfolge, Fanglinien/Option-Umgehung, Ausrichten/gleiche Abstände, Gruppengriffe, Undo/Redo, Persistenz und PNG-Gleichheit bei Zuschnitt und freier X/Y-Ausgabeskalierung ab. Auswahlgriffe bei 50/100/400 % bleiben erfolgreich.
+- `./scripts/test-redaction-suggestions.sh` und `./scripts/test-redaction-suggestions.sh --sandbox`: echte Vision-Erkennung auf synthetischen Pixeln, Koordinaten nach Zuschnitt und freier Skalierung, Auswahlprüfung, schwarze PNG-Pixel, ein gemeinsames Undo/Redo, Wiederöffnen, Ablehnung veralteter Treffer, drainender Retry mit neuem Snapshot und Abbruch trotz verspäteter Erkennung erfolgreich.
+- `./scripts/test-ocr.sh`: bestehende vollständige OCR-Suite erfolgreich, einschließlich echter Erkennung auf Englisch/Deutsch/automatisch, sichtbarer Markierungen, Zuschnitt/Skalierung, Abdeckungen, Ressourcen-/Modellrückfall, Abbruch und Wiederholung. Der erste genaue Vision-Lauf brauchte auf diesem Mac ungewöhnlich lange; die neue Schwärzungshilfe verwendet den separat geprüften schnellen Pfad.
+- `./scripts/test-video-editing.sh`: synthetische MP4-/GIF-Prüfungen erfolgreich. ImageIO prüft GIF-Frames, Größen, Zeitabstände und unterschiedliche Quellabschnitte; zu lange Auswahl, veraltete Revision, geschützte Originalziele und Abbruch vor Ersetzen des Ziels werden abgewiesen.
+- `./scripts/test-video.sh`: native Aufnahmekonfiguration mit separat aktivierter/deaktivierter Klickanzeige und explizitem BGRA erfolgreich; bestehende Lebenszyklus-/Unterbrechungsprüfungen erfolgreich.
+- `./scripts/test-settings.sh`: gespeicherte Klickoption nach erneutem Laden sowie bestehende Einstellungs-/Speicherortprüfungen erfolgreich.
+- `python3 scripts/check-localization.py build/AnnotationBuild` und `./scripts/test-localization.sh "$PWD/build/AnnotationBuild/Build/Products/Debug/Snaprivo.app"`: vollständige Compilerabdeckung, passende Formatargumente und native Deutsch-/Englisch-Laufzeittexte einschließlich Prozessneustarts erfolgreich (1.065 App-, sieben InfoPlist- und 18 Domain-Texte).
+
+Der automatisierte Nachweis ersetzt keine vollständige VoiceOver- oder physische Bedienabnahme auf verschiedenen Macs. Die tatsächliche Darstellung und das Timing von Klickmarkierungen in einer echten ScreenCaptureKit-Aufnahme müssen noch auf dem Gerät geprüft werden. Die bereits dokumentierte offene reale Video-/Tonabnahme bleibt bestehen. Es wurde nichts veröffentlicht.

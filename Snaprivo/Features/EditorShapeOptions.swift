@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import SnagForgeDomain
 
 struct EditorInstructionOptions: View {
@@ -113,10 +114,10 @@ struct EditorShapeOptions: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(String(localized: "Form")).font(.caption)
             LazyVGrid(columns: columns, spacing: 6) {
-                ForEach(ShapeChoice.all) { choice in
+                ForEach(EditorShapeChoice.all) { choice in
                     let selected = model.activeKind == choice.kind && (choice.kind != .rectangle || (corner > 0) == (choice.corner > 0))
                     Button { model.selectShape(choice.kind, corner: choice.corner) } label: {
-                        ShapeIcon(kind: choice.kind, corner: choice.corner > 0 ? 6 : 0)
+                        EditorShapeIcon(kind: choice.kind, corner: choice.corner > 0 ? 6 : 0)
                             .stroke(selected ? Color.accentColor : .primary, lineWidth: 2)
                             .frame(width: 28, height: 24).frame(maxWidth: .infinity).frame(height: 38)
                             .background(selected ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.04), in: .rect(cornerRadius: 7))
@@ -135,9 +136,9 @@ struct EditorShapeOptions: View {
                         model.endStyleEditing()
                         model.updateStyle(color: preset.color, width: 5, fill: preset.fill, stroke: EditorStroke())
                     } label: {
-                        ShapeIcon(kind: model.activeKind ?? .rectangle, corner: corner > 0 ? 5 : 0)
+                        EditorShapeIcon(kind: model.activeKind ?? .rectangle, corner: corner > 0 ? 5 : 0)
                             .fill(preset.fill.isEnabled ? preset.fill.color.swiftUIColor.opacity(preset.fill.opacity) : .clear)
-                            .overlay { ShapeIcon(kind: model.activeKind ?? .rectangle, corner: corner > 0 ? 5 : 0).stroke(preset.color.swiftUIColor, lineWidth: 3) }
+                            .overlay { EditorShapeIcon(kind: model.activeKind ?? .rectangle, corner: corner > 0 ? 5 : 0).stroke(preset.color.swiftUIColor, lineWidth: 3) }
                             .frame(width: 30, height: 25).frame(maxWidth: .infinity).frame(height: 38)
                             .background(.background, in: .rect(cornerRadius: 7))
                             .overlay { RoundedRectangle(cornerRadius: 7).stroke(.quaternary) }
@@ -149,21 +150,6 @@ struct EditorShapeOptions: View {
             }
         }
     }
-}
-
-private struct ShapeChoice: Identifiable {
-    let id: String
-    let kind: EditorObject.Kind
-    let title: String
-    var corner: CGFloat = 0
-    static let all: [Self] = [
-        .init(id: "rectangle", kind: .rectangle, title: String(localized: "Rechteck")),
-        .init(id: "rounded", kind: .rectangle, title: String(localized: "Abgerundetes Rechteck"), corner: 20),
-        .init(id: "ellipse", kind: .ellipse, title: String(localized: "Ellipse")),
-        .init(id: "triangle", kind: .triangle, title: String(localized: "Dreieck")),
-        .init(id: "diamond", kind: .diamond, title: String(localized: "Raute")),
-        .init(id: "star", kind: .star, title: String(localized: "Stern"))
-    ]
 }
 
 private struct ShapeStylePreset: Identifiable {
@@ -184,16 +170,6 @@ private struct ShapeStylePreset: Identifiable {
     ]
 }
 
-private struct ShapeIcon: Shape {
-    var kind: EditorObject.Kind
-    var corner: CGFloat
-    func path(in rect: CGRect) -> Path {
-        var object = EditorObject(kind: kind, start: rect.origin, end: CGPoint(x: rect.maxX, y: rect.maxY))
-        object.cornerRadius = corner
-        return Path(EditorRenderer.shapePath(object))
-    }
-}
-
 struct EditorColorOptions: View {
     let title: String
     @Binding var color: EditorColor
@@ -204,7 +180,7 @@ struct EditorColorOptions: View {
                 color = EditorColor(red: next.redComponent, green: next.greenComponent, blue: next.blueComponent)
             }), supportsOpacity: false)
             HStack(spacing: 4) {
-                ForEach(ColorChoice.all) { choice in
+                ForEach(EditorColorChoice.all) { choice in
                     Button { color = choice.color } label: {
                         Circle().fill(choice.color.swiftUIColor)
                             .overlay { Circle().stroke(Color.primary.opacity(0.25), lineWidth: 1) }
@@ -221,22 +197,120 @@ struct EditorColorOptions: View {
     }
 }
 
-private struct ColorChoice: Identifiable {
-    let title: String
-    let color: EditorColor
-    var id: String { title }
-    static let all: [Self] = [
-        .init(title: String(localized: "Rot"), color: EditorColor()),
-        .init(title: String(localized: "Orange"), color: EditorColor(red: 1, green: 0.5, blue: 0)),
-        .init(title: String(localized: "Gelb"), color: EditorColor(red: 1, green: 0.85, blue: 0.1)),
-        .init(title: String(localized: "Grün"), color: EditorColor(red: 0.2, green: 0.65, blue: 0.25)),
-        .init(title: String(localized: "Blau"), color: EditorColor(red: 0, green: 0.4, blue: 1)),
-        .init(title: String(localized: "Violett"), color: EditorColor(red: 0.65, green: 0.25, blue: 0.85)),
-        .init(title: String(localized: "Schwarz"), color: EditorColor(red: 0, green: 0, blue: 0)),
-        .init(title: String(localized: "Weiß"), color: EditorColor(red: 1, green: 1, blue: 1))
-    ]
+
+struct EditorSpotlightOptions: View {
+    let model: EditorModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Picker(String(localized: "Form"), selection: Binding(get: { model.activeSpotlightStyle.shape }, set: { shape in
+                var style = model.activeSpotlightStyle; style.shape = shape; model.updateSpotlightStyle(style)
+            })) {
+                Text(String(localized: "Rechteck")).tag(EditorSpotlightShape.rectangle)
+                Text(String(localized: "Ellipse")).tag(EditorSpotlightShape.ellipse)
+            }.pickerStyle(.segmented).accessibilityIdentifier("editor.spotlight.shape")
+            VStack(alignment: .leading, spacing: 4) {
+                Text(String(localized: "Abdunklung")).font(.caption).foregroundStyle(.secondary)
+                Slider(value: Binding(get: { model.activeSpotlightStyle.opacity * 100 }, set: { opacity in
+                    var style = model.activeSpotlightStyle; style.opacity = opacity / 100; model.updateSpotlightStyle(style)
+                }), in: 0...95, onEditingChanged: { editing in
+                    if editing { model.beginStyleEditing() } else { model.endStyleEditing() }
+                }).accessibilityLabel(String(localized: "Abdunklung")).accessibilityIdentifier("editor.spotlight.opacity")
+            }
+            Text(String(localized: "Weitere Fokusbereiche bleiben gemeinsam hell. Es gilt die stärkste gewählte Abdunklung."))
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
 }
 
-private extension EditorColor {
-    var swiftUIColor: Color { Color(.sRGB, red: red, green: green, blue: blue) }
+/// A shared frame control for the source composition and individually selected image objects.
+struct EditorImageFrameControls: View {
+    @Binding var radius: Double
+    @Binding var border: EditorImageBorder?
+    let onEditingChanged: (Bool) -> Void
+    @FocusState private var radiusHasFocus: Bool
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(String(localized: "Eckenradius"))
+                Spacer()
+                TextField(String(localized: "Eckenradius"), value: $radius, format: .number.precision(.fractionLength(0...1)))
+                    .textFieldStyle(.roundedBorder).multilineTextAlignment(.trailing).frame(width: 56)
+                    .focused($radiusHasFocus)
+                    .onChange(of: radiusHasFocus) { _, active in onEditingChanged(active) }
+                    .onSubmit { onEditingChanged(false); radiusHasFocus = false }
+                    .accessibilityIdentifier("editor.image.cornerRadius")
+                Text("px").foregroundStyle(.secondary)
+            }
+            Slider(value: $radius, in: 0...100, onEditingChanged: onEditingChanged)
+                .accessibilityLabel(String(localized: "Eckenradius"))
+                .accessibilityIdentifier("editor.image.cornerSlider")
+            Toggle(String(localized: "Rand"), isOn: Binding(get: { border != nil }, set: { border = $0 ? EditorImageBorder() : nil }))
+                .accessibilityIdentifier("editor.image.border")
+            if let current = border {
+                ColorPicker(String(localized: "Randfarbe"), selection: Binding(get: {
+                    Color(red: current.color.red, green: current.color.green, blue: current.color.blue)
+                }, set: { value in
+                    guard let color = NSColor(value).usingColorSpace(.sRGB) else { return }
+                    border?.color = EditorColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent)
+                }), supportsOpacity: false)
+                HStack {
+                    Text(String(localized: "Randbreite"))
+                    Slider(value: Binding(get: { current.width }, set: { border?.width = $0 }), in: 1...20, onEditingChanged: onEditingChanged)
+                        .accessibilityLabel(String(localized: "Randbreite"))
+                    Text("\(Int(current.width)) px").monospacedDigit().foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+/// Source-image selection edits its frame without entering the presentation viewport.
+struct EditorSourceImageFrameControls: View {
+    let model: EditorModel
+    var body: some View {
+        EditorImageFrameControls(radius: Binding(get: { model.history.presentation.cornerRadius }, set: { value in
+            var next = model.history.presentation; next.cornerRadius = value; model.updatePresentation(next)
+        }), border: Binding(get: { model.history.presentation.border }, set: { border in
+            var next = model.history.presentation; next.border = border; model.updatePresentation(next)
+        }), onEditingChanged: { active in
+            if active { model.beginPresentationEditing() } else { model.endPresentationEditing() }
+        })
+        .onDisappear { model.endPresentationEditing() }
+    }
+}
+
+struct EditorSelectedImageFrameControls: View {
+    let model: EditorModel
+    private var currentBorder: EditorImageBorder? {
+        guard let object = model.selectedObject, object.stroke?.isEnabled == true else { return nil }
+        return EditorImageBorder(width: min(100, object.lineWidth), color: object.color)
+    }
+    @FocusState private var angleFocused: Bool
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(String(localized: "Drehwinkel"))
+                Spacer()
+                TextField(String(localized: "Drehwinkel"), value: Binding(get: { model.selectedObject?.imageRotationDegrees ?? 0 }, set: { model.updateSelectedImageRotation($0) }), format: .number.precision(.fractionLength(0...1)))
+                    .focused($angleFocused).textFieldStyle(.roundedBorder).frame(width: 70)
+                    .accessibilityIdentifier("editor.image.rotation.value")
+                Text("°").foregroundStyle(.secondary)
+            }
+            Slider(value: Binding(get: { model.selectedObject?.imageRotationDegrees ?? 0 }, set: { model.updateSelectedImageRotation($0) }), in: -180...180, onEditingChanged: { active in
+                if active { model.beginStyleEditing() } else { model.endStyleEditing() }
+            }).accessibilityLabel(String(localized: "Drehwinkel")).accessibilityIdentifier("editor.image.rotation.slider")
+            Button(String(localized: "Ausrichtung zurücksetzen"), systemImage: "arrow.uturn.backward") { model.updateSelectedImageRotation(0) }
+                .disabled((model.selectedObject?.imageRotationDegrees ?? 0) == 0)
+            Divider()
+        EditorImageFrameControls(radius: Binding(get: { model.selectedObject?.cornerRadius ?? 0 }, set: { value in
+            model.updateSelectedImageFrame(radius: value, border: currentBorder)
+        }), border: Binding(get: { currentBorder }, set: { border in
+            model.updateSelectedImageFrame(radius: model.selectedObject?.cornerRadius ?? 0, border: border)
+        }), onEditingChanged: { active in
+            if active { model.beginStyleEditing() } else { model.endStyleEditing() }
+        })
+        }.onChange(of: angleFocused) { _, active in
+            if active { model.beginStyleEditing() } else { model.endStyleEditing() }
+        }.onDisappear { model.endStyleEditing() }
+    }
 }

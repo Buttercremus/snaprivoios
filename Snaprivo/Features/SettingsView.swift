@@ -29,6 +29,21 @@ private struct GeneralSettings: View {
     let workspace: WorkspaceModel
     var body: some View {
         Form {
+            Section(String(localized: "Sprache")) {
+                Picker(String(localized: "Sprache"), selection: $preferences.language) {
+                    ForEach(AppLanguage.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("settings.language")
+                Text(String(localized: "Die Sprache wird beim nächsten Start von Snaprivo übernommen. Die Systemsprache deines Macs bleibt unverändert."))
+                    .font(.callout).foregroundStyle(.secondary)
+                if preferences.requiresLanguageRestart {
+                    Button(String(localized: "Snaprivo beenden")) { NSApplication.shared.terminate(nil) }
+                        .accessibilityIdentifier("settings.language.quit")
+                    Text(String(localized: "Öffne Snaprivo anschließend erneut, um die neue Sprache zu verwenden."))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
             Section(String(localized: "Erscheinungsbild")) {
                 Picker(String(localized: "Darstellung"), selection: $preferences.appearance) {
                     ForEach(AppAppearance.allCases, id: \.self) { Text($0.title).tag($0) }
@@ -61,6 +76,8 @@ struct CaptureClipboardSettings: View {
     var body: some View {
         Section(String(localized: "Nach dem Screenshot")) {
             Toggle(String(localized: "Schnellvorschau nach der Aufnahme"), isOn: $preferences.quickPreviewAfterCapture)
+            Text(String(localized: "Bis zu fünf Aufnahmen bleiben unten links griffbereit. Schließen entfernt nur die Vorschau; die Bilder bleiben in der Bibliothek."))
+                .font(.callout).foregroundStyle(.secondary)
             Toggle(String(localized: "Screenshot automatisch in die Zwischenablage kopieren"), isOn: $preferences.copyAfterCapture)
                 .accessibilityIdentifier("settings.capture.copy")
             Text(String(localized: "Nach dem Bestätigen der Aufnahme steht das PNG automatisch zum Einfügen bereit. Der Screenshot bleibt zusätzlich als bearbeitbares Projekt im Editor. Gilt auch für Scroll-Aufnahmen; Bildimporte werden nicht kopiert."))
@@ -263,6 +280,10 @@ private struct CaptureSettings: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
             Section(String(localized: "Videoton")) {
+                Toggle(String(localized: "Mausklicks im Video hervorheben"), isOn: Binding(
+                        get: { workspace.preferences.videoMouseClicks },
+                        set: { workspace.preferences.videoMouseClicks = $0 }))
+                    .accessibilityIdentifier("settings.capture.mouseClicks")
                 Toggle(String(localized: "Systemton aufnehmen"), isOn: Binding(
                     get: { workspace.preferences.videoSystemAudio },
                     set: { workspace.preferences.videoSystemAudio = $0 }))
@@ -355,10 +376,21 @@ private struct PrivacySettings: View {
                 Text(String(localized: "Bilder und bearbeitbare Projekte bleiben lokal auf deinem Mac. Snaprivo überträgt keine Bildinhalte und enthält derzeit keine Analyse- oder Cloud-Dienste."))
                 Text(String(localized: "Das Projekt behält sein vollständiges Original. Zuschnitt und Unschärfe entfernen keine Quelldaten aus dem bearbeitbaren Projekt."))
                     .font(.callout).foregroundStyle(.secondary)
+                Link(String(localized: "Datenschutzerklärung"), destination: SnaprivoPrivacyPolicy.url(for: Bundle.main.preferredLocalizations))
+                    .accessibilityIdentifier("settings.privacy.policy")
             }
         }.formStyle(.grouped)
         .onAppear { refresh() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in refresh() }
     }
     private func refresh() { screenshot.refreshPermission(); hasPermission = screenshot.hasPermission }
+}
+
+enum SnaprivoPrivacyPolicy {
+    static func url(for preferredLanguages: [String]) -> URL {
+        let language = Bundle.preferredLocalizations(from: ["en", "de"], forPreferences: preferredLanguages).first
+        return URL(string: language == "de"
+            ? "https://snaprivo.com/de/privacy/"
+            : "https://snaprivo.com/en/privacy/")!
+    }
 }

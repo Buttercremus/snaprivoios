@@ -1,6 +1,6 @@
 # Free, Pro und Einmalkauf
 
-Stand: 18. Oktober 2026. Paket und Preis vom Nutzer bestätigt. Diese Entscheidung ersetzt frühere Vorschläge im Product Brief. Die technische Umsetzung ist keine Freigabe zur Store-Veröffentlichung.
+Stand: 20. Oktober 2026. Paket und Preis vom Nutzer bestätigt. Vollständige Kauf-/Restore-Tests und Store-Vorbereitung sind am 20.10.2026 ausdrücklich vom Nutzer als getestet bestätigt (K02/K03/R01). Diese Entscheidung ersetzt frühere Vorschläge im Product Brief. Eine Store-Veröffentlichung wurde damit nicht beauftragt.
 
 ## Bestätigte Aufteilung
 
@@ -33,11 +33,11 @@ Nicht verbrauchbarer In-App-Kauf: `com.snaprivo.pro.lifetime`, Name **Snaprivo P
 
 Die App verwendet ausschließlich `Product.displayPrice` und das aktuelle Produkt von Apple. Nur wenn der Store tatsächlich **29,99 EUR** liefert, erscheint zusätzlich „Einführungspreis“ und der in derselben Währung/Locale formatierte spätere Preis **39,99 EUR**. Bei 39,99 EUR oder anderen Preisen/Währungen erscheint keine erfundene Einführungsermäßigung. Ohne Produkt/Preis bleibt Kaufen gesperrt; Free und Restore sind erreichbar. Der Preis wird vor dem Kauf neu geladen; bei einer Änderung muss der neue Preis erneut bestätigt werden.
 
-**Noch extern einzurichten:**
+**Externe Einrichtung und Nutzerabnahme:**
 
-1. In App Store Connect das obige nicht verbrauchbare Produkt für `com.snaprivo.app` anlegen, deutsche/englische Beschreibung und Review-Screenshot hinzufügen, Verträge/Verfügbarkeit prüfen.
-2. Im deutschen Store 29,99 € zum Verkaufsstart einstellen und den Wechsel auf 39,99 € nach vier Wochen planen. Andere Storefronts bewusst über Apples Preispunkte konfigurieren; keine pauschale 1:1-Währungsumrechnung in der App.
-3. Produkt und Preisplan im Store prüfen und den signierten Kandidaten in Apples Sandbox/TestFlight mit Kauf, Wiederherstellung, Offline-Neustart und Erstattung abnehmen. Keine Veröffentlichung wurde vorgenommen.
+1. **Nutzerbeleg vom 19.10.2026:** StoreKit-Kauf im eigenen TestFlight-Client erfolgreich.
+2. **Nutzerabnahme vom 20.10.2026:** „vollständige Kauf-/Restore-Tests und Store-Vorbereitung. getestet“. Damit sind K02/K03 und R01 einschließlich der bisher offenen realen Store-Testmatrix und externen Vorbereitung im Arbeitsplan abgeschlossen. Die Bestätigung stammt vom Nutzer; dieser Auftrag führt keine erneute Portalprüfung oder Käufe aus. TestFlight-Build, Storefront, Einzelresultate und Kalenderdaten wurden nicht zusätzlich genannt.
+3. Bestätigte Preisregel bleibt 29,99 € zur Einführung und danach 39,99 € einmalig. Andere Storefronts verwenden Apples Preispunkte; keine pauschale 1:1-Währungsumrechnung in der App. Eine Veröffentlichung ist weiterhin ein eigener Schritt R04.
 
 Die lokale Datei `Tests/Fixtures/Snaprivo.storekit` enthält den Einführungspreis in einer deutschen Test-Storefront. Der native StoreKit-Test erzeugt zusätzlich eine temporäre Konfiguration für 39,99 €. Diese Dateien richten keine Preise in App Store Connect ein. Der kommerzielle Client ist im Code aktiviert; ein Kauf ist nur mit einem vom Store gelieferten Produkt möglich.
 
@@ -56,4 +56,4 @@ Apple-Referenzen: [Produktpreis formatieren](https://developer.apple.com/documen
 - `python3 scripts/check-localization.py build/ProPackage`: 934 App-, 7 InfoPlist- und 13 Domain-Texte vollständig auf Deutsch/Englisch, passende Formatargumente und vollständige Compilerabdeckung.
 - Isolierte Produktionsoberfläche mit synthetischen Bildern: Free zeigt Pro-Kennzeichnung und kontextbezogene OCR-Paywall; Einführungspreis, späterer Preis und sichtbare Vorteile geprüft. Ein ausschließlich lokal simulierter Kauf zeigt „Pro ist aktiviert“ und entsperrt den vorhandenen Editor samt Callout ohne Neustart. Visueller Nachweis: `build/pro-paywall-launch-ui.png`. Die Test-App verwendet eigene temporäre Daten und einen ausschließlich in der Fixture definierten Store-Client.
 
-Im Widerrufstest gefundene Rekursion bei Video-Schnittgrenzen wurde vor Abschluss behoben und in der Sandbox erneut erfolgreich geprüft. Bereits offene Hardware-/Capture-/Ton-/vollständige VoiceOver-Abnahmen aus dem Arbeitsplan bleiben bestehen. App-Store-Connect-Produkt, kalenderbasierter Preisplan und reale Store-Sandbox/TestFlight-Prüfung sind durch lokale Tests nicht ersetzt.
+Im Widerrufstest gefundene Rekursion bei Video-Schnittgrenzen wurde vor Abschluss behoben und in der Sandbox erneut erfolgreich geprüft. Bereits offene Hardware-/Capture-/Ton-/vollständige VoiceOver-Abnahmen aus dem Arbeitsplan bleiben bestehen. Auf den TestFlight-Kaufbeleg vom 19.10. folgt am 20.10.2026 die ausdrückliche Nutzerabnahme der vollständigen Kauf-/Restore-Tests und Store-Vorbereitung; diese Punkte werden nicht weiter als offen geführt.

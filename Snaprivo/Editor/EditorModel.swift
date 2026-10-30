@@ -10,6 +10,7 @@ final class EditorModel {
     @ObservationIgnored var requestFeature: @MainActor (ProFeature) -> Bool = { _ in true }
     @ObservationIgnored var hasProAccess: @MainActor () -> Bool = { true }
     let image: CGImage
+    @ObservationIgnored var initialCanvas: EditorCanvasPreparation?
     /// Freeze outgoing document input while retaining its rendered UI until the replacement is ready.
     var isSwitchingImage = false
     private(set) var document: ProjectDocument
@@ -38,6 +39,7 @@ final class EditorModel {
     var saveStatus: String { saveError != nil ? String(localized: "Speichern fehlgeschlagen") : isSaving ? String(localized: "Wird gesichert …") : isDirty ? String(localized: "Änderungen werden gesichert …") : String(localized: "Alle Änderungen gesichert") }
     @ObservationIgnored private var store: ProjectStore
     @ObservationIgnored private let onSaved: @MainActor () -> Void
+    @ObservationIgnored var onLibraryItemSaved: (@MainActor (ProjectLibraryItem) -> Void)?
     @ObservationIgnored private var debounceTask: Task<Void, Never>?
     @ObservationIgnored private var saveTask: Task<Bool, Never>?
     typealias PNGWriter = @Sendable (Data, URL) async throws -> Void
@@ -52,9 +54,23 @@ final class EditorModel {
     @ObservationIgnored private var pngExportPanel: NSSavePanel?
     private var isFinishingPendingWork = false
     @ObservationIgnored private var hasUnacknowledgedOutputError = false
+    var isEditingPresentation = false {
+        didSet {
+            guard oldValue != isEditingPresentation else { return }
+            isSourceImageSelected = false
+            if isEditingPresentation { isRecognizingTextInPlace = false }
+            let reference = history.presentation.previewReferenceSize(for: document.contentPixelSize)
+            preserveViewportScale(from: oldValue || history.presentation.requiresCanvasLayout ? reference : imageSize)
+            endPresentationEditing()
+        }
+    }
+    @ObservationIgnored private var isAdjustingPresentation = false
     var history = EditorHistory()
     var preview: [EditorObject]?
-    private(set) var selectedIDs: Set<UUID> = []
+    private(set) var isSourceImageSelected = false
+    private(set) var selectedIDs: Set<UUID> = [] {
+        didSet { isSourceImageSelected = false }
+    }
     var selection: UUID? {
         get { history.objects.first { selectedIDs.contains($0.id) }?.id }
         set { selectedIDs = newValue.map { expandedSelection([$0]) } ?? [] }
@@ -72,12 +88,16 @@ final class EditorModel {
     func selectObjectFromList(_ id: UUID) {
         guard !isSwitchingImage, !isCanvasGestureActive, cropDraft == nil,
               history.objects.contains(where: { $0.id == id }) else { return }
+        isEditingPresentation = false
+        isRecognizingTextInPlace = false
         endStyleEditing(); finishTextEditing(); tool = .selection
         // A list row targets one object, including members of a group.
         selectedIDs = [id]
     }
     func selectObjectsFromList(_ ids: Set<UUID>) {
         guard !isSwitchingImage, !isCanvasGestureActive, cropDraft == nil else { return }
+        isEditingPresentation = false
+        isRecognizingTextInPlace = false
         endStyleEditing(); finishTextEditing(); tool = .selection
         selectedIDs = ids.intersection(history.objects.map(\.id))
     }
@@ -111,12 +131,19 @@ final class EditorModel {
             if let feature = ProFeature.required(for: tool), !requestFeature(feature) {
                 tool = oldValue; return
             }
+            isSourceImageSelected = false
+            isEditingPresentation = false
+            isRecognizingTextInPlace = false
             if tool == .crop { startCropSession() }
             else if oldValue == .crop { closeCropSession() }
         }
     }
     var isShowingImageSize = false
     var isShowingTextRecognition = false
+    var isRecognizingTextInPlace = false
+    private var imageRotationDraftArea: CGRect?
+    var isShowingRedactionSuggestions = false
+    var snapsToObjects = true
     var cropDraft: CGRect?
     @ObservationIgnored private var cropViewport: EditorViewport?
     private(set) var editingTextObject: EditorObject?
@@ -134,7 +161,19 @@ final class EditorModel {
     }
     /// A switch blocks actions without fading otherwise unchanged toolbar buttons.
     var hasConfirmedImageForToolbar: Bool {
-        cropDraft == nil && !isShowingImageSize && !isShowingTextRecognition && !isCanvasGestureActive && preview == nil && !isOpeningExternally
+        cropDraft == nil && hasIdleCanvasForToolbar
+    }
+    private var hasIdleCanvasForToolbar: Bool {
+        !isShowingImageSize && !isShowingTextRecognition && !isShowingRedactionSuggestions && !isCanvasGestureActive && preview == nil && !isOpeningExternally
+    }
+    var canSwitchEditingTool: Bool {
+        hasIdleCanvasForToolbar && !isSwitchingImage && !isExporting && !isFinishingPendingWork
+    }
+    /// Switching tools discards only the crop preview; output still requires a confirmed image.
+    @discardableResult func prepareForEditingTool() -> Bool {
+        guard canSwitchEditingTool else { return false }
+        if cropDraft != nil { cancelCrop() }
+        return true
     }
     /// A value snapshot keeps an open system share independent of later edits or editor replacement.
     var pngShareItem: EditorPNGShare? {
@@ -144,7 +183,7 @@ final class EditorModel {
     var pngShareItemForToolbar: EditorPNGShare? {
         guard hasConfirmedImageForToolbar, !isExportingPNG else { return nil }
         return EditorPNGShare(image: image, objects: history.objects, crop: history.crop,
-                              resizedSize: history.resizedSize, title: name)
+                              resizedSize: history.resizedSize, title: name, canvasRect: history.canvasRect, transform: history.transform, presentation: history.presentation)
     }
     enum CopyState { case idle, copying, copied }
     private(set) var copyState = CopyState.idle
@@ -159,20 +198,26 @@ final class EditorModel {
     @ObservationIgnored var viewportBackingScale: CGFloat = 1
     var isCanvasGestureActive = false
     var originalRect: CGRect { EditorCrop.fullRect(document.pixelSize) }
-    var sourceRect: CGRect { cropDraft == nil ? document.outputRect : originalRect }
-    var imageSize: CGSize { cropDraft != nil ? originalRect.size : CGSize(width: document.outputPixelSize.width, height: document.outputPixelSize.height) }
+    var fullCanvasRect: CGRect { history.canvasRect ?? originalRect }
+    var sourceRect: CGRect { cropDraft == nil ? document.outputRect : fullCanvasRect }
+    var imageSize: CGSize { cropDraft != nil ? fullCanvasRect.size : CGSize(width: document.untransformedOutputPixelSize.width, height: document.untransformedOutputPixelSize.height) }
     func beginTextRecognition() {
         guard hasExportableImage, !isExporting else { return }
         guard requestFeature(.textRecognition) else { return }
         endStyleEditing(); finishTextEditing(); isShowingTextRecognition = true
     }
+    func beginRedactionSuggestions() {
+        guard hasExportableImage, !isExporting, requestFeature(.textRecognition) else { return }
+        endStyleEditing(); finishTextEditing(); isShowingRedactionSuggestions = true
+    }
     func beginImageResize() {
-        guard !isSwitchingImage, cropDraft == nil, !isCanvasGestureActive, !isExporting else { return }
+        guard prepareForEditingTool() else { return }
         endStyleEditing(); finishTextEditing(); isShowingImageSize = true
     }
     @discardableResult func applyImageSize(_ size: PixelSize) -> Bool {
         guard !isSwitchingImage, cropDraft == nil, !isCanvasGestureActive, EditorResize.isValid(size) else { return false }
         endStyleEditing(); finishTextEditing()
+        let size = history.transform.applying(to: size)
         let next: PixelSize? = CGSize(width: size.width, height: size.height) == document.outputRect.size ? nil : size
         let old = history.resizedSize
         history.commitResize(next)
@@ -199,8 +244,8 @@ final class EditorModel {
     func cancelCrop() { tool = .selection }
     func applyCrop() {
         guard canApplyCrop, let cropDraft,
-              let rect = EditorCrop.normalized(cropDraft, in: document.pixelSize) else { return }
-        let next: CGRect? = rect == originalRect ? nil : rect
+              let rect = EditorCrop.normalized(cropDraft, in: fullCanvasRect) else { return }
+        let next: CGRect? = rect == fullCanvasRect ? nil : rect
         let old = history.crop, oldResize = history.resizedSize
         let resizedSize: PixelSize?
         do { resizedSize = try EditorResize.preservingScale(from: document.outputRect, to: rect, output: history.resizedSize) }
@@ -212,23 +257,32 @@ final class EditorModel {
     }
     func restoreOriginal() {
         guard !isSwitchingImage, !isCanvasGestureActive else { return }
-        if cropDraft != nil { cropDraft = originalRect; focusRequest += 1 }
+        if cropDraft != nil { cropDraft = fullCanvasRect; focusRequest += 1 }
         else if history.crop != nil {
             endStyleEditing(); finishTextEditing()
             do {
-                let size = try EditorResize.preservingScale(from: document.outputRect, to: originalRect, output: history.resizedSize)
+                let size = try EditorResize.preservingScale(from: document.outputRect, to: fullCanvasRect, output: history.resizedSize)
                 history.commitCrop(nil, resizedSize: size); resetImageView(); selection = nil; changed(); focusRequest += 1
             } catch { self.error = String(localized: "Das vollständige Original überschreitet bei dieser Skalierung die Bildgrenze. Verkleinere zuerst die Bildauflösung.") }
         }
     }
     var zoomLabel: String { viewport.zoom.map { "\(Int(($0 * 100).rounded())) %" } ?? String(localized: "Anpassen") }
+    var viewportImageSize: CGSize {
+        if isRecognizingTextInPlace { return CGSize(width: document.outputPixelSize.width, height: document.outputPixelSize.height) }
+        return cropDraft == nil && (isEditingPresentation || history.presentation.requiresCanvasLayout) ? history.presentation.previewReferenceSize(for: document.contentPixelSize) : imageSize
+    }
+    /// Adding canvas around an image must not refit/shrink its existing pixels.
+    private func preserveViewportScale(from previousSize: CGSize) {
+        guard viewportBounds.width > 0, viewportBounds.height > 0 else { return }
+        viewport.lockScale(image: previousSize, in: viewportBounds, backingScale: viewportBackingScale)
+    }
     func setZoom(_ factor: CGFloat, at anchor: CGPoint? = nil) {
         guard !isCanvasGestureActive else { return }
         viewport.setZoom(factor, at: anchor ?? CGPoint(x: viewportBounds.midX, y: viewportBounds.midY),
-                         image: imageSize, in: viewportBounds, backingScale: viewportBackingScale)
+                         image: viewportImageSize, in: viewportBounds, backingScale: viewportBackingScale)
     }
     func zoomBy(_ factor: CGFloat, at anchor: CGPoint? = nil) {
-        let current = viewport.scale(image: imageSize, in: viewportBounds, backingScale: viewportBackingScale) * viewportBackingScale
+        let current = viewport.scale(image: viewportImageSize, in: viewportBounds, backingScale: viewportBackingScale) * viewportBackingScale
         setZoom(current * factor, at: anchor)
     }
     func fitImage() {
@@ -242,7 +296,7 @@ final class EditorModel {
     }
     private func resetImageView() { viewport = EditorViewport(fitsImage: automaticallyFitsImage) }
     func panImage(by delta: CGSize) {
-        viewport.pan(by: delta, image: imageSize, in: viewportBounds, backingScale: viewportBackingScale)
+        viewport.pan(by: delta, image: viewportImageSize, in: viewportBounds, backingScale: viewportBackingScale)
     }
     var defaultRedactionColor = EditorColor(red: 0, green: 0, blue: 0)
     var activeColor: EditorColor {
@@ -260,7 +314,22 @@ final class EditorModel {
     var defaultFontSize: CGFloat = 32
     var defaultTextStyle = EditorTextStyle()
     var activeTextStyle: EditorTextStyle { selectedObject?.effectiveTextStyle ?? defaultTextStyle }
+    var defaultPenWidth: CGFloat = 4
+    var defaultPenSmoothed = true
+    var defaultSpotlightStyle = EditorSpotlightStyle()
+    var activePenSmoothed: Bool { selectedObject?.penStroke?.isSmoothed ?? defaultPenSmoothed }
+    var activeSpotlightStyle: EditorSpotlightStyle { selectedObject?.spotlightStyle ?? defaultSpotlightStyle }
+    var defaultMagnification: CGFloat = 2
+    var defaultMagnifierOffset = false
+    var activeMagnifierOffset: Bool {
+        guard let object = selectedObject, object.kind == .magnifier else { return defaultMagnifierOffset }
+        return object.magnifierSource != nil
+    }
+    var defaultShapeDrawingStyle = EditorDrawingStyle.precise
+    var activeMagnification: CGFloat { selectedObject?.effectiveMagnification ?? defaultMagnification }
     var defaultBlurRadius: CGFloat = 12
+    var defaultBlurStyle = EditorBlurStyle.gaussian
+    var activeBlurStyle: EditorBlurStyle { selectedObject?.effectiveBlurStyle ?? defaultBlurStyle }
     var defaultShapeFill = EditorFill()
     var defaultCalloutFill = EditorFill(isEnabled: true)
     var defaultCornerRadius: CGFloat = 0
@@ -278,7 +347,11 @@ final class EditorModel {
         defaultColor = previous.defaultColor; defaultRedactionColor = previous.defaultRedactionColor
         defaultArrowLineWidth = previous.defaultArrowLineWidth; defaultLineWidth = previous.defaultLineWidth
         defaultFontSize = previous.defaultFontSize; defaultTextStyle = previous.defaultTextStyle
-        defaultBlurRadius = previous.defaultBlurRadius; defaultShapeFill = previous.defaultShapeFill
+        defaultPenWidth = previous.defaultPenWidth; defaultPenSmoothed = previous.defaultPenSmoothed
+        defaultSpotlightStyle = previous.defaultSpotlightStyle; snapsToObjects = previous.snapsToObjects
+        defaultMagnifierOffset = previous.defaultMagnifierOffset
+        defaultMagnification = previous.defaultMagnification; defaultShapeDrawingStyle = previous.defaultShapeDrawingStyle
+        defaultBlurRadius = previous.defaultBlurRadius; defaultBlurStyle = previous.defaultBlurStyle; defaultShapeFill = previous.defaultShapeFill
         defaultCalloutFill = previous.defaultCalloutFill; defaultCornerRadius = previous.defaultCornerRadius
         defaultShapeKind = previous.defaultShapeKind; defaultShapeStroke = previous.defaultShapeStroke
         defaultHighlightMode = previous.defaultHighlightMode; defaultHighlightOpacity = previous.defaultHighlightOpacity
@@ -294,18 +367,18 @@ final class EditorModel {
         endStyleEditing(); finishTextEditing()
         if ProFeature.required(for: tool) != nil { tool = .selection }
         if ProFeature.required(for: defaultShapeKind) != nil { defaultShapeKind = .rectangle }
-        defaultArrowDrawingStyle = .precise; defaultEllipseDrawingStyle = .precise
-        isShowingTextRecognition = false
+        defaultArrowDrawingStyle = .precise; defaultEllipseDrawingStyle = .precise; defaultShapeDrawingStyle = .precise
+        isRecognizingTextInPlace = false; isShowingTextRecognition = false; isShowingRedactionSuggestions = false
         preview = nil
     }
     var selectedObject: EditorObject? { editingTextObject ?? (selectedIDs.count == 1 ? history.objects.first { selectedIDs.contains($0.id) } : nil) }
     var drawingKind: EditorObject.Kind? { tool == .rectangle ? defaultShapeKind : EditorObject.Kind.from(tool) }
     var activeKind: EditorObject.Kind? { selectedIDs.count > 1 ? nil : (editingTextObject?.kind ?? selectedObject?.kind ?? drawingKind) }
-    var activeLineWidth: CGFloat { selectedObject?.lineWidth ?? (activeKind == .arrow ? defaultArrowLineWidth : activeKind == .highlight ? defaultHighlightWidth : defaultLineWidth) }
+    var activeLineWidth: CGFloat { selectedObject?.lineWidth ?? (activeKind == .arrow ? defaultArrowLineWidth : activeKind == .highlight ? defaultHighlightWidth : activeKind == .pen ? defaultPenWidth : defaultLineWidth) }
     var activeFill: EditorFill { selectedObject?.effectiveFill ?? (activeKind == .callout ? defaultCalloutFill : defaultShapeFill) }
     var defaultArrowDrawingStyle = EditorDrawingStyle.precise
     var defaultEllipseDrawingStyle = EditorDrawingStyle.precise
-    var activeDrawingStyle: EditorDrawingStyle { selectedObject?.effectiveDrawingStyle ?? (activeKind == .arrow ? defaultArrowDrawingStyle : defaultEllipseDrawingStyle) }
+    var activeDrawingStyle: EditorDrawingStyle { selectedObject?.effectiveDrawingStyle ?? (activeKind == .arrow ? defaultArrowDrawingStyle : activeKind == .ellipse ? defaultEllipseDrawingStyle : defaultShapeDrawingStyle) }
     var activeStroke: EditorStroke { selectedObject?.effectiveStroke ?? defaultShapeStroke }
     var activeHighlightStyle: EditorHighlightStyle { selectedObject?.highlightStyle ?? EditorHighlightStyle(mode: defaultHighlightMode, opacity: defaultHighlightOpacity) }
     var activeStepStyle: EditorStepStyle { selectedObject?.stepStyle ?? defaultStepStyle }
@@ -314,6 +387,16 @@ final class EditorModel {
     var activeStepSize: CGFloat {
         guard let object = selectedObject, object.kind == .step else { return defaultStepSize }
         return min(object.rect.width, object.rect.height)
+    }
+    func updatePenSmoothed(_ enabled: Bool) {
+        guard requestFeature(.advancedEditing) else { return }
+        defaultPenSmoothed = enabled
+        updateInstructionObject { if $0.kind == .pen { $0.penStroke?.isSmoothed = enabled } }
+    }
+    func updateSpotlightStyle(_ style: EditorSpotlightStyle) {
+        guard style.opacity.isFinite, (0...0.95).contains(style.opacity), requestFeature(.advancedEditing) else { return }
+        defaultSpotlightStyle = style
+        updateInstructionObject { if $0.kind == .spotlight { $0.spotlightStyle = style } }
     }
     func setHighlightMode(_ mode: EditorHighlightMode) {
         guard requestFeature(.advancedEditing) else { return }
@@ -366,11 +449,11 @@ final class EditorModel {
         object.stepStyle?.index = index
         commit(history.objects + [object]); selection = object.id
     }
-    func selectShape(_ kind: EditorObject.Kind, corner: CGFloat = 0) {
+    func selectShape(_ kind: EditorObject.Kind, corner: CGFloat = 0, focusCanvas: Bool = true) {
         guard kind.isShape else { return }
         if let feature = ProFeature.required(for: kind), !requestFeature(feature) { return }
         endStyleEditing()
-        if kind != .ellipse { defaultShapeKind = kind }
+        defaultShapeKind = kind
         defaultCornerRadius = corner
         if let selected = selectedObject, selected.kind.isShape {
             var next = history.objects
@@ -381,7 +464,7 @@ final class EditorModel {
                 if tool == .rectangle || tool == .ellipse { tool = kind == .ellipse ? .ellipse : .rectangle }
             }
         } else { tool = kind == .ellipse ? .ellipse : .rectangle }
-        focusRequest += 1
+        if focusCanvas { focusRequest += 1 }
     }
     /// Sliders update the actual document live, including autosave, and finish as one undo step.
     /// During inline typing, style changes belong to the existing text transaction.
@@ -391,16 +474,39 @@ final class EditorModel {
     }
     func endStyleEditing() {
         guard isEditingStyle else { return }
+        if let area = imageRotationDraftArea, let canvas = EditorCanvasExtent.expanded(fullCanvasRect, including: area) {
+            do {
+                let size = try EditorResize.preservingScale(from: document.outputRect, to: area, output: history.resizedSize)
+                history.updateTransaction(history.objects, canvasRect: canvas == originalRect ? nil : canvas,
+                    crop: history.crop == nil || area == canvas ? nil : area, resizedSize: size)
+                changed()
+            } catch { self.error = error.localizedDescription }
+        }
+        imageRotationDraftArea = nil
         history.endTransaction(); isEditingStyle = false
     }
-    func updateStyle(color: EditorColor? = nil, width: CGFloat? = nil, font: CGFloat? = nil, blur: CGFloat? = nil,
+    func updateSelectedImageRotation(_ angle: Double) {
+        guard !isSwitchingImage, angle.isFinite, (-180...180).contains(angle),
+              let object = selectedObject, object.kind == .image, requestFeature(.insertedImages) else { return }
+        var next = history.objects
+        guard let index = next.firstIndex(where: { $0.id == object.id }) else { return }
+        next[index].imageRotationDegrees = angle == 0 ? nil : angle
+        preserveViewportScale(from: imageSize)
+        guard next != history.objects, let area = expandedCanvasArea(for: next),
+              EditorCanvasExtent.expanded(fullCanvasRect, including: area) != nil else { return }
+        if isEditingStyle {
+            imageRotationDraftArea = area; history.updateTransaction(next); changed()
+        } else { commit(next, expandingCanvas: true) }
+    }
+    func updateStyle(color: EditorColor? = nil, width: CGFloat? = nil, font: CGFloat? = nil, blur: CGFloat? = nil, blurStyle: EditorBlurStyle? = nil,
                      fill: EditorFill? = nil, corner: CGFloat? = nil, stroke: EditorStroke? = nil, textStyle: EditorTextStyle? = nil, drawingStyle: EditorDrawingStyle? = nil) {
         guard !isSwitchingImage else { return }
         if let kind = activeKind, let feature = ProFeature.required(for: kind), !requestFeature(feature) { return }
-        if drawingStyle == .handDrawn, !requestFeature(.advancedEditing) { return }
+        if let drawingStyle, drawingStyle != .precise, !requestFeature(.advancedEditing) { return }
         if let drawingStyle {
             if activeKind == .arrow { defaultArrowDrawingStyle = drawingStyle }
             if activeKind == .ellipse { defaultEllipseDrawingStyle = drawingStyle }
+            else if activeKind?.isShape == true { defaultShapeDrawingStyle = drawingStyle }
         }
         if let textStyle { defaultTextStyle = textStyle }
         if let color {
@@ -414,10 +520,12 @@ final class EditorModel {
         if let width {
             if activeKind == .arrow { defaultArrowLineWidth = width }
             else if activeKind == .highlight { defaultHighlightWidth = width }
+            else if activeKind == .pen { defaultPenWidth = width }
             else { defaultLineWidth = width }
         }
         if let font { defaultFontSize = font }
         if let blur { defaultBlurRadius = blur }
+        if let blurStyle, activeKind == .blur { defaultBlurStyle = blurStyle }
         if let fill {
             if activeKind == .callout { defaultCalloutFill = fill } else { defaultShapeFill = fill }
         }
@@ -441,6 +549,7 @@ final class EditorModel {
         if let width { next[index].lineWidth = width }
         if let font { next[index].fontSize = font }
         if let blur { next[index].blurRadius = blur }
+        if let blurStyle, next[index].kind == .blur { next[index].blurStyle = blurStyle == .gaussian ? nil : blurStyle }
         if let fill { next[index].fill = fill }
         if let corner { next[index].cornerRadius = corner }
         if let stroke { next[index].stroke = stroke }
@@ -452,11 +561,27 @@ final class EditorModel {
             if old != next { changed() }
         } else { commit(next) }
     }
+    /// Image frames are local to the selected image and never change drawing defaults.
+    func updateSelectedImageFrame(radius: CGFloat, border: EditorImageBorder?) {
+        guard !isSwitchingImage, radius.isFinite, (0...1000).contains(radius), border?.isValid != false,
+              let selected = selectedObject, selected.kind == .image,
+              ProFeature.required(for: .image).map({ requestFeature($0) }) != false else { return }
+        var next = history.objects
+        guard let index = next.firstIndex(where: { $0.id == selected.id }) else { return }
+        next[index].cornerRadius = radius == 0 ? nil : radius
+        next[index].stroke = border.map { _ in EditorStroke(isEnabled: true) }
+        if let border { next[index].lineWidth = border.width; next[index].color = border.color }
+        if isEditingStyle {
+            guard next != history.objects else { return }
+            history.updateTransaction(next); changed()
+        } else { commit(next) }
+    }
     func makeObject(kind: EditorObject.Kind, start: CGPoint, end: CGPoint = .zero) -> EditorObject {
         var object = EditorObject(kind: kind, start: start, end: end, fontSize: defaultFontSize,
                                   lineWidth: kind == .arrow ? defaultArrowLineWidth : defaultLineWidth)
         object.color = kind == .redact ? defaultRedactionColor : defaultColor; object.blurRadius = defaultBlurRadius
-        if kind.isShape { object.fill = defaultShapeFill; object.stroke = defaultShapeStroke }
+        if kind == .blur, defaultBlurStyle != .gaussian { object.blurStyle = defaultBlurStyle }
+        if kind.isShape { object.fill = defaultShapeFill; object.stroke = defaultShapeStroke; object.drawingStyle = defaultShapeDrawingStyle }
         if kind == .arrow { object.drawingStyle = defaultArrowDrawingStyle }
         if kind == .ellipse { object.drawingStyle = defaultEllipseDrawingStyle }
         if kind == .rectangle { object.cornerRadius = defaultCornerRadius }
@@ -467,6 +592,9 @@ final class EditorModel {
             object.highlightStyle = EditorHighlightStyle(mode: defaultHighlightMode, opacity: defaultHighlightOpacity,
                                                          points: defaultHighlightMode == .freehand ? [start] : [])
         }
+        if kind == .pen { object.lineWidth = defaultPenWidth; object.penStroke = EditorPenStroke(points: [start], isSmoothed: defaultPenSmoothed) }
+        if kind == .spotlight { object.spotlightStyle = defaultSpotlightStyle }
+        if kind == .magnifier { object.magnification = defaultMagnification }
         if kind == .step { object.color = defaultStepColor; object.stepStyle = defaultStepStyle }
         return object
     }
@@ -488,19 +616,23 @@ final class EditorModel {
         }
         // Update only the appearance fields supported by this tool family.
         switch style.family {
+        case .pen: defaultColor = style.color; defaultPenWidth = style.lineWidth; defaultPenSmoothed = style.penSmoothed ?? true
+        case .spotlight: defaultSpotlightStyle = style.spotlight ?? .init()
+        case .magnifier: defaultColor = style.color; defaultLineWidth = style.lineWidth; defaultMagnification = style.magnification ?? 2
         case .arrow: defaultColor = style.color; defaultArrowLineWidth = style.lineWidth
             defaultArrowDrawingStyle = style.drawingStyle ?? .precise
         case .shape:
             defaultColor = style.color; defaultLineWidth = style.lineWidth
             defaultShapeFill = style.fill; defaultShapeStroke = style.stroke
             defaultEllipseDrawingStyle = style.drawingStyle ?? .precise
+            defaultShapeDrawingStyle = style.drawingStyle ?? .precise
             if let corner = style.cornerRadius { defaultCornerRadius = corner }
         case .text:
             defaultColor = style.color; defaultFontSize = style.fontSize; defaultTextStyle = style.textStyle
         case .callout:
             defaultColor = style.color; defaultLineWidth = style.lineWidth
             defaultFontSize = style.fontSize; defaultTextStyle = style.textStyle; defaultCalloutFill = style.fill
-        case .blur: defaultBlurRadius = style.blurRadius
+        case .blur: defaultBlurRadius = style.blurRadius; defaultBlurStyle = style.blurStyle ?? .gaussian
         case .redact: defaultRedactionColor = style.color
         case .highlight:
             defaultHighlightColor = style.color; defaultHighlightWidth = style.lineWidth; defaultHighlightOpacity = style.highlightOpacity
@@ -523,11 +655,29 @@ final class EditorModel {
         self.savedRevision = generation; self.store = store; self.writePNG = writePNG; self.onSaved = onSaved
         self.pngDirectory = pngDirectory
         self.openPNGApplication = openPNGApplication; self.externalOpenRoot = externalOpenRoot
-        self.history = EditorHistory(objects: document.objects, crop: document.crop, resizedSize: document.resizedSize)
+        self.history = EditorHistory(objects: document.objects, crop: document.crop, resizedSize: document.resizedSize, canvasRect: document.canvasRect, transform: document.transform, presentation: document.presentation ?? .init())
+        self.isEditingPresentation = document.presentation?.isIdentity == false
         self.automaticallyFitsImage = automaticallyFitsImage
         self.viewport = EditorViewport(fitsImage: automaticallyFitsImage)
     }
-    func commit(_ objects: [EditorObject]) {
+    /// Geometry previews use this without changing the projection or document until mouse-up.
+    func expandedCanvasArea(for objects: [EditorObject]) -> CGRect? {
+        let previous = Dictionary(uniqueKeysWithValues: history.objects.map { ($0.id, $0) })
+        var area = document.outputRect
+        for object in objects where previous[object.id] != object {
+            let ink = EditorRenderer.paintedBounds(object)
+            if ink.isNull { continue }
+            guard let expanded = EditorCanvasExtent.expanded(area, including: ink) else { return nil }
+            area = expanded
+        }
+        return area
+    }
+    var previewSourceRect: CGRect {
+        if let imageRotationDraftArea { return imageRotationDraftArea }
+        guard cropDraft == nil, let preview else { return sourceRect }
+        return expandedCanvasArea(for: preview) ?? sourceRect
+    }
+    func commit(_ objects: [EditorObject], expandingCanvas: Bool = false) {
         guard !isSwitchingImage else { return }
         // Cover insertion, duplication and canvas commits as well as toolbar actions.
         // Existing paid objects can still be moved, reordered, renamed or removed.
@@ -539,29 +689,94 @@ final class EditorModel {
         }
         endStyleEditing()
         preview = nil
-        let old = history.objects; history.commit(objects); notice = nil
-        if old != history.objects { changed() }
+        let old = history.objects
+        guard old != objects else { return }
+        if expandingCanvas {
+            guard let area = expandedCanvasArea(for: objects),
+                  let canvas = EditorCanvasExtent.expanded(fullCanvasRect, including: area) else {
+                notice = String(localized: "Die Zeichenfläche kann nicht weiter wachsen (max. 32.768 Pixel je Kante, 100 Millionen Pixel).")
+                return
+            }
+            let output: PixelSize?
+            do { output = try EditorResize.preservingScale(from: document.outputRect, to: area, output: history.resizedSize) }
+            catch { notice = String(localized: "Die Zeichenfläche kann nicht weiter wachsen (max. 32.768 Pixel je Kante, 100 Millionen Pixel)."); return }
+            let crop = history.crop == nil || area == canvas ? nil : area
+            history.commit(objects, canvasRect: canvas == originalRect ? nil : canvas, crop: crop, resizedSize: output)
+        } else { history.commit(objects) }
+        notice = nil; changed()
+    }
+    var canTransformImage: Bool { hasExportableImage && !isExporting && !isShowingTextRecognition && !isShowingRedactionSuggestions }
+    func beginInlineTextRecognition() {
+        guard canSwitchEditingTool, requestFeature(.textRecognition), prepareForEditingTool() else { return }
+        endPresentationEditing(); endStyleEditing(); finishTextEditing()
+        preserveViewportScale(from: viewportImageSize)
+        isEditingPresentation = false; selection = nil; isRecognizingTextInPlace.toggle()
+    }
+    func togglePresentationTool() {
+        guard canSwitchEditingTool, requestFeature(.presentation), prepareForEditingTool() else { return }
+        endStyleEditing(); finishTextEditing(); isEditingPresentation.toggle()
+    }
+    func beginFreeRotation() {
+        guard prepareForEditingTool() else { return }
+        endStyleEditing(); finishTextEditing(); isEditingPresentation = true
+    }
+    func selectSourceImage() {
+        guard canTransformImage, tool == .selection else { return }
+        endStyleEditing(); finishTextEditing(); selection = nil; isSourceImageSelected = true
+    }
+    func beginPresentationEditing() {
+        guard canTransformImage, !isAdjustingPresentation else { return }
+        endStyleEditing(); finishTextEditing(); history.beginTransaction(); isAdjustingPresentation = true
+    }
+    func endPresentationEditing() {
+        guard isAdjustingPresentation else { return }
+        history.endTransaction(); isAdjustingPresentation = false
+    }
+    func updatePresentation(_ next: EditorPresentation) {
+        guard canTransformImage, next.isLayoutValid, next.geometry(for: document.contentPixelSize) != nil,
+              next != history.presentation else { return }
+        var oldStyle = history.presentation, newStyle = next
+        oldStyle.rotationDegrees = 0; newStyle.rotationDegrees = 0
+        guard oldStyle == newStyle || requestFeature(.presentation) else { return }
+        if !isEditingPresentation, history.presentation.requiresCanvasLayout != next.requiresCanvasLayout {
+            preserveViewportScale(from: viewportImageSize)
+        }
+        if isEditingPresentation, viewport.zoom == nil,
+           next.previewReferenceSize(for: document.contentPixelSize) != history.presentation.previewReferenceSize(for: document.contentPixelSize) {
+            preserveViewportScale(from: history.presentation.previewReferenceSize(for: document.contentPixelSize))
+        }
+        if isAdjustingPresentation { history.updatePresentationTransaction(next) }
+        else { endStyleEditing(); finishTextEditing(); history.commitPresentation(next) }
+        changed()
+    }
+    func transformImage(_ transform: EditorImageTransform) {
+        guard prepareForEditingTool(), canTransformImage else { return }
+        endPresentationEditing(); endStyleEditing(); finishTextEditing(); preview = nil; selection = nil
+        guard transform != history.transform else { return }
+        history.commitTransform(transform); resetImageView(); changed(); focusRequest += 1
     }
     func undo() {
         guard !isSwitchingImage, !isShowingImageSize else { return }
         if cropDraft != nil { cancelCrop(); return }
+        endPresentationEditing()
         endStyleEditing()
         finishTextEditing()
-        preview = nil; let old = history.objects, crop = history.crop, resizedSize = history.resizedSize; history.undo(); selection = nil; focusRequest += 1
-        if crop != history.crop || resizedSize != history.resizedSize { resetImageView() }
-        if old != history.objects || crop != history.crop || resizedSize != history.resizedSize { changed() }
+        preview = nil; let old = history.objects, crop = history.crop, resizedSize = history.resizedSize, canvasRect = history.canvasRect, transform = history.transform, presentation = history.presentation; history.undo(); selection = nil; focusRequest += 1
+        if crop != history.crop || resizedSize != history.resizedSize || canvasRect != history.canvasRect || transform != history.transform { resetImageView() }
+        if old != history.objects || crop != history.crop || resizedSize != history.resizedSize || canvasRect != history.canvasRect || transform != history.transform || presentation != history.presentation { changed() }
     }
     func redo() {
         guard !isSwitchingImage, !isShowingImageSize else { return }
         if cropDraft != nil { cancelCrop(); return }
+        endPresentationEditing()
         endStyleEditing()
         finishTextEditing()
-        preview = nil; let old = history.objects, crop = history.crop, resizedSize = history.resizedSize; history.redo(); selection = nil; focusRequest += 1
-        if crop != history.crop || resizedSize != history.resizedSize { resetImageView() }
-        if old != history.objects || crop != history.crop || resizedSize != history.resizedSize { changed() }
+        preview = nil; let old = history.objects, crop = history.crop, resizedSize = history.resizedSize, canvasRect = history.canvasRect, transform = history.transform, presentation = history.presentation; history.redo(); selection = nil; focusRequest += 1
+        if crop != history.crop || resizedSize != history.resizedSize || canvasRect != history.canvasRect || transform != history.transform { resetImageView() }
+        if old != history.objects || crop != history.crop || resizedSize != history.resizedSize || canvasRect != history.canvasRect || transform != history.transform || presentation != history.presentation { changed() }
     }
     private func changed() {
-        document.objects = history.objects; document.crop = history.crop; document.resizedSize = history.resizedSize; document.modifiedAt = .now; document.revision += 1
+        document.presentation = history.presentation.isIdentity ? nil : history.presentation; document.objects = history.objects; document.crop = history.crop; document.resizedSize = history.resizedSize; document.canvasRect = history.canvasRect; document.imageTransform = history.transform == .identity ? nil : history.transform; document.modifiedAt = .now; document.revision += 1
         debounceTask?.cancel()
         debounceTask = Task { [weak self] in
             do { try await Task.sleep(for: .milliseconds(450)) } catch { return }
@@ -583,10 +798,12 @@ final class EditorModel {
                 do {
                     // Thumbnail is a cache. A failed thumbnail never prevents saving annotations.
                     let thumbnail = await Task.detached(priority: .utility) {
-                        try? EditorRenderer.thumbnail(image: image, objects: snapshot.objects, crop: snapshot.crop, resizedSize: snapshot.resizedSize)
+                        try? EditorRenderer.thumbnail(image: image, objects: snapshot.objects, crop: snapshot.crop, resizedSize: snapshot.resizedSize, canvasRect: snapshot.canvasRect, transform: snapshot.transform, presentation: snapshot.presentation)
                     }.value
                     try await store.save(snapshot, expectedGeneration: baseRevision, thumbnail: thumbnail)
-                    savedRevision = snapshot.revision; saveError = nil; onSaved()
+                    savedRevision = snapshot.revision; saveError = nil
+                    onLibraryItemSaved?(ProjectLibraryItem(document: snapshot, thumbnail: thumbnail))
+                    onSaved()
                     return true
                 } catch { saveError = error.localizedDescription; return false }
             }
@@ -601,21 +818,23 @@ final class EditorModel {
         debounceTask?.cancel(); debounceTask = nil
         let snapshot = document, image = image
         let copy = ProjectDocument(title: String(name.prefix(1015)) + String(localized: " – Kopie"), pixelSize: document.pixelSize, objects: history.objects, crop: history.crop, resizedSize: history.resizedSize, isFavorite: document.isFavorite,
-                                   tags: document.tags, collections: document.collections)
+                                   tags: document.tags, collections: document.collections, canvasRect: history.canvasRect, transform: history.transform, presentation: history.presentation)
         isSaving = true
         let task = Task { [self] in
             defer { isSaving = false; saveTask = nil }
             do {
                 let (original, thumbnail) = try await Task.detached(priority: .utility) {
-                    (try EditorRenderer.png(image: image, objects: []), try? EditorRenderer.thumbnail(image: image, objects: copy.objects, crop: copy.crop, resizedSize: copy.resizedSize))
+                    (try EditorRenderer.png(image: image, objects: []), try? EditorRenderer.thumbnail(image: image, objects: copy.objects, crop: copy.crop, resizedSize: copy.resizedSize, canvasRect: copy.canvasRect, transform: copy.transform, presentation: copy.presentation))
                 }.value
                 try await store.create(copy, original: original, thumbnail: thumbnail)
                 let changedDuringSave = document.revision != snapshot.revision
                 document = ProjectDocument(id: copy.id, title: document.title != snapshot.title ? document.title : copy.title, pixelSize: copy.pixelSize, objects: history.objects,
                                            createdAt: copy.createdAt, modifiedAt: changedDuringSave ? document.modifiedAt : copy.modifiedAt,
                                            revision: changedDuringSave ? 1 : 0, crop: history.crop, resizedSize: history.resizedSize, isFavorite: document.isFavorite,
-                                           tags: document.tags, collections: document.collections)
-                savedRevision = 0; saveError = nil; onSaved()
+                                           tags: document.tags, collections: document.collections, canvasRect: history.canvasRect, transform: history.transform, presentation: history.presentation)
+                savedRevision = 0; saveError = nil
+                onLibraryItemSaved?(ProjectLibraryItem(document: copy, thumbnail: thumbnail))
+                onSaved()
                 return true
             } catch { saveError = error.localizedDescription; return false }
         }
@@ -626,6 +845,22 @@ final class EditorModel {
     var canActOnSelection: Bool {
         cropDraft == nil && !isShowingImageSize && !isCanvasGestureActive &&
         selection.map { id in history.objects.contains { $0.id == id } } == true
+    }
+    var canNudgeSelection: Bool {
+        canActOnSelection && !isSwitchingImage && !isShowingTextRecognition &&
+        editingTextObject == nil && preview == nil
+    }
+    /// Output pixels, independent of zoom, Retina scale and nonuniform image resize.
+    @discardableResult func nudgeSelection(by pixels: CGSize) -> Bool {
+        guard canNudgeSelection, pixels.width.isFinite, pixels.height.isFinite,
+              pixels != .zero else { return false }
+        let output = document.untransformedOutputPixelSize, area = document.outputRect
+        let pixels = history.transform.sourceVector(fromDisplayed: pixels)
+        let delta = CGSize(width: pixels.width * area.width / CGFloat(output.width),
+                           height: pixels.height * area.height / CGFloat(output.height))
+        let revision = document.revision
+        commit(history.objects.map { selectedIDs.contains($0.id) ? $0.translated(by: delta) : $0 }, expandingCanvas: true)
+        return document.revision != revision
     }
     var canDuplicateSelection: Bool {
         canActOnSelection && history.objects.count + selectedIDs.count <= 10_000
@@ -655,8 +890,8 @@ final class EditorModel {
             selectedIDs = Set(copies.map(\.id)); focusRequest += 1; return
         }
         guard let object = selectedObject else { return }
-        let preferred = CGSize(width: 16 * document.outputRect.width / CGFloat(document.outputPixelSize.width),
-                               height: 16 * document.outputRect.height / CGFloat(document.outputPixelSize.height))
+        let preferred = CGSize(width: 16 * document.outputRect.width / CGFloat(document.untransformedOutputPixelSize.width),
+                               height: 16 * document.outputRect.height / CGFloat(document.untransformedOutputPixelSize.height))
         let offset = EditorLayers.duplicateOffset(bounds: EditorRenderer.bounds(object), visible: document.outputRect, preferred: preferred)
         var copy = object.duplicated(by: offset)
         if copy.groupID != nil { copy.groupID = UUID() }
@@ -690,7 +925,16 @@ final class EditorModel {
         textBase = history.objects
         history.beginTransaction()
         editingTextObject = object ?? makeObject(kind: tool == .callout ? .callout : .text, start: position)
-        if object == nil { editingTextObject?.textWidth = width }
+        if object == nil {
+            editingTextObject?.textWidth = width
+            if kind == .callout {
+                editingTextObject?.calloutTip = position
+                editingTextObject?.start = CGPoint(x: position.x + 36, y: position.y + 34)
+                editingTextObject?.textWidth = width ?? 156
+                editingTextObject?.textHeight = 44
+                updateText("")
+            }
+        }
         selection = editingTextObject?.id
     }
     func updateText(_ text: String) {
@@ -698,7 +942,7 @@ final class EditorModel {
         object.text = text; editingTextObject = object
         var next = textBase
         if let index = next.firstIndex(where: { $0.id == object.id }) { next.remove(at: index) }
-        if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if object.kind == .callout || !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             if let index = textBase.firstIndex(where: { $0.id == object.id }) { next.insert(object, at: index) }
             else { next.append(object) }
         }
@@ -712,6 +956,57 @@ final class EditorModel {
         editingTextObject = object
         updateText(object.text)
     }
+    func positionCallout(in rect: CGRect) {
+        guard var object = editingTextObject, object.kind == .callout else { return }
+        object.start = CGPoint(x: rect.minX + 12, y: rect.minY + 10)
+        object.textWidth = max(24, rect.width - 24); object.textHeight = max(1, rect.height - 20)
+        editingTextObject = object; updateText(object.text)
+    }
+    func updateMagnifierOffset(_ offset: Bool) {
+        guard requestFeature(.advancedEditing) else { return }
+        endStyleEditing()
+        defaultMagnifierOffset = offset
+        guard !isSwitchingImage, let selection else { return }
+        let next = history.objects.map { current in
+            guard current.id == selection, current.kind == .magnifier,
+                  (current.magnifierSource != nil) != offset else { return current }
+            var object = current
+            if offset {
+                let source = CGPoint(x: object.rect.midX, y: object.rect.midY)
+                object = object.translated(by: CGSize(width: object.rect.width, height: 0))
+                object.magnifierSource = source
+            } else {
+                let source = object.magnifierSource!
+                object = object.translated(by: CGSize(width: source.x - object.rect.midX, height: source.y - object.rect.midY))
+                object.magnifierSource = nil
+            }
+            return object
+        }
+        commit(next, expandingCanvas: true)
+    }
+    func updateMagnification(_ value: CGFloat) {
+        guard value.isFinite, (1.5...5).contains(value), requestFeature(.advancedEditing) else { return }
+        defaultMagnification = value
+        updateInstructionObject { if $0.kind == .magnifier { $0.magnification = value } }
+    }
+    var activeArrowCurvature: Double {
+        guard let object = selectedObject, object.kind == .arrow else { return 0 }
+        let dx = object.end.x - object.start.x, dy = object.end.y - object.start.y
+        let lengthSquared = dx * dx + dy * dy
+        guard lengthSquared > 0 else { return 0 }
+        let bend = EditorArrow.bendHandle(for: object)
+        return Double(((bend.x - (object.start.x + object.end.x) / 2) * -dy
+            + (bend.y - (object.start.y + object.end.y) / 2) * dx) / lengthSquared * 100)
+    }
+    func updateArrowCurvature(_ value: Double) {
+        guard value.isFinite, let object = selectedObject, object.kind == .arrow else { return }
+        let dx = object.end.x - object.start.x, dy = object.end.y - object.start.y
+        updateInstructionObject {
+            $0.arrowBend = CGPoint(x: (object.start.x + object.end.x) / 2 - dy * value / 100,
+                                  y: (object.start.y + object.end.y) / 2 + dx * value / 100)
+        }
+    }
+    func straightenArrow() { updateArrowCurvature(0) }
     func finishTextEditing(cancel: Bool = false) {
         guard editingTextObject != nil else { return }
         let old = history.objects
@@ -748,12 +1043,12 @@ final class EditorModel {
         guard hasExportableImage, !isExporting else { return false }
         endStyleEditing(); finishTextEditing()
         isExportingPNG = true; notice = nil
-        let image = image, objects = history.objects, crop = history.crop, resizedSize = history.resizedSize
+        let image = image, objects = history.objects, crop = history.crop, resizedSize = history.resizedSize, canvasRect = history.canvasRect, transform = history.transform, presentation = history.presentation
         let task = Task { [self] in
             defer { isExportingPNG = false; pngExportTask = nil }
             do {
                 let data = try await Task.detached(priority: .userInitiated) {
-                    try EditorRenderer.png(image: image, objects: objects, crop: crop, resizedSize: resizedSize)
+                    try EditorRenderer.png(image: image, objects: objects, crop: crop, resizedSize: resizedSize, canvasRect: canvasRect, transform: transform, presentation: presentation)
                 }.value
                 try await writePNG(data, url)
                 notice = String(localized: "PNG gespeichert")
@@ -853,7 +1148,7 @@ final class EditorModel {
         }
         let exported = await pngExportTask?.value ?? true
         let opened = await externalOpenTask?.value ?? true
-        endStyleEditing(); finishTextEditing()
+        endPresentationEditing(); endStyleEditing(); finishTextEditing()
         let saved = await flush()
         // A failed export may already have been awaited by a project switch when Quit arrives.
         // Keep the app open until the error alert has been acknowledged in that case as well.
@@ -865,11 +1160,11 @@ final class EditorModel {
         copyFeedbackTask?.cancel()
         animateCopyFeedback = animateFeedback
         copyState = .copying
-        let image = image, objects = history.objects, crop = history.crop, resizedSize = history.resizedSize
+        let image = image, objects = history.objects, crop = history.crop, resizedSize = history.resizedSize, canvasRect = history.canvasRect, transform = history.transform, presentation = history.presentation
         Task { [self] in
             do {
                 let data = try await Task.detached(priority: .userInitiated) {
-                    try EditorRenderer.png(image: image, objects: objects, crop: crop, resizedSize: resizedSize)
+                    try EditorRenderer.png(image: image, objects: objects, crop: crop, resizedSize: resizedSize, canvasRect: canvasRect, transform: transform, presentation: presentation)
                 }.value
                 pasteboard.clearContents()
                 guard pasteboard.setData(data, forType: .png) else {
@@ -893,12 +1188,15 @@ struct EditorPNGShare: Transferable, Sendable {
     let crop: CGRect?
     let resizedSize: PixelSize?
     let title: String
+    var canvasRect: CGRect? = nil
+    var transform: EditorImageTransform = .identity
+    var presentation: EditorPresentation? = nil
 
     static var transferRepresentation: some TransferRepresentation {
         DataRepresentation(exportedContentType: .png) { item in
             try await Task.detached(priority: .userInitiated) {
                 try Task.checkCancellation()
-                return try EditorRenderer.png(image: item.image, objects: item.objects, crop: item.crop, resizedSize: item.resizedSize)
+                return try EditorRenderer.png(image: item.image, objects: item.objects, crop: item.crop, resizedSize: item.resizedSize, canvasRect: item.canvasRect, transform: item.transform, presentation: item.presentation)
             }.value
         }
         .suggestedFileName { $0.fileName }
@@ -915,19 +1213,27 @@ struct EditorPNGShare: Transferable, Sendable {
     /// Keep successful copies available for apps that reopen or save their source later.
     /// These live in the sandbox's temporary directory and are reclaimed by macOS.
     func writeTemporaryPNG(in root: URL) async throws -> URL {
-        try await Task.detached(priority: .userInitiated) {
+        let worker = Task.detached(priority: .userInitiated) {
             let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
             do {
-                let data = try EditorRenderer.png(image: image, objects: objects, crop: crop, resizedSize: resizedSize)
+                try Task.checkCancellation()
+                let data = try EditorRenderer.png(image: image, objects: objects, crop: crop, resizedSize: resizedSize, canvasRect: canvasRect, transform: transform, presentation: presentation)
+                try Task.checkCancellation()
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
                 let file = directory.appendingPathComponent(fileName)
                 try data.write(to: file, options: .atomic)
+                try Task.checkCancellation()
                 return file
             } catch {
                 try? FileManager.default.removeItem(at: directory)
                 throw error
             }
-        }.value
+        }
+        return try await withTaskCancellationHandler(operation: {
+            try await worker.value
+        }, onCancel: {
+            worker.cancel()
+        })
     }
 }
 
@@ -955,6 +1261,9 @@ struct EditorPNGApplication: Identifiable {
 extension EditorObject.Kind {
     static func from(_ tool: AnnotationTool) -> Self? {
         switch tool {
+        case .pen: .pen
+        case .spotlight: .spotlight
+        case .magnifier: .magnifier
         case .arrow: .arrow
         case .text: .text
         case .rectangle: .rectangle

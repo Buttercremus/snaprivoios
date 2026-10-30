@@ -4,6 +4,15 @@ import SnagForgeDomain
 @main struct LibraryChecks {
     @MainActor static func main() async throws {
         _ = NSApplication.shared
+        if CommandLine.arguments.contains("--opening-benchmark") {
+            try await ScreenshotOpeningBenchmark.run(); return
+        }
+        if CommandLine.arguments.contains("--incremental-only") {
+            try await IncrementalLibraryChecks.run(); return
+        }
+        if CommandLine.arguments.contains("--search-only") {
+            try await LibrarySearchChecks.run(); return
+        }
         if CommandLine.arguments.contains("--filmstrip-only") {
             try await EditorFilmstripChecks.run(); return
         }
@@ -44,6 +53,7 @@ import SnagForgeDomain
         let saved = await editor.flush(); precondition(saved)
         let removed = await fresh.updateProjectMetadata(b.id, favorite: false); precondition(removed)
         let again = try await fresh.store.load(b.id); precondition(!again.document.isFavorite && again.document.title == "Renamed")
+        try await IncrementalLibraryChecks.run()
         try await LibrarySearchChecks.run()
         try await EditorFilmstripChecks.run()
         print("Library checks passed: four sorts, natural names, closed/open project metadata, pending autosave, object undo isolation, preferences and projects after fresh workspace/store, favorite removal.")

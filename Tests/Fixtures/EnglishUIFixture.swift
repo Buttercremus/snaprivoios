@@ -24,11 +24,12 @@ private actor UIExportHold {
 }
 
 /// Runs production scenes with synthetic images and a disposable library.
-/// Scroll controls retain production actions; video selection/countdown uses a failing synthetic engine.
+/// Capture controls retain production actions; video uses synthetic transports or explicit failures.
 @MainActor enum EnglishUIFixture {
     static private var selector: ScreenshotSelector?
-    static private var scrollSession: ManualScrollSession?
+    static private var scrollSession: ScrollCaptureSession?
     static private var videoSession: VideoRecordingSession?
+    static private var recordingToolbarPreview: VideoRecordingToolbar?
     static private var hoverPanel: SelectionPanel?
     static private var imageSwitchHold: UIExportHold?
 
@@ -88,15 +89,21 @@ private actor UIExportHold {
                 let result = try await selector?.select(source: source, windows: windows, desktop: desktop, media: video ? .video : .image)
                 if let result {
                     if result.media == .video {
-                        // UI-only synthetic source: explicit Start fails instead of opening a real capture stream.
-                        videoSession = VideoRecordingSession(selection: result, includesCursor: false, delaySeconds: 3,
+                        // Mirror source activation delay while retaining the production selection overlay.
+                        try await Task.sleep(for: .milliseconds(350))
+                        videoSession = VideoRecordingSession(selection: result, includesCursor: false,
+                            selectionOverlay: selector?.takeVideoOverlay(), delaySeconds: 3,
                             files: VideoRecordingFiles(root: FileManager.default.temporaryDirectory.appendingPathComponent("Synthetic-Video-UI-\(UUID())")),
-                            makeEngine: { VideoRecordingEngine(prepare: { _, _, _, _ in throw VideoRecordingError.windowUnavailable }) })
+                            makeEngine: { VideoRecordingEngine { _, _, _, url in
+                                try await SyntheticVideoFixture.write(to: url)
+                                return PreparedVideoRecording(transport: UICompletedVideoTransport(), pixelSize: PixelSize(width: 320, height: 180)!)
+                            } })
+                        videoSession?.onFinished = { _ in }
                         await videoSession?.run(startImmediately: true); videoSession = nil
                     } else { workspace.openScreenshot(try desktop.crop(result)) }
                 }
             } catch { workspace.importError = error.localizedDescription }
-            selector = nil
+            selector?.cancel(); selector = nil
             NSApp.windows.first { $0.identifier?.rawValue == "workspace" }?.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
@@ -107,7 +114,8 @@ private actor UIExportHold {
             rect: CGRect(x: screen.frame.minX + 100, y: screen.frame.minY + 100, width: 640, height: 400), screenFrame: screen.frame)
     }
     static func showScroll() {
-        scrollSession = ManualScrollSession(selection: sampleSelection(), first: bitmap(width: 1280, height: 800))
+        let first = bitmap(width: 1280, height: 800)
+        scrollSession = ScrollCaptureSession(selection: sampleSelection(), first: first, captureFrame: { first })
         Task { _ = await scrollSession?.run(); scrollSession = nil }
     }
     static func showVideo() {
@@ -115,6 +123,19 @@ private actor UIExportHold {
             files: VideoRecordingFiles(root: FileManager.default.temporaryDirectory.appendingPathComponent("Synthetic-Video-UI-\(UUID())")),
             makeEngine: { VideoRecordingEngine(prepare: { _, _, _, _ in throw VideoRecordingError.windowUnavailable }) })
         Task { await videoSession?.run(startImmediately: true); videoSession = nil }
+    }
+    /// Production REC/Stop controls only: no capture stream or audio device.
+    static func showRecordingToolbar() {
+        recordingToolbarPreview?.hide()
+        let toolbar = VideoRecordingToolbar()
+        recordingToolbarPreview = toolbar
+        toolbar.onStop = { recordingToolbarPreview?.hide(); recordingToolbarPreview = nil }
+        toolbar.update(recording: true, status: "Videoaufnahme · 01:23", duration: "01:23", dimensions: "1280 × 800 px", canCancel: false)
+        let selection = sampleSelection()
+        toolbar.show(region: selection.rect, screen: selection.screenFrame)
+        // QA inspection only. Production show() deliberately preserves the
+        // source application's keyboard focus, covered by the native tests.
+        NSApp.windows.first { $0.identifier?.rawValue == "video.recordingToolbar" }?.makeKeyAndOrderFront(nil)
     }
     static func showVideoEditorFlow(workspace: WorkspaceModel) {
         if let videoSession { videoSession.show(); return }
@@ -135,6 +156,22 @@ private actor UIExportHold {
         }
         videoSession = session
         Task { await session.run(startImmediately: true); videoSession = nil }
+    }
+    static func showVideoEditor(workspace: WorkspaceModel) {
+        Task {
+            do {
+                // Only this disposable QA workspace unlocks video editing without StoreKit.
+                workspace.videos.hasProAccess = { true }; workspace.videos.requestFeature = { _ in true }
+                let files = workspace.videos.files
+                let partial = try await files.prepare(availableBytes: 1_000_000_000)
+                try await SyntheticVideoFixture.write(to: partial)
+                let movie = try await files.finalize(partial)
+                let item = try await files.list().items.first { $0.document.fileName == movie.lastPathComponent }!
+                _ = try await files.setTrim(item.id, trim: .init(start: 0.234567, end: 1.876543), expectedRevision: 0)
+                workspace.libraryShowsVideos = true; workspace.section = .library
+                await workspace.videos.showPreview(recording: movie)
+            } catch { workspace.importError = error.localizedDescription }
+        }
     }
     static func addVideos(workspace: WorkspaceModel) {
         Task {
@@ -274,7 +311,9 @@ struct EnglishUIFixtureCommands: Commands {
             Button("Synthetic Window Video Selection") { EnglishUIFixture.showSelection(workspace: workspace, video: true, source: .window) }
             Button("Scroll Panel (Preview Only)") { EnglishUIFixture.showScroll() }
             Button("Video Countdown (Synthetic)") { EnglishUIFixture.showVideo() }
+            Button("Recording Toolbar (Preview Only)") { EnglishUIFixture.showRecordingToolbar() }
             Button("Synthetic Video to Internal Editor") { EnglishUIFixture.showVideoEditorFlow(workspace: workspace) }
+            Button("Synthetic Video Editor") { EnglishUIFixture.showVideoEditor(workspace: workspace) }
         }
     }
 }

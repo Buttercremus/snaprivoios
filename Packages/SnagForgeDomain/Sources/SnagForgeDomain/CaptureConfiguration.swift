@@ -31,7 +31,7 @@ public enum CaptureSource: String, CaseIterable, Sendable {
 }
 
 public enum AnnotationTool: String, CaseIterable, Sendable {
-    case selection, arrow, text, callout, rectangle, ellipse, crop, highlight, steps, blur, redact
+    case selection, arrow, text, callout, rectangle, ellipse, crop, highlight, steps, blur, redact, magnifier, pen, spotlight
 }
 
 /// All persisted image geometry uses pixels with a top-left origin.

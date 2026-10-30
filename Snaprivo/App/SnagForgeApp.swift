@@ -8,6 +8,13 @@ struct SnagForgeApp: App {
     @NSApplicationDelegateAdaptor(SnagForgeDelegate.self) private var appDelegate
     @State private var workspace = WorkspaceModel()
     @Environment(\.openWindow) private var openWindow
+    @FocusedValue(\.guideEditor) private var focusedGuideEditor
+
+    private var guideEditingIsActive: Bool {
+        guard workspace.section == .guides, focusedGuideEditor === workspace.guides,
+              let window = NSApp.keyWindow, !(window is NSPanel), window.sheetParent == nil else { return false }
+        return true
+    }
 
     var body: some Scene {
         Window(String(localized: "Snaprivo"), id: "workspace") {
@@ -20,6 +27,15 @@ struct SnagForgeApp: App {
         }
         .defaultSize(width: 1180, height: 780)
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button(String(localized: "Über Snaprivo")) {
+                    NSApp.orderFrontStandardAboutPanel(options: [
+                        .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+                            ?? String(localized: "Entwicklungsversion"),
+                        .version: ""
+                    ])
+                }
+            }
             CommandGroup(after: .newItem) {
                 Button(String(localized: "Bild öffnen …")) { workspace.isImporting = true }
                     .keyboardShortcut("o")
@@ -37,39 +53,41 @@ struct SnagForgeApp: App {
                     .disabled(workspace.guides.isBusy || workspace.videos.preview != nil)
             }
             CommandGroup(replacing: .saveItem) {
-                Button(workspace.section == .editor && workspace.videos.preview == nil
-                       ? String(localized: "Speichern als …") : String(localized: "Projekt sichern")) {
-                    if workspace.section == .editor && workspace.videos.preview == nil {
-                        workspace.editor?.exportPNG()
-                    } else {
-                        Task {
-                            if workspace.section == .guides { await workspace.guides.flush() }
-                            else if let video = workspace.videos.preview { await video.apply() }
-                            else { await workspace.editor?.flush() }
-                        }
+                Button(workspace.section == .guides ? String(localized: "Anleitung sichern") : String(localized: "Projekt sichern")) {
+                    Task {
+                        if workspace.section == .guides { await workspace.guides.flush() }
+                        else if let video = workspace.videos.preview { await video.apply() }
+                        else { await workspace.editor?.flush() }
                     }
                 }
                 .keyboardShortcut("s")
-                .disabled(workspace.videos.preview != nil ? workspace.videos.preview?.canApply != true
-                          : workspace.section == .editor ? workspace.editor?.hasExportableImage != true || workspace.editor?.isExporting == true || workspace.isLoading
-                          : workspace.section == .guides ? workspace.guides.document == nil : workspace.editor == nil)
+                .disabled(workspace.section == .guides ? workspace.guides.document == nil || workspace.guides.isBusy || workspace.guides.isSuspended
+                          : workspace.videos.preview != nil ? workspace.videos.preview?.canApply != true
+                          : workspace.editor == nil || workspace.isLoading)
                 Button(String(localized: "Bearbeitbares Projekt exportieren …")) {
                     if let id = workspace.editor?.document.id { workspace.chooseTransfer(.exportProject(id)) }
                 }.disabled(workspace.section != .editor || workspace.editor == nil || workspace.isLoading)
-                Button(String(localized: "PNG exportieren …")) { workspace.editor?.exportPNG() }
-                    .keyboardShortcut("e", modifiers: [.command, .shift]).disabled(workspace.section != .editor || workspace.editor?.hasExportableImage != true || workspace.editor?.isExportingPNG == true)
+                Button(workspace.section == .guides ? String(localized: "PDF exportieren …") : String(localized: "PNG exportieren …")) {
+                    if workspace.section == .guides { workspace.guides.chooseExport(.pdf) }
+                    else { workspace.editor?.exportPNG() }
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+                .disabled(workspace.section == .guides ? workspace.guides.document?.steps.isEmpty != false || workspace.guides.isBusy || workspace.guides.showsTrash
+                          : workspace.section != .editor || workspace.editor?.hasExportableImage != true || workspace.editor?.isExportingPNG == true)
             }
             CommandGroup(replacing: .undoRedo) {
                 Button(String(localized: "Rückgängig")) {
-                    if let video = workspace.videos.preview, !video.hasUnappliedChanges { Task { await video.undo() } }
+                    if guideEditingIsActive { workspace.guides.undo() }
                     else if let text = NSApp.keyWindow?.firstResponder as? NSTextView { text.undoManager?.undo() }
+                    else if let video = workspace.videos.preview, !video.hasUnappliedChanges { Task { await video.undo() } }
                     else if workspace.section == .editor { workspace.editor?.undo() }
-                }.keyboardShortcut("z").disabled(workspace.videos.preview.map { !($0.canUndo || $0.hasUnappliedChanges) } ?? (workspace.section != .guides && workspace.editor == nil))
+                }.keyboardShortcut("z").disabled(guideEditingIsActive ? !workspace.guides.canUndo || !workspace.purchases.hasPro : (NSApp.keyWindow?.firstResponder as? NSTextView).map { $0.undoManager?.canUndo != true } ?? (workspace.videos.preview.map { !$0.canUndo } ?? (workspace.editor == nil)))
                 Button(String(localized: "Wiederholen")) {
-                    if let video = workspace.videos.preview, !video.hasUnappliedChanges { Task { await video.redo() } }
+                    if guideEditingIsActive { workspace.guides.redo() }
                     else if let text = NSApp.keyWindow?.firstResponder as? NSTextView { text.undoManager?.redo() }
+                    else if let video = workspace.videos.preview, !video.hasUnappliedChanges { Task { await video.redo() } }
                     else if workspace.section == .editor { workspace.editor?.redo() }
-                }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(workspace.videos.preview.map { !($0.canRedo || $0.hasUnappliedChanges) } ?? (workspace.section != .guides && workspace.editor == nil))
+                }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(guideEditingIsActive ? !workspace.guides.canRedo || !workspace.purchases.hasPro : (NSApp.keyWindow?.firstResponder as? NSTextView).map { $0.undoManager?.canRedo != true } ?? (workspace.videos.preview.map { !$0.canRedo } ?? (workspace.editor == nil)))
             }
             CaptureCommands(workspace: workspace)
             CommandGroup(replacing: .help) {
@@ -81,6 +99,15 @@ struct SnagForgeApp: App {
             }
             CommandGroup(after: .pasteboard) {
                 Divider()
+                Button(String(localized: "90° nach rechts drehen")) { if let editor = workspace.editor { editor.transformImage(editor.history.transform.rotated()) } }
+                    .disabled(workspace.section != .editor || workspace.editor?.canTransformImage != true)
+                Button(String(localized: "90° nach links drehen")) { if let editor = workspace.editor { editor.transformImage(editor.history.transform.rotated(clockwise: false)) } }
+                    .disabled(workspace.section != .editor || workspace.editor?.canTransformImage != true)
+                Button(String(localized: "Horizontal spiegeln")) { if let editor = workspace.editor { editor.transformImage(editor.history.transform.flippedHorizontally()) } }
+                    .disabled(workspace.section != .editor || workspace.editor?.canTransformImage != true)
+                Button(String(localized: "Vertikal spiegeln")) { if let editor = workspace.editor { editor.transformImage(editor.history.transform.flippedVertically()) } }
+                    .disabled(workspace.section != .editor || workspace.editor?.canTransformImage != true)
+                Divider()
                 Button(String(localized: "Objekt duplizieren")) { workspace.editor?.duplicateSelection() }
                     .keyboardShortcut("d")
                     .disabled(workspace.section != .editor || workspace.editor?.canDuplicateSelection != true)
@@ -89,7 +116,7 @@ struct SnagForgeApp: App {
                         .disabled(workspace.section != .editor || workspace.editor?.canMoveSelection(direction) != true)
                 }
                 Divider()
-                Button(String(localized: "Text erkennen")) { workspace.editor?.beginTextRecognition() }
+                Button(String(localized: "Text erkennen")) { workspace.editor?.beginInlineTextRecognition() }
                     .keyboardShortcut("t", modifiers: [.command, .shift])
                     .disabled(workspace.section != .editor || workspace.editor?.hasExportableImage != true || workspace.editor?.isExporting == true)
                 Button(String(localized: "Bildauflösung ändern …")) { workspace.editor?.beginImageResize() }
@@ -100,6 +127,11 @@ struct SnagForgeApp: App {
                     .disabled(workspace.editor?.document.crop == nil || workspace.editor?.cropDraft != nil)
             }
             CommandGroup(before: .toolbar) {
+                Button(String(localized: "Letzte Schnellvorschau anzeigen")) { QuickCapturePanelController.shared.restore() }
+                    .disabled(workspace.quickCapture == nil && !workspace.showsDirectCaptureResult)
+                Button(String(localized: "Alle Anheftungen entsperren")) { PinnedImageController.shared.unlockAll() }
+                Button(String(localized: "Alle Anheftungen schließen")) { PinnedImageController.shared.closeAll() }
+                Divider()
                 Button(String(localized: "Vergrößern")) { workspace.editor?.zoomBy(1.25) }
                     .keyboardShortcut("+").disabled(workspace.editor == nil)
                 Button(String(localized: "Verkleinern")) { workspace.editor?.zoomBy(1 / 1.25) }
@@ -149,6 +181,11 @@ private struct MenuBarContent: View {
 
     var body: some View {
         CaptureMenuItems(workspace: workspace)
+        Divider()
+        Button(String(localized: "Letzte Schnellvorschau anzeigen")) { QuickCapturePanelController.shared.restore() }
+            .disabled(workspace.quickCapture == nil && !workspace.showsDirectCaptureResult)
+        Button(String(localized: "Alle Anheftungen entsperren")) { PinnedImageController.shared.unlockAll() }
+        Button(String(localized: "Alle Anheftungen schließen")) { PinnedImageController.shared.closeAll() }
         Divider()
         Button(String(localized: "Bibliothek öffnen"), systemImage: "photo.on.rectangle") {
             workspace.section = .library

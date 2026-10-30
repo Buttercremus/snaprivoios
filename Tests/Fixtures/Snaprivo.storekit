@@ -1,36 +1,65 @@
 {
-  "identifier": "ef4042a0-4014-4c4f-b5b8-fb90204c971a",
-  "nonRenewingSubscriptions": [],
-  "products": [
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "ef4042a0-4014-4c4f-b5b8-fb90204c971a",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
     {
-      "displayPrice": "29.99",
-      "familyShareable": false,
-      "internalID": "1000001",
-      "localizations": [
+      "displayPrice" : "29.99",
+      "familyShareable" : false,
+      "internalID" : "1000001",
+      "localizations" : [
         {
-          "description": "Einmal kaufen. Pro dauerhaft freischalten. Lokales StoreKit-Testprodukt.",
-          "displayName": "Snaprivo Pro",
-          "locale": "de_DE"
+          "description" : "Einmal kaufen. Pro dauerhaft freischalten. Lokales StoreKit-Testprodukt.",
+          "displayName" : "Snaprivo Pro",
+          "locale" : "de"
         },
         {
-          "description": "Buy once. Unlock Pro permanently. Local StoreKit test product.",
-          "displayName": "Snaprivo Pro",
-          "locale": "en_US"
+          "description" : "Buy once. Unlock Pro permanently. Local StoreKit test product.",
+          "displayName" : "Snaprivo Pro",
+          "locale" : "en_US"
         }
       ],
-      "productID": "com.snaprivo.pro.lifetime",
-      "referenceName": "Snaprivo Pro launch (local test)",
-      "type": "NonConsumable"
+      "productID" : "com.snaprivo.pro.lifetime",
+      "referenceName" : "Snaprivo Pro launch (local test)",
+      "type" : "NonConsumable"
     }
   ],
-  "settings": {
-    "_failTransactionsEnabled": false,
-    "_locale": "de_DE",
-    "_storefront": "DEU"
+  "settings" : {
+    "_askToBuyEnabled" : false,
+    "_billingGracePeriodEnabled" : false,
+    "_billingIssuesEnabled" : false,
+    "_disableDialogs" : false,
+    "_failTransactionsEnabled" : false,
+    "_locale" : "de",
+    "_renewalBillingIssuesEnabled" : false,
+    "_storefront" : "DEU",
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
   },
-  "subscriptionGroups": [],
-  "version": {
-    "major": 3,
-    "minor": 0
+  "subscriptionBundleGroups" : [
+
+  ],
+  "subscriptionGroups" : [
+
+  ],
+  "subscriptionSuiteGroups" : [
+
+  ],
+  "version" : {
+    "major" : 6,
+    "minor" : 3
   }
 }

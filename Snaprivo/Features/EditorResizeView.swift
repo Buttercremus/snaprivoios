@@ -12,7 +12,7 @@ struct EditorResizeView: View {
 
     init(model: EditorModel) {
         self.model = model
-        let size = model.document.outputPixelSize
+        let size = model.document.contentPixelSize
         _width = State(initialValue: String(size.width)); _height = State(initialValue: String(size.height))
         _ratio = State(initialValue: CGSize(width: size.width, height: size.height))
     }
@@ -23,7 +23,7 @@ struct EditorResizeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text(String(localized: "Bildauflösung ändern")).font(.title2.bold())
-            Text(String(localized: "Aktuell: \(model.document.outputPixelSize.width) × \(model.document.outputPixelSize.height) Pixel"))
+            Text(String(localized: "Aktuell: \(model.document.contentPixelSize.width) × \(model.document.contentPixelSize.height) Pixel"))
                 .foregroundStyle(.secondary).monospacedDigit()
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
                 GridRow {
@@ -50,7 +50,8 @@ struct EditorResizeView: View {
                 Button("200 %") { setPercent(2) }
                 Spacer()
                 Button(String(localized: "Originalauflösung")) {
-                    let source = model.document.outputRect.size
+                    let original = model.document.outputRect.size
+                    let source = model.history.transform.swapsAxes ? CGSize(width: original.height, height: original.width) : original
                     width = String(Int(source.width)); height = String(Int(source.height)); ratio = source
                 }
             }
@@ -64,7 +65,7 @@ struct EditorResizeView: View {
                     if let target, model.applyImageSize(target) { dismiss() }
                 }
                 .keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent)
-                .disabled(target == nil || target == model.document.outputPixelSize)
+                .disabled(target == nil || target == model.document.contentPixelSize)
                 .accessibilityIdentifier("editor.resize.apply")
             }
         }
@@ -77,7 +78,7 @@ struct EditorResizeView: View {
         if changingWidth { height = String(Int(other)) } else { width = String(Int(other)) }
     }
     private func setPercent(_ factor: Double) {
-        let current = model.document.outputPixelSize
+        let current = model.document.contentPixelSize
         width = String(max(1, Int((Double(current.width) * factor).rounded())))
         height = String(max(1, Int((Double(current.height) * factor).rounded())))
         ratio = CGSize(width: current.width, height: current.height)

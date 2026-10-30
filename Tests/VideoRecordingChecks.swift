@@ -108,6 +108,7 @@ struct VideoRecordingChecks {
                 check(config.queueDepth == 8, "H.264 recording needs the hardware-tested surface headroom")
                 check(config.sourceRect == geometry.sourceRect && config.width == 640 && config.height == 360)
                 check(config.showsCursor == !system && config.minimumFrameInterval == CMTime(value: 1, timescale: 30))
+                check(!config.showMouseClicks, "Click highlights require an explicit recording option")
                 check(config.captureDynamicRange == .SDR && config.preservesAspectRatio && !config.scalesToFit)
             }
         }
@@ -118,6 +119,15 @@ struct VideoRecordingChecks {
         check(window.backgroundColor.components == [0, 1], "Window letterboxing keeps an opaque black background alive")
         check(window.width == 1620 && window.height == 1080 && window.captureDynamicRange == .SDR)
         check(!window.capturesAudio && !window.captureMicrophone)
+        let noClicks = VideoRecordingEngine.configuration(geometry: geometry, includesCursor: false, audio: .init(), showsMouseClicks: false)
+        check(!noClicks.showMouseClicks && noClicks.pixelFormat != kCVPixelFormatType_32BGRA,
+              "Click highlights must remain disabled without the option")
+        let clicks = VideoRecordingEngine.configuration(geometry: geometry, includesCursor: false, audio: .init(), showsMouseClicks: true)
+        check(clicks.showMouseClicks && !clicks.showsCursor && clicks.pixelFormat == kCVPixelFormatType_32BGRA,
+              "Click highlights require explicit BGRA configuration")
+        let windowClicks = VideoRecordingEngine.configuration(geometry: windowGeometry, includesCursor: true, audio: .init(), windowCapture: true, showsMouseClicks: true)
+        check(windowClicks.showMouseClicks && windowClicks.pixelFormat == kCVPixelFormatType_32BGRA,
+              "Window click highlights require BGRA configuration")
     }
     @MainActor static func checkMicrophoneAccess() async throws {
         // No real authorization prompt or microphone input is used in tests.
@@ -182,7 +192,8 @@ struct VideoRecordingChecks {
         session.onPermissionFailure = { _ in screenFailures += 1 }
         let run = Task { await session.run() }
         try await Task.sleep(for: .milliseconds(150))
-        let view = NSApp.windows.first { $0.identifier?.rawValue == "video.controls" && $0.isVisible }!.contentView!
+        let panel = NSApp.windows.first { $0.identifier?.rawValue == "video.controls" && $0.isVisible }!
+        let view = (panel.contentView as! CaptureToolbarSurface).controls
         func button(_ identifier: String) -> NSButton {
             view.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityIdentifier() == identifier }!
         }

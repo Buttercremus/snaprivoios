@@ -75,11 +75,11 @@ final class LibrarySearchModel {
                 try Task.checkCancellation()
                 guard self.request == request else { return }
                 if recovered {
-                    notice = String(localized: "Der beschädigte Suchcache wurde neu angelegt. Projekte bleiben erhalten.")
+                    notice = String(localized: "Der beschädigte Suchcache wurde neu angelegt. Bilder bleiben erhalten.")
                 }
             } catch {
                 guard self.request == request else { return }
-                if Task.isCancelled { notice = String(localized: "Indexierung abgebrochen. Bereits erkannte Projekte bleiben durchsuchbar.") }
+                if Task.isCancelled { notice = String(localized: "Indexierung abgebrochen. Bereits erkannte Bilder bleiben durchsuchbar.") }
                 else if !enabled { self.error = String(localized: "Der OCR-Suchcache konnte nicht entfernt werden. OCR wird nicht verwendet. Versuche das Entfernen erneut.") }
                 else { self.error = String(localized: "Der Suchindex konnte nicht aktualisiert werden. Titel, Tags und Sammlungen bleiben durchsuchbar.") }
             }
@@ -97,7 +97,7 @@ final class LibrarySearchModel {
                   let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
                   image.width == loaded.document.pixelSize.width, image.height == loaded.document.pixelSize.height else { throw ProjectError.invalidDocument }
             let document = loaded.document
-            let snapshot = TextRecognitionSnapshot(image: image, objects: document.objects, crop: document.crop, resizedSize: document.resizedSize)
+            let snapshot = TextRecognitionSnapshot(image: image, objects: document.objects, crop: document.crop, resizedSize: document.resizedSize, canvasRect: document.canvasRect)
             return try await TextRecognitionService.shared.recognize(snapshot, selection: CGRect(x: 0, y: 0, width: 1, height: 1), language: "").text
         }
         return try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }

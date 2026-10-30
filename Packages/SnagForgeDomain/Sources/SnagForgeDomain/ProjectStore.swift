@@ -6,6 +6,22 @@ public struct ProjectLibraryItem: Identifiable, Sendable {
     public let thumbnail: Data?
     public let recovered: Bool
     public var id: UUID { document.id }
+    public init(document: ProjectDocument, thumbnail: Data?, recovered: Bool = false) {
+        self.document = document; self.thumbnail = thumbnail; self.recovered = recovered
+    }
+
+    /// Apply a committed save without reading every project and thumbnail again.
+    public func updating(_ items: [Self]) -> [Self] {
+        var result = items
+        if let index = result.firstIndex(where: { $0.id == id }) {
+            guard result[index].document.revision <= document.revision else { return result }
+            result[index] = self
+        } else { result.append(self) }
+        return result.sorted {
+            if $0.document.modifiedAt != $1.document.modifiedAt { return $0.document.modifiedAt > $1.document.modifiedAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
 }
 
 public struct LibraryListing: Sendable {
@@ -25,6 +41,7 @@ public struct LoadedProject: Sendable {
 public actor ProjectStore {
     private static let maximumDocumentBytes = 32_000_000
     public nonisolated let root: URL
+    private let lockTimeout: Duration
     private let files = FileManager.default
 
     private struct Manifest: Codable {
@@ -34,16 +51,34 @@ public actor ProjectStore {
         let previous: Int?
     }
 
-    public init(root: URL) { self.root = root }
+    public init(root: URL, lockTimeout: Duration = .seconds(3)) {
+        self.root = root; self.lockTimeout = lockTimeout
+    }
     // Multiple local builds may share a container. Coordinate their read/check/commit sequence.
     private func withLibraryLock<T>(_ operation: () throws -> T) throws -> T {
         try files.createDirectory(at: root, withIntermediateDirectories: true)
-        let descriptor = Darwin.open(root.appendingPathComponent(".library-lock").path, O_CREAT | O_RDWR, mode_t(0o600))
+        let descriptor = Darwin.open(root.appendingPathComponent(".library-lock").path, O_CREAT | O_RDWR | O_NOFOLLOW, mode_t(0o600))
         guard descriptor >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
         defer { Darwin.close(descriptor) }
-        guard flock(descriptor, LOCK_EX) == 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
-        defer { _ = flock(descriptor, LOCK_UN) }
-        return try operation()
+        let deadline = ContinuousClock.now.advanced(by: lockTimeout)
+        while true {
+            // Check cancellation before every syscall so a cancelled task never acquires
+            // a newly released lock and starts a write.
+            try Task.checkCancellation()
+            if flock(descriptor, LOCK_EX | LOCK_NB) == 0 {
+                try Task.checkCancellation()
+                defer { _ = flock(descriptor, LOCK_UN) }
+                return try operation()
+            }
+            let error = errno
+            if error == EINTR {
+                guard ContinuousClock.now < deadline else { throw ProjectError.libraryBusy }
+                continue
+            }
+            guard error == EWOULDBLOCK || error == EAGAIN else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(error)) }
+            guard ContinuousClock.now < deadline else { throw ProjectError.libraryBusy }
+            Thread.sleep(forTimeInterval: 0.02)
+        }
     }
 
     private func package(_ id: UUID) -> URL { root.appendingPathComponent(id.uuidString).appendingPathExtension("snagforge") }
@@ -93,7 +128,7 @@ public actor ProjectStore {
         return try JSONSerialization.data(withJSONObject: json)
     }
     private func manifest(in package: URL) throws -> Manifest {
-        let value = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: package.appendingPathComponent("manifest.json")))
+        let value = try JSONDecoder().decode(Manifest.self, from: ProjectArchive.readRegularFile(package.appendingPathComponent("manifest.json"), limit: 65_536))
         guard value.schemaVersion == 1 else { throw ProjectError.unsupportedVersion }
         guard value.generation >= 0, value.generation < Int.max - 1,
               value.previous == nil || (value.previous! >= 0 && value.previous! < value.generation) else { throw ProjectError.invalidDocument }
@@ -102,9 +137,10 @@ public actor ProjectStore {
     private func document(in package: URL, manifest: Manifest) throws -> (ProjectDocument, Bool) {
         func read(_ generation: Int) throws -> ProjectDocument {
             let url = revisionURL(generation, in: package)
-            let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-            guard size <= Self.maximumDocumentBytes else { throw ProjectError.documentTooLarge }
-            let value = try ProjectDocument.decode(hydrateAssets(Data(contentsOf: url), in: package))
+            let data: Data
+            do { data = try ProjectArchive.readRegularFile(url, limit: Self.maximumDocumentBytes) }
+            catch ProjectError.fileTooLarge { throw ProjectError.documentTooLarge }
+            let value = try ProjectDocument.decode(hydrateAssets(data, in: package))
             guard value.id == manifest.id, value.revision == generation else { throw ProjectError.invalidDocument }
             return value
         }
@@ -122,6 +158,7 @@ public actor ProjectStore {
     private func createUnlocked(_ document: ProjectDocument, original: Data, thumbnail: Data?) throws {
         let document = try document.validated()
         guard document.revision == 0, !original.isEmpty else { throw ProjectError.invalidDocument }
+        guard original.count <= ProjectArchive.maximumOriginalBytes else { throw ProjectError.fileTooLarge }
         let encoded = try encodeDocument(document)
         try files.createDirectory(at: root, withIntermediateDirectories: true)
         let staging = root.appendingPathComponent(".creating-\(UUID().uuidString)")
@@ -131,7 +168,7 @@ public actor ProjectStore {
         try original.write(to: staging.appendingPathComponent("original.png"), options: .atomic)
         try encoded.write(to: revisionURL(0, in: staging), options: .atomic)
         try encode(Manifest(id: document.id, generation: 0, previous: nil)).write(to: staging.appendingPathComponent("manifest.json"), options: .atomic)
-        if let thumbnail { try? thumbnail.write(to: staging.appendingPathComponent("thumbnail.png"), options: .atomic) }
+        if let thumbnail, thumbnail.count <= ProjectArchive.maximumThumbnailBytes { try? thumbnail.write(to: staging.appendingPathComponent("thumbnail.png"), options: .atomic) }
         try files.moveItem(at: staging, to: package(document.id))
     }
 
@@ -151,7 +188,7 @@ public actor ProjectStore {
         let next = Manifest(id: document.id, generation: document.revision, previous: readable.revision)
         try encode(next).write(to: folder.appendingPathComponent("manifest.json"), options: .atomic)
         // Thumbnail is only a disposable cache; it cannot invalidate a committed project.
-        if let thumbnail { try? thumbnail.write(to: folder.appendingPathComponent("thumbnail.png"), options: .atomic) }
+        if let thumbnail, thumbnail.count <= ProjectArchive.maximumThumbnailBytes { try? thumbnail.write(to: folder.appendingPathComponent("thumbnail.png"), options: .atomic) }
         if let revisions = try? files.contentsOfDirectory(at: folder.appendingPathComponent("Revisions"), includingPropertiesForKeys: nil) {
             let keep = Set(["\(document.revision).json", "\(readable.revision).json"])
             for url in revisions where !keep.contains(url.lastPathComponent) { try? files.removeItem(at: url) }
@@ -195,7 +232,7 @@ public actor ProjectStore {
         let (document, recovered) = try self.document(in: folder, manifest: manifest)
         let url = folder.appendingPathComponent("original.png")
         guard files.fileExists(atPath: url.path) else { throw ProjectError.missingOriginal }
-        return LoadedProject(document: document, original: try Data(contentsOf: url), generation: manifest.generation, recovered: recovered)
+        return LoadedProject(document: document, original: try ProjectArchive.readRegularFile(url, limit: ProjectArchive.maximumOriginalBytes), generation: manifest.generation, recovered: recovered)
     }
 
     public func exportProject(_ id: UUID, to destination: URL) throws {
@@ -231,7 +268,7 @@ public actor ProjectStore {
                 guard listing.issues.isEmpty else { throw ProjectError.invalidDocument }
                 for item in listing.items {
                     let folder = directory.appendingPathComponent(item.id.uuidString + ".snagforge")
-                    let original = try Data(contentsOf: folder.appendingPathComponent("original.png"))
+                    let original = try ProjectArchive.readRegularFile(folder.appendingPathComponent("original.png"), limit: ProjectArchive.maximumOriginalBytes)
                     let data = try ProjectArchive(document: item.document, original: original).encoded()
                     let file = UUID().uuidString + ".snaprivo"
                     try data.write(to: staging.appendingPathComponent(file), options: .atomic)
@@ -393,7 +430,7 @@ public actor ProjectStore {
                 let (document, recovered) = try document(in: folder, manifest: manifest)
                 guard files.fileExists(atPath: folder.appendingPathComponent("original.png").path) else { throw ProjectError.missingOriginal }
                 // A recovered document must not show a thumbnail from the broken revision.
-                let thumbnail = recovered ? nil : try? Data(contentsOf: folder.appendingPathComponent("thumbnail.png"))
+                let thumbnail = recovered ? nil : try? ProjectArchive.readRegularFile(folder.appendingPathComponent("thumbnail.png"), limit: ProjectArchive.maximumThumbnailBytes)
                 items.append(ProjectLibraryItem(document: document, thumbnail: thumbnail, recovered: recovered))
             } catch { issues.append("\(folder.lastPathComponent): \(error.localizedDescription)") }
         }

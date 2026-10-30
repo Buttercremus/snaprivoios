@@ -5,6 +5,20 @@ import CryptoKit
 import UniformTypeIdentifiers
 import SnagForgeDomain
 
+struct VideoGIFOptions: Equatable, Sendable {
+    var framesPerSecond: Int = 12
+    var maximumDimension: Int = 720
+    var maximumDuration: Double = 15
+
+    func validated() throws -> Self {
+        guard (1...24).contains(framesPerSecond), (160...1_440).contains(maximumDimension),
+              maximumDuration.isFinite, (0.25...30).contains(maximumDuration) else {
+            throw VideoRecordingError.invalidGIFOptions
+        }
+        return self
+    }
+}
+
 actor VideoRecordingFiles {
     struct Item: Identifiable, Sendable {
         var document: VideoDocument
@@ -146,7 +160,7 @@ actor VideoRecordingFiles {
             if document.state == .finished, (try? requireRegularFile(root.appendingPathComponent(document.fileName))) == nil {
                 document.state = .failed; document.failure = String(localized: "Die Videodatei fehlt oder ist nicht zugänglich.")
             }
-            return Item(document: document, thumbnail: document.state == .finished ? try? Data(contentsOf: thumbnailURL(document.id)) : nil,
+            return Item(document: document, thumbnail: document.state == .finished ? try? ProjectArchive.readRegularFile(thumbnailURL(document.id), limit: ProjectArchive.maximumThumbnailBytes) : nil,
                         bytes: Int64((try? root.appendingPathComponent(document.fileName).resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0))
         }.sorted { $0.document.createdAt > $1.document.createdAt }
         return Listing(items: items, issues: issues)
@@ -229,6 +243,55 @@ actor VideoRecordingFiles {
         if FileManager.default.fileExists(atPath: target.path) { _ = try FileManager.default.replaceItemAt(target, withItemAt: temporary) }
         else { try FileManager.default.moveItem(at: temporary, to: target) }
     }
+
+    /// Exports the applied trim as a bounded animated GIF without modifying the source.
+    func exportGIF(_ id: UUID, to target: URL, expectedRevision: Int? = nil,
+                   options: VideoGIFOptions = .init(),
+                   beforePublish: @Sendable () async throws -> Void = {}) async throws {
+        let options = try options.validated()
+        let document = try readDocument(id), source = try movieURL(id)
+        if let expectedRevision, expectedRevision != document.revision { throw ProjectError.staleRevision }
+        let canonicalTarget = target.standardizedFileURL.resolvingSymlinksInPath().path.lowercased()
+        let canonicalRoot = root.standardizedFileURL.resolvingSymlinksInPath().path.lowercased()
+        guard canonicalTarget != canonicalRoot, !canonicalTarget.hasPrefix(canonicalRoot + "/") else { throw VideoEditError.originalTarget }
+        let duration = document.duration ?? 0
+        let trim = try (document.trim ?? .init(start: 0, end: duration)).validated(duration: duration)
+        guard trim.duration <= options.maximumDuration + 0.0001 else { throw VideoRecordingError.gifDurationExceeded }
+        let exportDuration = trim.duration
+        let frameCount = max(1, Int(ceil(exportDuration * Double(options.framesPerSecond))))
+        let replacement = try FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: target, create: true)
+        defer { try? FileManager.default.removeItem(at: replacement) }
+        let temporary = replacement.appendingPathComponent("Video.gif")
+        let data = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(data, UTType.gif.identifier as CFString, frameCount, nil) else { throw VideoRecordingError.invalidMovie }
+        let asset = AVURLAsset(url: source)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.maximumSize = CGSize(width: options.maximumDimension, height: options.maximumDimension)
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+        let frameProperties: [CFString: Any] = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFDelayTime: 1.0 / Double(options.framesPerSecond)]]
+        let loopProperties: [CFString: Any] = [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]]
+        CGImageDestinationSetProperties(destination, loopProperties as CFDictionary)
+        for index in 0..<frameCount {
+            try Task.checkCancellation()
+            let seconds = trim.start + min(Double(index) / Double(options.framesPerSecond), max(0, exportDuration - 1.0 / Double(options.framesPerSecond)))
+            let result = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 600))
+            let frameInterval = 1.0 / Double(options.framesPerSecond)
+            // Encoded keyframes can be reported a single frame around the
+            // requested timestamp; never allow a sample from a different trim
+            // section to leak into the GIF.
+            guard result.actualTime.seconds >= trim.start - frameInterval,
+                  result.actualTime.seconds < trim.end + frameInterval else { throw VideoRecordingError.invalidMovie }
+            CGImageDestinationAddImage(destination, result.image, frameProperties as CFDictionary)
+        }
+        guard CGImageDestinationFinalize(destination) else { throw VideoRecordingError.invalidMovie }
+        try data.write(to: temporary, options: .atomic)
+        try await beforePublish()
+        try Task.checkCancellation()
+        if FileManager.default.fileExists(atPath: target.path) { _ = try FileManager.default.replaceItemAt(target, withItemAt: temporary) }
+        else { try FileManager.default.moveItem(at: temporary, to: target) }
+    }
     func movieURL(_ id: UUID) throws -> URL {
         let document = try readDocument(id)
         guard document.state == .finished, document.trashedAt == nil else { throw VideoRecordingError.invalidMovie }
@@ -243,9 +306,7 @@ actor VideoRecordingFiles {
         return document
     }
     private func read(_ url: URL) throws -> VideoDocument {
-        try requireRegularFile(url)
-        guard (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max) <= 1_048_576 else { throw ProjectError.invalidDocument }
-        return try JSONDecoder().decode(VideoDocument.self, from: Data(contentsOf: url)).validated()
+        return try JSONDecoder().decode(VideoDocument.self, from: ProjectArchive.readRegularFile(url, limit: 1_048_576)).validated()
     }
     private func save(_ document: VideoDocument) throws {
         _ = try document.validated()
@@ -321,9 +382,8 @@ actor VideoRecordingFiles {
     }
     func restore(from source: URL) async throws -> Int { try await restoreIDs(from: source).count }
     func restoreIDs(from source: URL) async throws -> [UUID] {
-        let manifest = source.appendingPathComponent("manifest.json"); try requireRegularFile(manifest)
-        guard (try manifest.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? Int.max) <= 16_777_216 else { throw ProjectError.invalidDocument }
-        let backup = try JSONDecoder().decode(VideoBackup.self, from: Data(contentsOf: manifest)).validated()
+        let manifest = source.appendingPathComponent("manifest.json")
+        let backup = try JSONDecoder().decode(VideoBackup.self, from: ProjectArchive.readRegularFile(manifest, limit: 16_777_216)).validated()
         // Validate every source before changing the library. No overwrite: restore
         // always creates new identities, including repeated imports.
         for entry in backup.entries where entry.hasFile != false {

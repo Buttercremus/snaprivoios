@@ -36,6 +36,13 @@ public struct EditorViewport: Equatable, Sendable {
         return CGPoint(x: (viewPoint.x - rect.minX) / scale, y: (viewPoint.y - rect.minY) / scale)
     }
     public mutating func fit() { zoom = nil; offset = .zero }
+    /// Freeze the current fit before the surrounding canvas grows. Keep very
+    /// large images at their fitted scale even below the manual zoom range.
+    public mutating func lockScale(image: CGSize, in bounds: CGRect, backingScale: CGFloat) {
+        let rect = imageRect(image: image, in: bounds, backingScale: backingScale)
+        zoom = scale(image: image, in: bounds, backingScale: backingScale) * max(1, backingScale)
+        offset = CGSize(width: rect.midX - bounds.midX, height: rect.midY - bounds.midY)
+    }
     public mutating func setZoom(_ value: CGFloat, at anchor: CGPoint, image: CGSize, in bounds: CGRect, backingScale: CGFloat) {
         guard value.isFinite, image.width > 0, image.height > 0, bounds.width > 0, bounds.height > 0 else { return }
         let point = imagePoint(from: anchor, image: image, in: bounds, backingScale: backingScale)

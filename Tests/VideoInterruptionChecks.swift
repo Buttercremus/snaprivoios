@@ -33,7 +33,7 @@ import SnagForgeDomain
                 let run = Task { await session.run() }
                 try await VideoLifecycleChecks.waitUntil { NSApp.windows.contains { $0.isVisible && $0.title == String(localized: "Videoaufnahme") } }
                 let panel = NSApp.windows.first { $0.isVisible && $0.title == String(localized: "Videoaufnahme") }!
-                let views = panel.contentView!.subviews
+                let views = (panel.contentView as! CaptureToolbarSurface).controls.subviews
                 let primary = views.compactMap { $0 as? NSButton }.first { $0.accessibilityIdentifier() == "video.primary" }!
                 let status = views.compactMap { $0 as? NSTextField }.first { $0.accessibilityIdentifier() == "video.status" }!
                 if stage != "ready" { primary.performClick(nil) }

@@ -11,6 +11,6 @@ xcrun swiftc -swift-version 6 -emit-library -emit-module -module-name SnagForgeD
 xcrun swiftc -swift-version 6 -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
   Snaprivo/Features/SelectionGrips.swift \
   -Xlinker -rpath -Xlinker "$validation_dir" \
-  Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/ScreenshotSelector.swift \
-  Tests/CaptureSelectionChecks.swift -o "$validation_dir/CaptureSelectionChecks"
+  Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/ScreenshotSelector.swift \
+  Tests/SelectionMaskRendering.swift Tests/CaptureSelectionChecks.swift -o "$validation_dir/CaptureSelectionChecks"
 "$validation_dir/CaptureSelectionChecks"

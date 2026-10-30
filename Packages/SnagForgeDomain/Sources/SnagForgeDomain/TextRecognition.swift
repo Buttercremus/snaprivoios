@@ -11,9 +11,10 @@ public struct TextRecognitionPlan: Equatable, Sendable {
 
     public init(sourceSize: PixelSize, crop: CGRect? = nil, resizedSize: PixelSize? = nil,
                 selection: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1),
-                maximumDimension: Int = Self.maximumDimension) throws {
-        let visible = crop ?? EditorCrop.fullRect(sourceSize)
-        guard EditorCrop.isValid(visible, in: sourceSize), maximumDimension > 0,
+                maximumDimension: Int = Self.maximumDimension, canvasRect: CGRect? = nil) throws {
+        let full = canvasRect ?? EditorCrop.fullRect(sourceSize)
+        let visible = crop ?? full
+        guard EditorCanvasExtent.isValid(full), full.contains(EditorCrop.fullRect(sourceSize)), EditorCrop.isValid(visible, in: full), maximumDimension > 0,
               [selection.minX, selection.minY, selection.width, selection.height].allSatisfy(\.isFinite),
               selection.size.width > 0, selection.size.height > 0,
               selection.minX >= 0, selection.minY >= 0, selection.maxX <= 1, selection.maxY <= 1,

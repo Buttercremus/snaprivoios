@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import Darwin
 
 /// A portable, self-contained project. Previous revisions are deliberately not exported.
 public struct ProjectArchive: Codable, Sendable {
@@ -9,6 +10,8 @@ public struct ProjectArchive: Codable, Sendable {
     public let original: Data
     public let digest: String
     public static let maximumBytes = 550_000_000
+    public static let maximumOriginalBytes = 512_000_000
+    public static let maximumThumbnailBytes = 8_000_000
 
     public init(document: ProjectDocument, original: Data) throws {
         format = "com.snaprivo.project"; version = 1
@@ -21,7 +24,7 @@ public struct ProjectArchive: Codable, Sendable {
         guard format == "com.snaprivo.project" else { throw ProjectError.invalidDocument }
         guard version == 1 else { throw ProjectError.unsupportedVersion }
         guard document.count <= 32_000_000 else { throw ProjectError.documentTooLarge }
-        guard original.count <= 512_000_000 else { throw ProjectError.fileTooLarge }
+        guard original.count <= Self.maximumOriginalBytes else { throw ProjectError.fileTooLarge }
         let value = try ProjectDocument.decode(document)
         guard digest == Self.hash(original), Self.pngSize(original) == value.pixelSize else { throw ProjectError.invalidDocument }
         return value
@@ -39,13 +42,28 @@ public struct ProjectArchive: Codable, Sendable {
         return archive
     }
     public static func readRegularFile(_ url: URL, limit: Int) throws -> Data {
-        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
-        guard values.isRegularFile == true, values.isSymbolicLink != true,
-              let size = values.fileSize else { throw ProjectError.invalidDocument }
-        guard size <= limit else { throw ProjectError.fileTooLarge }
-        let data = try Data(contentsOf: url)
-        guard data.count <= limit else { throw ProjectError.fileTooLarge }
-        return data
+        guard limit >= 0 else { throw ProjectError.invalidDocument }
+        // Check the opened file, not a pathname that may change between stat/read.
+        // Nonblocking open also avoids waiting on a substituted pipe/device.
+        let descriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        guard descriptor >= 0 else {
+            if errno == ELOOP { throw ProjectError.invalidDocument }
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: [NSFilePathErrorKey: url.path])
+        }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        defer { try? handle.close() }
+        var info = stat()
+        guard fstat(descriptor, &info) == 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno), userInfo: [NSFilePathErrorKey: url.path]) }
+        guard info.st_mode & S_IFMT == S_IFREG, info.st_size >= 0 else { throw ProjectError.invalidDocument }
+        guard info.st_size <= limit else { throw ProjectError.fileTooLarge }
+        var data = Data()
+        while true {
+            // Read at most one byte over the limit, even if the file grows after fstat.
+            let count = min(1_048_576, limit - data.count) + 1
+            guard let chunk = try handle.read(upToCount: count), !chunk.isEmpty else { return data }
+            guard chunk.count <= limit - data.count else { throw ProjectError.fileTooLarge }
+            data.append(chunk)
+        }
     }
     public static func hash(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
     static func pngSize(_ data: Data) -> PixelSize? {
@@ -57,7 +75,7 @@ public struct ProjectArchive: Codable, Sendable {
     public static func copy(_ source: ProjectDocument, id: UUID) -> ProjectDocument {
         ProjectDocument(id: id, title: source.title, pixelSize: source.pixelSize, objects: source.objects,
                         createdAt: source.createdAt, modifiedAt: source.modifiedAt, crop: source.crop,
-                        resizedSize: source.resizedSize, isFavorite: source.isFavorite, tags: source.tags, collections: source.collections)
+                        resizedSize: source.resizedSize, isFavorite: source.isFavorite, tags: source.tags, collections: source.collections, canvasRect: source.canvasRect, transform: source.transform, presentation: source.presentation)
     }
 }
 

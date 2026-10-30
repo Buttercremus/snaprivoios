@@ -18,7 +18,12 @@ import SnagForgeDomain
             let folder = root.appendingPathComponent("Complete-\(seconds)")
             let clock = CountdownTestClock(), source = SyntheticVideoTransport()
             var prepared = 0
+            let inherited = NSPanel(contentRect: VideoLifecycleChecks.selection.screenFrame,
+                styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            inherited.isReleasedWhenClosed = false; inherited.orderFrontRegardless()
+            let overlay = CaptureSelectionOverlay(panels: [inherited])
             let session = VideoRecordingSession(selection: VideoLifecycleChecks.selection, includesCursor: false,
+                selectionOverlay: overlay,
                 delaySeconds: seconds, audio: .init(systemAudio: true, microphone: false), files: VideoRecordingFiles(root: folder), makeEngine: {
                     prepared += 1
                     return VideoRecordingEngine { _, _, audio, url in
@@ -28,8 +33,13 @@ import SnagForgeDomain
                     }
                 }, waitCountdownSecond: { try await clock.wait() })
             session.onState = { _, recording in
+                if [.starting, .countingDown, .recording].contains(session.phase) {
+                    require(inherited.isVisible && inherited.alphaValue == 1, "Video startup hid/faded its inherited frame")
+                }
                 if session.phase == .countingDown { require(!recording, "Countdown reported an active recording") }
             }
+            overlay.close()
+            require(inherited.isVisible, "Session did not take ownership of the visible selection")
             let run = Task { await session.run(startImmediately: true) }
             let controls = try await controls(for: session)
             require(controls.delay.selectedTag() == seconds && !controls.delay.isEnabled)
@@ -44,11 +54,12 @@ import SnagForgeDomain
             }
             try await VideoLifecycleChecks.waitUntil { session.phase == .recording }
             require(prepared == 1 && source.startCalls == 1 && clock.waits == seconds)
+            require(inherited.isVisible && inherited.identifier?.rawValue == "video.recordingRegion")
             require(session.hasLibraryChanges)
             require(NSApp.windows.contains { $0.identifier?.rawValue == "video.recordingRegion" && $0.isVisible }, "Recording lost its visible region")
             let toolbar = NSApp.windows.first { $0.identifier?.rawValue == "video.recordingToolbar" && $0.isVisible }!
-            require(!controls.panel.isVisible && toolbar.frame.height == 52, "Recording retained the large setup window")
-            let stop = toolbar.contentView!.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityIdentifier() == "video.recordingStop" }!
+            require(!controls.panel.isVisible && toolbar.frame.height == CaptureToolbarSurface.barHeight, "Recording retained the large setup window")
+            let stop = (toolbar.contentView as! CaptureToolbarSurface).controls.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityIdentifier() == "video.recordingStop" }!
             require(stop.isEnabled && stop.title == String(localized: "Stop"))
             require(controls.status.stringValue.contains("00:00"), "Countdown was counted as recording duration")
             stop.performClick(nil)
@@ -57,6 +68,7 @@ import SnagForgeDomain
             require(!NSApp.windows.contains { $0.identifier?.rawValue == "video.recordingRegion" && $0.isVisible }, "Finished capture retained its frame")
             require(!toolbar.isVisible, "Finished capture retained its recording toolbar")
             await session.closeSafely(); await run.value
+            require(!inherited.isVisible, "Completed session retained its inherited selection")
             session.onState = nil
         }
 
@@ -79,7 +91,7 @@ import SnagForgeDomain
             }
             if tickToCancel == 1 {
                 let toolbar = NSApp.windows.first { $0.identifier?.rawValue == "video.recordingToolbar" && $0.isVisible }!
-                let cancel = toolbar.contentView!.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityIdentifier() == "video.recordingStop" }!
+                let cancel = (toolbar.contentView as! CaptureToolbarSurface).controls.subviews.compactMap { $0 as? NSButton }.first { $0.accessibilityIdentifier() == "video.recordingStop" }!
                 require(cancel.isEnabled && cancel.keyEquivalent == "\u{1b}")
                 cancel.performClick(nil)
             }
@@ -194,12 +206,12 @@ import SnagForgeDomain
         toolbar.update(recording: true, status: "Recording · 01:02", duration: "01:02", dimensions: "320 × 180 px", canCancel: false)
         toolbar.show(region: region, screen: screen)
         let panel = NSApp.windows.first { $0.identifier?.rawValue == "video.recordingToolbar" && $0.isVisible }!
-        let views = panel.contentView!.subviews
+        let views = (panel.contentView as! CaptureToolbarSurface).controls.subviews
         let dot = views.first { $0.accessibilityIdentifier() == "video.recordingDot" }!
         let stop = views.compactMap { $0 as? NSButton }.first!
         let pulse = dot.layer!.animation(forKey: "recordingPulse") as! CABasicAnimation
         require(pulse.duration >= 0.5 && pulse.autoreverses && pulse.repeatCount == .infinity)
-        require(!panel.ignoresMouseEvents && NSApp.keyWindow === keyWindow && panel.frame.height == 52)
+        require(!panel.ignoresMouseEvents && NSApp.keyWindow === keyWindow && panel.frame.height == CaptureToolbarSurface.barHeight)
         let available = NSScreen.screens.first!.visibleFrame
         require(available.contains(panel.frame) && !panel.frame.intersects(region), "Toolbar covered a source despite free space below/above")
         require(views.compactMap { $0 as? NSTextField }.contains { $0.stringValue == "REC" && !$0.isHidden })
@@ -227,7 +239,7 @@ import SnagForgeDomain
     private static func controls(for session: VideoRecordingSession) async throws -> Controls {
         try await VideoLifecycleChecks.waitUntil { NSApp.windows.contains { $0.identifier?.rawValue == "video.controls" && $0.delegate === session } }
         let panel = NSApp.windows.first { $0.identifier?.rawValue == "video.controls" && $0.delegate === session }!
-        let views = panel.contentView!.subviews
+        let views = (panel.contentView as! CaptureToolbarSurface).controls.subviews
         func button(_ id: String) -> NSButton { views.compactMap { $0 as? NSButton }.first { $0.accessibilityIdentifier() == id }! }
         return Controls(panel: panel, primary: button("video.primary"), close: button("video.close"), microphone: button("video.microphone"), system: button("video.systemAudio"),
             delay: views.compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityIdentifier() == "video.delay" }!,

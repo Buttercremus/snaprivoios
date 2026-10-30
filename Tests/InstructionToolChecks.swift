@@ -14,6 +14,7 @@ import SnagForgeDomain
         let store = ProjectStore(root: root)
         try await store.create(document, original: original, thumbnail: nil)
         let model = EditorModel(image: image, document: document, generation: 0, store: store, onSaved: {})
+        model.snapsToObjects = false
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 800, height: 600), styleMask: .borderless, backing: .buffered, defer: false)
         let canvas = CanvasView(model: model); window.contentView = canvas
         canvas.frame.size = CGSize(width: 800, height: 600); canvas.synchronizeViewport()
@@ -139,6 +140,7 @@ import SnagForgeDomain
         let saved = await model.flush(); precondition(saved)
         let loaded = try await ProjectStore(root: root).load(document.id)
         let reopened = EditorModel(image: image, document: loaded.document, generation: loaded.generation, store: store, onSaved: {})
+        reopened.snapsToObjects = false
         precondition(reopened.history.objects == model.history.objects && reopened.document.outputPixelSize == PixelSize(width: 280, height: 200))
         precondition(reopened.nextStepIndex == 4)
         reopened.defaultStepStyle.numbering = .letters; precondition(reopened.nextStepLabel == "AB")

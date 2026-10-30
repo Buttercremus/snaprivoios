@@ -8,15 +8,17 @@ struct TextRecognitionSnapshot: Sendable {
     let objects: [EditorObject]
     let crop: CGRect?
     let resizedSize: PixelSize?
+    var canvasRect: CGRect? = nil
+    var transform: EditorImageTransform = .identity
 
     func plan(selection: CGRect = .init(x: 0, y: 0, width: 1, height: 1), maximumDimension: Int = TextRecognitionPlan.maximumDimension) throws -> TextRecognitionPlan {
         try TextRecognitionPlan(sourceSize: PixelSize(width: image.width, height: image.height)!, crop: crop,
-                                resizedSize: resizedSize, selection: selection, maximumDimension: maximumDimension)
+                                resizedSize: resizedSize, selection: transform.sourceUnitRect(fromDisplayed: selection), maximumDimension: maximumDimension, canvasRect: canvasRect)
     }
     func render(_ plan: TextRecognitionPlan) throws -> CGImage {
         // Use the export compositor, including masks before downsampling. Never send
         // the immutable original directly to Vision when the editor has annotations.
-        try EditorRenderer.render(image: image, objects: objects, crop: plan.sourceArea, resizedSize: plan.outputSize)
+        try EditorRenderer.render(image: image, objects: objects, crop: plan.sourceArea, resizedSize: plan.outputSize, canvasRect: canvasRect, transform: transform)
     }
 }
 
@@ -33,15 +35,59 @@ actor TextRecognitionService {
     typealias Perform = @Sendable (RecognizeTextRequest, CGImage) async throws -> [RecognizedTextObservation]
     static let shared = TextRecognitionService()
     private var isBusy = false
+    private var waiters: [(UUID, CheckedContinuation<Void, Error>)] = []
     private var prefersFastRecognition = false
     private let perform: Perform
     init(perform: @escaping Perform = { try await $0.perform(on: $1, orientation: .up) }) {
         self.perform = perform
     }
 
+    struct DirectResult: Sendable { let text: String; let codes: [String] }
+    func recognizeDirect(_ image: CGImage, includeCodes: Bool = true) async throws -> DirectResult {
+        try await acquire(); defer { release() }
+        try Task.checkCancellation()
+        let snapshot = TextRecognitionSnapshot(image: image, objects: [], crop: nil, resizedSize: nil)
+        let image = try snapshot.render(snapshot.plan())
+        var request = RecognizeTextRequest()
+        request.recognitionLevel = prefersFastRecognition ? .fast : .accurate; request.usesLanguageCorrection = true
+        request.minimumTextHeightFraction = 0
+        request.automaticallyDetectsLanguage = true
+        request.recognitionLanguages = request.supportedRecognitionLanguages
+        var observations: [RecognizedTextObservation]
+        do { observations = try await performWithResourceRetry(request, image: image) }
+        catch {
+            try Task.checkCancellation()
+            guard Self.isModelFailure(error), let fallback = Self.fastRequest(language: "") else { throw error }
+            observations = try await performWithResourceRetry(fallback, image: image)
+            prefersFastRecognition = true
+        }
+        try Task.checkCancellation()
+        if observations.isEmpty, request.recognitionLevel == .accurate, let fallback = Self.fastRequest(language: "") {
+            observations = try await performWithResourceRetry(fallback, image: image)
+        }
+        try Task.checkCancellation()
+        let text = observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+        guard includeCodes else { return DirectResult(text: text, codes: []) }
+        let barcode = VNDetectBarcodesRequest()
+        barcode.symbologies = [.qr, .aztec, .code128, .code39, .code93, .ean8, .ean13, .dataMatrix, .pdf417]
+        let handler = VNImageRequestHandler(cgImage: image, orientation: .up)
+        try handler.perform([barcode])
+        try Task.checkCancellation()
+        let codes = (barcode.results ?? []).compactMap { $0.payloadStringValue }
+        return DirectResult(text: text, codes: codes)
+    }
+    func recognizeCodes(_ image: CGImage) async throws -> [String] {
+        try await acquire(); defer { release() }
+        try Task.checkCancellation()
+        let request = VNDetectBarcodesRequest()
+        request.symbologies = [.qr, .aztec, .code128, .code39, .code93, .ean8, .ean13, .dataMatrix, .pdf417]
+        try VNImageRequestHandler(cgImage: image, orientation: .up).perform([request])
+        try Task.checkCancellation()
+        return (request.results ?? []).compactMap { $0.payloadStringValue }
+    }
+
     func prepare(_ snapshot: TextRecognitionSnapshot) async throws -> TextRecognitionPreparation {
-        guard !isBusy else { throw TextRecognitionError.busy }
-        isBusy = true; defer { isBusy = false }
+        try await acquire(); defer { release() }
         try Task.checkCancellation()
         var request = RecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -51,9 +97,8 @@ actor TextRecognitionService {
         return TextRecognitionPreparation(preview: preview, languages: languages)
     }
 
-    func recognize(_ snapshot: TextRecognitionSnapshot, selection: CGRect, language: String) async throws -> TextRecognitionResult {
-        guard !isBusy else { throw TextRecognitionError.busy }
-        isBusy = true; defer { isBusy = false }
+    func recognize(_ snapshot: TextRecognitionSnapshot, selection: CGRect, language: String, preferFast: Bool = false) async throws -> TextRecognitionResult {
+        try await acquire(); defer { release() }
         try Task.checkCancellation()
         var request = RecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -66,7 +111,7 @@ actor TextRecognitionService {
         } else {
             request.recognitionLanguages = supported
         }
-        if prefersFastRecognition, let fallback = Self.fastRequest(language: language) { request = fallback }
+        if preferFast || prefersFastRecognition, let fallback = Self.fastRequest(language: language) { request = fallback }
         let image = try snapshot.render(snapshot.plan(selection: selection))
         try Task.checkCancellation()
         let observations: [RecognizedTextObservation]
@@ -88,6 +133,31 @@ actor TextRecognitionService {
             return RecognizedTextLine(text: candidate.string, confidence: candidate.confidence,
                                       bounds: CGRect(x: box.minX, y: 1 - box.maxY, width: box.width, height: box.height))
         }, usedFastRecognition: request.recognitionLevel == .fast)
+    }
+
+    /// Wait for a cancelling editor/preview request instead of failing the next capture as "busy".
+    private func acquire() async throws {
+        try Task.checkCancellation()
+        if !isBusy { isBusy = true; return }
+        let id = UUID()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                if Task.isCancelled { continuation.resume(throwing: CancellationError()) }
+                else { waiters.append((id, continuation)) }
+            }
+        } onCancel: {
+            Task { await self.cancelWaiter(id) }
+        }
+        do { try Task.checkCancellation() }
+        catch { release(); throw error }
+    }
+    private func cancelWaiter(_ id: UUID) {
+        guard let index = waiters.firstIndex(where: { $0.0 == id }) else { return }
+        waiters.remove(at: index).1.resume(throwing: CancellationError())
+    }
+    private func release() {
+        if waiters.isEmpty { isBusy = false }
+        else { waiters.removeFirst().1.resume() }
     }
 
     private func performWithResourceRetry(_ request: RecognizeTextRequest, image: CGImage) async throws -> [RecognizedTextObservation] {
@@ -154,6 +224,7 @@ final class TextRecognitionModel {
     private(set) var hasResult = false
     private(set) var isEmptyResult = false
     private(set) var hasUncertainText = false
+    private(set) var codes: [String] = []
     private(set) var didCopy = false
     private(set) var notice: String?
     @ObservationIgnored private let prepareImage: Prepare
@@ -184,6 +255,7 @@ final class TextRecognitionModel {
         guard canRecognize else { return }
         let area = selection, chosenLanguage = language
         isBusy = true; notice = nil; text = ""; hasResult = false; isEmptyResult = false; hasUncertainText = false
+        codes = []
         task = Task {
             defer { isBusy = false; isCancelling = false; task = nil }
             do {
@@ -193,6 +265,12 @@ final class TextRecognitionModel {
                 hasUncertainText = result.hasUncertainText; hasResult = true
                 if result.usedFastRecognition {
                     notice = String(localized: "Die Standarderkennung ist auf diesem Mac derzeit nicht verfügbar. Der Text wurde mit der schnellen Erkennung gelesen. Prüfe das Ergebnis besonders sorgfältig.")
+                }
+                let plan = try snapshot.plan(selection: area)
+                if plan.sourceArea.width > 0, plan.sourceArea.height > 0 {
+                    let sourceSnapshot = snapshot
+                    let rendered = try await Task.detached(priority: .userInitiated) { try sourceSnapshot.render(plan) }.value
+                    codes = (try? await TextRecognitionService.shared.recognizeCodes(rendered)) ?? []
                 }
             } catch { handle(error) }
         }

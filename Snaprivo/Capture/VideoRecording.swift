@@ -80,11 +80,13 @@ struct PreparedVideoRecording {
 @MainActor
 final class VideoRecordingEngine {
     typealias Prepare = @MainActor (ScreenshotSelection, Bool, VideoAudioOptions, URL) async throws -> PreparedVideoRecording
+    typealias PrepareWithClicks = @MainActor (ScreenshotSelection, Bool, VideoAudioOptions, URL, Bool) async throws -> PreparedVideoRecording
     // SCK imports backgroundColor as unowned(unsafe), so keep the color alive.
     private static let windowBackgroundColor = CGColor(gray: 0, alpha: 1)
     private enum Phase { case idle, starting, recording, stopping, terminal }
     private var phase: Phase = .idle
     private let prepare: Prepare
+    private let prepareWithClicks: PrepareWithClicks?
     private let timeout: Duration
     private var transport: (any VideoRecordingTransport)?
     private var preparation: Task<Void, Never>?
@@ -104,11 +106,17 @@ final class VideoRecordingEngine {
     private(set) var canDiscardPartial = true
     var onFailure: (@MainActor (any Error) -> Void)?
 
-    init(timeout: Duration = .seconds(15), prepare: @escaping Prepare = ScreenCaptureVideoTransport.prepare) {
-        self.timeout = timeout; self.prepare = prepare
+    init(timeout: Duration = .seconds(15), prepare: Prepare? = nil) {
+        self.timeout = timeout
+        if let prepare { self.prepare = prepare; prepareWithClicks = nil }
+        else {
+            self.prepare = ScreenCaptureVideoTransport.prepare
+            self.prepareWithClicks = ScreenCaptureVideoTransport.prepareWithClicks
+        }
     }
 
-    static func configuration(geometry: VideoGeometry, includesCursor: Bool, audio: VideoAudioOptions, windowCapture: Bool = false) -> SCStreamConfiguration {
+    static func configuration(geometry: VideoGeometry, includesCursor: Bool, audio: VideoAudioOptions, windowCapture: Bool = false,
+                              showsMouseClicks: Bool = false) -> SCStreamConfiguration {
         let config = SCStreamConfiguration()
         // Leave sourceRect unset for independent windows so resizing keeps the entire window.
         if !windowCapture { config.sourceRect = geometry.sourceRect }
@@ -123,6 +131,10 @@ final class VideoRecordingEngine {
         // frames. Eight is Apple's supported upper bound and gives the encoder
         // sufficient headroom; real A/V tests cover sustained frame delivery.
         config.queueDepth = 8; config.showsCursor = includesCursor
+        // ScreenCaptureKit's click indicator requires BGRA pixel buffers. Keep
+        // the default off and let the recording preference opt in explicitly.
+        config.showMouseClicks = showsMouseClicks
+        if showsMouseClicks { config.pixelFormat = kCVPixelFormatType_32BGRA }
         config.capturesAudio = audio.systemAudio
         config.sampleRate = 48_000; config.channelCount = 2
         config.excludesCurrentProcessAudio = true
@@ -132,7 +144,8 @@ final class VideoRecordingEngine {
         return config
     }
 
-    func start(selection: ScreenshotSelection, includesCursor: Bool, audio: VideoAudioOptions, url: URL) async throws -> PixelSize {
+    func start(selection: ScreenshotSelection, includesCursor: Bool, audio: VideoAudioOptions, url: URL,
+               showsMouseClicks: Bool = false) async throws -> PixelSize {
         guard phase == .idle else { throw VideoRecordingError.alreadyStarted }
         try Task.checkCancellation()
         phase = .starting
@@ -140,9 +153,15 @@ final class VideoRecordingEngine {
             try await withCheckedThrowingContinuation { continuation in
                 startWaiter = continuation
                 armDeadline()
-                preparation = Task { [weak self, prepare] in
+                let prepareWithClicks = self.prepareWithClicks
+                preparation = Task { [weak self, prepare, prepareWithClicks, showsMouseClicks] in
                     do {
-                        let prepared = try await prepare(selection, includesCursor, audio, url)
+                        let prepared: PreparedVideoRecording
+                        if let prepareWithClicks {
+                            prepared = try await prepareWithClicks(selection, includesCursor, audio, url, showsMouseClicks)
+                        } else {
+                            prepared = try await prepare(selection, includesCursor, audio, url)
+                        }
                         guard let self, phase == .starting, !Task.isCancelled else {
                             // Preparation may finish after cancellation or its deadline.
                             // No stream was started; detach the unused output only.
@@ -316,6 +335,10 @@ private final class ScreenCaptureVideoTransport: NSObject, VideoRecordingTranspo
     var onEvent: (@MainActor (VideoRecordingEvent) -> Void)?
 
     static func prepare(selection: ScreenshotSelection, includesCursor: Bool, audio: VideoAudioOptions, url: URL) async throws -> PreparedVideoRecording {
+        try await prepareWithClicks(selection: selection, includesCursor: includesCursor, audio: audio, url: url, showsMouseClicks: false)
+    }
+    static func prepareWithClicks(selection: ScreenshotSelection, includesCursor: Bool, audio: VideoAudioOptions, url: URL,
+                                  showsMouseClicks: Bool) async throws -> PreparedVideoRecording {
         let content = try await ScreenshotService().content()
         try Task.checkCancellation()
         let filter: SCContentFilter
@@ -335,7 +358,8 @@ private final class ScreenCaptureVideoTransport: NSObject, VideoRecordingTranspo
             filter = SCContentFilter(display: display, excludingApplications: own, exceptingWindows: [])
             geometry = try VideoGeometry(selection: selection.rect, screen: screen.frame, scale: CGFloat(filter.pointPixelScale))
         }
-        let config = VideoRecordingEngine.configuration(geometry: geometry, includesCursor: includesCursor, audio: audio, windowCapture: selection.windowID != nil)
+        let config = VideoRecordingEngine.configuration(geometry: geometry, includesCursor: includesCursor, audio: audio,
+            windowCapture: selection.windowID != nil, showsMouseClicks: showsMouseClicks)
         let recording = SCRecordingOutputConfiguration()
         recording.outputURL = url; recording.videoCodecType = .h264; recording.outputFileType = .mp4
         let transport = ScreenCaptureVideoTransport()
@@ -388,7 +412,7 @@ private final class ScreenCaptureVideoTransport: NSObject, VideoRecordingTranspo
 }
 
 enum VideoRecordingError: LocalizedError {
-    case notStarted, alreadyStarted, interrupted, timeout, lowSpace, invalidMovie, missingAudio, windowUnavailable
+    case notStarted, alreadyStarted, interrupted, timeout, lowSpace, invalidMovie, missingAudio, windowUnavailable, invalidGIFOptions, gifDurationExceeded
     var errorDescription: String? {
         switch self {
         case .notStarted: String(localized: "Die Videoaufnahme wurde noch nicht gestartet.")
@@ -399,6 +423,8 @@ enum VideoRecordingError: LocalizedError {
         case .invalidMovie: String(localized: "Die Aufnahme enthält noch kein abspielbares Video. Bitte etwas länger aufnehmen und erneut versuchen.")
         case .missingAudio: String(localized: "Die Aufnahme enthält keine lesbare Tonspur, obwohl Ton gewählt war. Bitte erneut aufnehmen oder die Tonaufnahme ausschalten.")
         case .windowUnavailable: String(localized: "Das gewählte Fenster ist nicht mehr verfügbar. Wähle es erneut aus.")
+        case .invalidGIFOptions: String(localized: "Die GIF-Einstellungen sind ungültig.")
+        case .gifDurationExceeded: String(localized: "Die ausgewählte GIF-Dauer überschreitet das Exportlimit. Kürze die Auswahl vor dem Export.")
         }
     }
 }
@@ -427,6 +453,7 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
     private let outline: VideoRecordingOutline
     private let recordingToolbar = VideoRecordingToolbar()
     private let includesCursor: Bool
+    private let showsMouseClicks: Bool
     private let microphoneAccess: VideoMicrophoneAccess
     private let files: VideoRecordingFiles
     private let makeEngine: @MainActor () -> VideoRecordingEngine
@@ -466,13 +493,14 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
     /// The application routes this validated local original into its own video editor.
     var onFinished: (@MainActor (URL) -> Void)?
 
-    init(selection: ScreenshotSelection, includesCursor: Bool, delaySeconds: Int = 0, audio: VideoAudioOptions = .init(), microphoneAccess: VideoMicrophoneAccess = .init(),
+    init(selection: ScreenshotSelection, includesCursor: Bool, showsMouseClicks: Bool = false, selectionOverlay: CaptureSelectionOverlay? = nil,
+         delaySeconds: Int = 0, audio: VideoAudioOptions = .init(), microphoneAccess: VideoMicrophoneAccess = .init(),
          files: VideoRecordingFiles = .init(), makeEngine: @escaping @MainActor () -> VideoRecordingEngine = { .init() },
          waitCountdownSecond: @escaping @MainActor () async throws -> Void = { try await Task.sleep(for: .seconds(1)) },
          workspaceNotifications: NotificationCenter = NSWorkspace.shared.notificationCenter, displayNotifications: NotificationCenter = .default,
          displayState: @escaping @MainActor () -> [VideoDisplaySnapshot] = VideoDisplaySnapshot.current) {
-        self.selection = selection; self.includesCursor = includesCursor
-        outline = VideoRecordingOutline(selection: selection)
+        self.selection = selection; self.includesCursor = includesCursor; self.showsMouseClicks = showsMouseClicks
+        outline = VideoRecordingOutline(selection: selection, selectionOverlay: selectionOverlay)
         self.microphoneAccess = microphoneAccess
         self.files = files; self.makeEngine = makeEngine
         self.waitCountdownSecond = waitCountdownSecond
@@ -501,36 +529,37 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
             panel.identifier = NSUserInterfaceItemIdentifier("video.controls")
             panel.isReleasedWhenClosed = false; panel.delegate = self
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            let body = NSVisualEffectView(frame: CGRect(x: 0, y: 0, width: 360, height: 380))
-            body.material = .hudWindow; body.state = .active; panel.contentView = body
-            status.frame = CGRect(x: 20, y: 262, width: 320, height: 98)
+            let surface = CaptureToolbarSurface(frame: CGRect(x: 0, y: 0, width: 360, height: 380))
+            panel.contentView = surface
+            let body = surface.controls
+            status.frame = CGRect(x: 20, y: 276, width: 320, height: 84)
             status.font = .systemFont(ofSize: 13); status.setAccessibilityIdentifier("video.status"); body.addSubview(status)
-            systemAudio.frame = CGRect(x: 20, y: 224, width: 320, height: 28)
+            systemAudio.frame = CGRect(x: 20, y: 236, width: 320, height: 28)
             systemAudio.target = self; systemAudio.action = #selector(audioChanged)
             systemAudio.setAccessibilityIdentifier("video.systemAudio")
             systemAudio.toolTip = String(localized: "Nimmt auch Ton von Apps außerhalb des Bildausschnitts auf.")
             body.addSubview(systemAudio)
-            microphone.frame = CGRect(x: 20, y: 188, width: 320, height: 28)
+            microphone.frame = CGRect(x: 20, y: 200, width: 320, height: 28)
             microphone.target = self; microphone.action = #selector(audioChanged)
             microphone.setAccessibilityIdentifier("video.microphone")
             microphone.toolTip = String(localized: "Nimmt das Standardmikrofon von macOS auf. Zugriff wird erst beim Start angefragt.")
             body.addSubview(microphone)
             let delayLabel = NSTextField(labelWithString: String(localized: "Vorlauf"))
-            delayLabel.frame = CGRect(x: 20, y: 148, width: 88, height: 24)
+            delayLabel.frame = CGRect(x: 20, y: 164, width: 88, height: 24)
             body.addSubview(delayLabel)
-            delay.frame = CGRect(x: 116, y: 144, width: 224, height: 28)
+            delay.frame = CGRect(x: 116, y: 160, width: 224, height: 28)
             delay.setAccessibilityLabel(String(localized: "Vorlauf vor Video")); delay.setAccessibilityIdentifier("video.delay")
             delay.toolTip = String(localized: "Wartezeit nach „Video starten“. Während des Countdowns kannst du abbrechen.")
             body.addSubview(delay)
-            primary.frame = CGRect(x: 20, y: 90, width: 320, height: 34); primary.bezelStyle = .rounded
+            primary.frame = CGRect(x: 20, y: 108, width: 320, height: 40); CaptureToolbarSurface.style(primary, prominent: true)
             primary.target = self; primary.action = #selector(primaryPressed); primary.keyEquivalent = "\r"
             primary.setAccessibilityIdentifier("video.primary"); body.addSubview(primary)
-            preview.frame = CGRect(x: 20, y: 50, width: 320, height: 32); preview.bezelStyle = .rounded
+            preview.frame = CGRect(x: 20, y: 60, width: 320, height: 40); CaptureToolbarSurface.style(preview)
             preview.target = self; preview.action = #selector(previewPressed); preview.setAccessibilityIdentifier("video.preview"); body.addSubview(preview)
-            microphoneSettings.frame = preview.frame; microphoneSettings.bezelStyle = .rounded
+            microphoneSettings.frame = preview.frame; CaptureToolbarSurface.style(microphoneSettings)
             microphoneSettings.target = self; microphoneSettings.action = #selector(openMicrophoneSettings)
             microphoneSettings.setAccessibilityIdentifier("video.microphoneSettings"); body.addSubview(microphoneSettings)
-            close.frame = CGRect(x: 20, y: 10, width: 320, height: 32); close.bezelStyle = .rounded
+            close.frame = CGRect(x: 20, y: 12, width: 320, height: 40); CaptureToolbarSurface.style(close)
             close.target = self; close.action = #selector(closePressed); close.keyEquivalent = "\u{1b}"
             close.setAccessibilityIdentifier("video.close"); body.addSubview(close)
             let screen = selection.screenFrame
@@ -637,7 +666,8 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
                 try Task.checkCancellation()
                 let engine = makeEngine(); self.engine = engine
                 engine.onFailure = { [weak self] error in self?.unexpectedFailure(error) }
-                outputSize = try await engine.start(selection: selection, includesCursor: includesCursor, audio: recordingAudio, url: url)
+                outputSize = try await engine.start(selection: selection, includesCursor: includesCursor, audio: recordingAudio, url: url,
+                    showsMouseClicks: showsMouseClicks)
                 try Task.checkCancellation()
                 if let pendingCaptureFailure { throw pendingCaptureFailure }
                 phase = .recording; startedAt = .now
@@ -800,22 +830,33 @@ final class VideoRecordingOutline {
     private(set) var visibleRect: CGRect?
     var onRegionChange: (@MainActor (CGRect?) -> Void)?
 
-    init(selection: ScreenshotSelection, screens: [CGRect] = NSScreen.screens.map(\.frame),
+    init(selection: ScreenshotSelection, selectionOverlay: CaptureSelectionOverlay? = nil,
+         screens: [CGRect] = NSScreen.screens.map(\.frame),
          windowFrame: @escaping @MainActor (CGWindowID) -> CGRect? = VideoRecordingOutline.currentWindowFrame) {
         self.selection = selection; self.windowFrame = windowFrame
+        let inheritedPanels = selectionOverlay?.takePanels() ?? []
         let frames = screens.contains(selection.screenFrame) ? screens : screens + [selection.screenFrame]
         panels = frames.map { frame in
-            let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            // Keep the same visible window throughout selection, source focus,
+            // countdown and stream startup. Replace only its drawing, never its visibility.
+            let panel = inheritedPanels.first { $0.frame == frame }
+                ?? NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             panel.identifier = NSUserInterfaceItemIdentifier("video.recordingRegion")
+            panel.setAccessibilityIdentifier("video.recordingRegion")
             panel.isReleasedWhenClosed = false; panel.isOpaque = false; panel.backgroundColor = .clear
             panel.hasShadow = false; panel.ignoresMouseEvents = true; panel.hidesOnDeactivate = false
+            panel.animationBehavior = .none
             panel.level = .statusBar
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             let view = VideoRecordingOutlineView()
+            view.selectionRect = selection.rect.offsetBy(dx: -frame.minX, dy: -frame.minY)
             view.setAccessibilityElement(false)
             panel.contentView = view
+            panel.displayIfNeeded()
             return panel
         }
+        // A display may have disappeared while the source app was activated.
+        inheritedPanels.filter { !frames.contains($0.frame) }.forEach { $0.orderOut(nil); $0.close() }
     }
     func show(recording: Bool) {
         for panel in panels {
@@ -879,14 +920,14 @@ final class VideoRecordingOutline {
 /// Only this small panel accepts input; the desktop shade remains click-through.
 @MainActor
 final class VideoRecordingToolbar: NSObject {
-    private let panel = VideoToolbarPanel(contentRect: CGRect(x: 0, y: 0, width: 408, height: 52),
+    private let panel = VideoToolbarPanel(contentRect: CGRect(x: 0, y: 0, width: 360, height: CaptureToolbarSurface.barHeight),
         styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-    private let dot = NSView(frame: CGRect(x: 16, y: 21, width: 10, height: 10))
+    private let dot = NSView(frame: CGRect(x: 14, y: 24, width: 8, height: 8))
     private let rec = NSTextField(labelWithString: "REC")
     private let time = NSTextField(labelWithString: "00:00")
     private let dimensions = NSTextField(labelWithString: "")
     private let message = NSTextField(wrappingLabelWithString: "")
-    private let stop = NSButton(title: String(localized: "Stop"), target: nil, action: nil)
+    private let stop = CaptureFlatButton(frame: .zero)
     private let reduceMotion: @MainActor () -> Bool
     private var isRecording = false
     private var cancelsCountdown = false
@@ -904,18 +945,16 @@ final class VideoRecordingToolbar: NSObject {
         panel.hidesOnDeactivate = false; panel.becomesKeyOnlyIfNeeded = true
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        let body = NSVisualEffectView(frame: CGRect(x: 0, y: 0, width: 408, height: 52))
-        body.material = .hudWindow; body.blendingMode = .behindWindow; body.state = .active
-        body.appearance = NSAppearance(named: .darkAqua)
-        body.wantsLayer = true; body.layer?.cornerRadius = 10; body.layer?.masksToBounds = true
-        panel.contentView = body
-        dot.wantsLayer = true; dot.layer?.backgroundColor = NSColor.systemRed.cgColor; dot.layer?.cornerRadius = 5
+        let surface = CaptureToolbarSurface(frame: CGRect(x: 0, y: 0, width: 360, height: CaptureToolbarSurface.barHeight), subdued: true)
+        panel.contentView = surface
+        let body = surface.controls
+        dot.wantsLayer = true; dot.layer?.backgroundColor = NSColor.systemRed.cgColor; dot.layer?.cornerRadius = 4
         dot.setAccessibilityElement(false); dot.setAccessibilityIdentifier("video.recordingDot")
         body.addSubview(dot)
         for (label, frame, font) in [
-            (rec, CGRect(x: 36, y: 16, width: 36, height: 20), NSFont.systemFont(ofSize: 13, weight: .bold)),
-            (time, CGRect(x: 82, y: 16, width: 58, height: 20), NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .medium)),
-            (dimensions, CGRect(x: 148, y: 17, width: 130, height: 18), NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium))
+            (rec, CGRect(x: 28, y: 20, width: 28, height: 16), NSFont.systemFont(ofSize: 11, weight: .bold)),
+            (time, CGRect(x: 64, y: 19, width: 56, height: 18), NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)),
+            (dimensions, CGRect(x: 128, y: 20, width: 108, height: 16), NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium))
         ] {
             label.frame = frame; label.font = font; label.textColor = .white
             body.addSubview(label)
@@ -924,12 +963,13 @@ final class VideoRecordingToolbar: NSObject {
         rec.setAccessibilityElement(false)
         time.setAccessibilityIdentifier("video.recordingTime")
         dimensions.setAccessibilityLabel(String(localized: "Auswahlgröße"))
-        message.frame = CGRect(x: 16, y: 8, width: 262, height: 36)
+        dimensions.textColor = NSColor.white.withAlphaComponent(0.68)
+        message.frame = CGRect(x: 12, y: 10, width: 224, height: 36)
         message.font = .systemFont(ofSize: 12, weight: .medium); message.textColor = .white
         message.setAccessibilityIdentifier("video.recordingMessage"); body.addSubview(message)
-        stop.frame = CGRect(x: 288, y: 8, width: 104, height: 36)
-        stop.bezelStyle = .rounded; stop.bezelColor = .systemRed
-        stop.font = .systemFont(ofSize: 13, weight: .semibold)
+        body.addSubview(CaptureToolbarSurface.divider(frame: CGRect(x: 248, y: 12, width: 1, height: 32)))
+        stop.frame = CGRect(x: 260, y: 10, width: 88, height: CaptureToolbarSurface.controlHeight)
+        CaptureToolbarSurface.styleFlat(stop, prominent: true); stop.flatCell.fill = .systemRed
         stop.target = self; stop.action = #selector(stopPressed)
         stop.setAccessibilityIdentifier("video.recordingStop"); body.addSubview(stop)
     }
@@ -945,6 +985,8 @@ final class VideoRecordingToolbar: NSObject {
         time.stringValue = duration; time.setAccessibilityLabel(status.components(separatedBy: "\n")[0])
         self.dimensions.stringValue = dimensions; self.dimensions.toolTip = status
         stop.title = canCancel ? String(localized: "Abbrechen") : String(localized: "Stop")
+        stop.image = canCancel ? nil : NSImage(systemSymbolName: "stop.fill", accessibilityDescription: nil)
+        stop.flatCell.iconSize = 12
         stop.isEnabled = recording || canCancel
         stop.keyEquivalent = canCancel ? "\u{1b}" : ""
         if accessibilityObserver == nil {

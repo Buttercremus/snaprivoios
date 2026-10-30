@@ -1,6 +1,6 @@
 # Bearbeitbare Projekte und Autosave
 
-Stand: 16. Oktober 2026 · Dokumentformat 9, internes Paketmanifest 1, portables Projekt-/Backupformat 1 · implementierter Stand. Bestehende Dokumente der Versionen 1–8 bleiben lesbar.
+Stand: 25. Oktober 2026 · Dokumentformat 19, internes Paketmanifest 1, portables Projekt-/Backupformat 1 · implementierter Stand. Bestehende Dokumente der Versionen 1–18 bleiben lesbar.
 
 ## Nutzerablauf
 
@@ -161,7 +161,7 @@ Ein Prozessabbruch während der letzten Umbenennungen kann eine Teilmenge vollst
 
 ## Separate Anleitungsdatei P06
 
-Bildprojekte verwenden inzwischen Format 8. Anleitungen verwenden unabhängig davon Format 1 als binäre `.snaprivoguide`-Property-List: ID/Revision, Titel, Einleitung, gemeinsamer PDF-Stil, Änderungsdatum und geordnete Schritte mit eigenen IDs, Schritttiteln, Bildunterschriften und flachen PNG-Pixeln. Lokale Arbeitsstände können einen Projektverweis und einen Hash der Bibliotheksidentität enthalten; portable Kopien entfernen beide. Keine Originale, Editorobjekte, vorherigen Revisionen oder OCR-Daten im Transfer. Arbeitsstände behalten separat eine vorherige vollständige Datei. PNG-Metadaten werden vor Import/Weitergabe bereinigt. Anleitungen werden im App-Container getrennt von der Bildbibliothek gesichert; deren Backup-/Ordnerwechsel übernimmt sie nicht. Grenzen, Wiederherstellung, Konfliktregeln und Nachweise: [Anleitungsausgabe](ANLEITUNG-AUSGABE-ABNAHME.md).
+Anleitungen verwenden unabhängig vom Bildprojektformat inzwischen Format 2 (liest Format 1) als binäre portable `.snaprivoguide`-Property-List: ID/Revision, Titel, Einleitung, gemeinsamer PDF-Stil, Änderungsdatum und geordnete Schritte mit eigenen IDs, Schritttiteln, Bildunterschriften und flachen PNG-Pixeln. Lokale Arbeitsstände können einen Projektverweis und einen Hash der Bibliotheksidentität enthalten; portable Kopien entfernen beide. Keine Originale, Editorobjekte, vorherigen Revisionen oder OCR-Daten im Transfer. Lokale Arbeitsstände verwenden seit 26.10. kleine Manifeste mit unveränderlichen PNG-Assets und behalten die vorherige Manifestgeneration samt benötigten Assets. PNG-Metadaten werden vor Import/Weitergabe bereinigt. Anleitungen werden im App-Container getrennt von der Bildbibliothek gesichert; deren Backup-/Ordnerwechsel übernimmt sie nicht. Grenzen, Wiederherstellung, Konfliktregeln und Nachweise: [Anleitungsausgabe](ANLEITUNG-AUSGABE-ABNAHME.md).
 
 
 ## Handgezeichneter Zeichenstil in Format 8
@@ -177,3 +177,56 @@ Der neue Typ `image` verlangt `imageAsset` mit SHA-256-`digest`, `size` und PNG-
 Lokale Revisionen enthalten nur Digest und Größe. Unveränderliche PNGs liegen unter `Assets/<digest>.png`; sie werden vor Veröffentlichung der Revision geschrieben und beim Laden kontrolliert ergänzt. Unbenutzte Assets bleiben für frühere Revisionen und Undo erhalten, bis das Projekt endgültig entfernt wird. Archive und Bibliotheksbackups enthalten die PNG-Daten im eingebetteten Dokument und sind eigenständig. Import und Wiederherstellung legen die getrennten Assets wieder an. Vorhandene Symlink-/Datei- und Größenprüfungen gelten auch hier.
 
 Formate 1–8 werden im Speicher nach 9 migriert, erst eine Änderung schreibt 9. Gruppen/Bildassets in einem fälschlich älter bezeichneten Dokument werden abgelehnt. Unbekannte zukünftige Versionen bleiben gesperrt. Paketmanifest und portable Container bleiben Version 1.
+
+
+## Format 12: Pfeilbiegung, Lupe und weitere Handstile
+
+`EditorObject.arrowBend` ist ein optionaler endlicher Punkt in Originalkoordinaten und nur für Pfeile zulässig. Er bezeichnet den Schaftpunkt bei t = 0,5; die gemeinsame Geometrie leitet daraus eine quadratische Kurve und die Tangente der Spitze ab. Ohne Feld behalten präzise Pfeile ihre Gerade und alte handgezeichnete Pfeile ihre bisherige Kurve. Translation und Duplikation versetzen den Punkt zusammen mit den Enden.
+
+Der Typ `magnifier` verwendet `start`/`end` für seinen Rahmen und optional `magnification` (1,5–5; fehlend 2). Der Rahmen muss positive Breite und Höhe haben. Die App erzeugt runde neue Lupen; Original-/Ausgabeskalierung gelten wie bei anderen Formen. Bilddaten werden nicht im Objekt dupliziert. Der Renderer vergrößert die flache Komposition ohne Lupen um die Rahmenmitte, einschließlich aller deckenden Abdeckungen und Filter. Farbe und Linienbreite bestimmen den Rand. Eigene Stilvorlagen speichern den Faktor, keine Position.
+
+`drawingStyle` ergänzt `sketch` und `marker` und ist jetzt für Pfeile und alle geometrischen Formen zulässig. Bestehende präzise/handgezeichnete Objekte behalten ihre Darstellung. Callouts nutzen für den live gezeichneten Rahmen die bereits vorhandenen Felder `textWidth`/`textHeight`; leere Callout-Texte sind gültig.
+
+Formate 1–11 werden im Speicher migriert; Format-11-`canvasRect` bleibt erhalten. Neue Geometriefelder und Stilwerte in älter etikettierten Dokumenten werden abgelehnt. Ältere Builds lehnen Format 12 ab. Paketmanifest und portable Container bleiben Version 1.
+
+
+## Format 13: Stift und Spotlight
+
+Der neue Typ `pen` verlangt `penStroke` mit 1–10.000 endlichen Originalkoordinaten und dem Glättungsschalter `isSmoothed`. Einzelpunkte werden als runde Punkte gezeichnet. Die quadratische Glättung wird deterministisch aus den gespeicherten Punkten abgeleitet; die Rohpunkte bleiben erhalten. Nur Stiftobjekte dürfen dieses Feld tragen. Farbe und Linienbreite verwenden die vorhandenen Felder. Stilvorlagen übernehmen den Glättungsschalter, keine Pfadkoordinaten.
+
+`spotlight` verlangt `spotlightStyle` mit `shape` (`rectangle` / `ellipse`) und endlicher Deckkraft `opacity` von 0 bis 0,95 sowie einen positiven Rahmen aus `start`/`end`. Andere Typen dürfen dieses Feld nicht tragen. Alle Fokusflächen werden gemeinsam aus einer Abdunklung mit der höchsten gewählten Deckkraft ausgespart. Die Ebene folgt auf Unschärfe und liegt unter gewöhnlichen Markierungen, Lupen und deckenden Abdeckungen. Vorschau und Exporte verwenden denselben Renderer.
+
+Gruppenskalierung speichert die resultierenden Objektkoordinaten und Darstellungsgrößen, keine zusätzliche Transformation. Pfeilbiegung, Callout-Ziel, Freihandmarker und Stiftpunkte werden mitgeführt. Nicht proportionale Skalierung passt Linien-/Schriftgrößen über das geometrische Mittel der Achsenfaktoren an; bestehende Formatgrenzen gelten weiter. Fanglinien und Einrastzustand gehören nur zur Ansicht. Schwärzungsvorschläge bleiben flüchtig; ausschließlich bestätigte gewöhnliche `redact`-Objekte gelangen ins Dokument.
+
+Formate 1–12 werden im Speicher migriert; Zuschnitt, Ausgabegröße und erweiterte Zeichenfläche bleiben erhalten. Stift-/Spotlight-Felder in älter etikettierten Dokumenten werden abgelehnt. Ältere Builds lehnen Format 13 ab. Paketmanifest und portable Container bleiben Version 1. [Bedienung und Nachweise](EDITOR-WORKFLOW-ABNAHME.md).
+
+## Format 14: versetzte Bildlupe
+
+`magnifierSource` ist ein optionaler Quellmittelpunkt auf Lupenobjekten. Ohne Wert liegt die Quelle wie bisher im Mittelpunkt des großen Kreises. Mit Wert werden Quellkreis und Verbindung angezeigt; sein Radius folgt dem Anzeigenradius geteilt durch den Zoom. Quelle und Anzeige bleiben separat bearbeitbar. Versionen 1–13 werden migriert; neue Quellen werden in älteren Versionsangaben abgelehnt. Verschieben von Gruppen, Duplizieren und Gruppenskalierung transformieren die Quelle mit.
+
+## Live-Gestaltung – Format 16 (25. Oktober 2026)
+
+Optionale `presentation`: freier Drehwinkel −180° bis 180°, Hintergrund (Vollton/Verlauf/eingebettetes PNG), Außenabstand, Ecken, Schatten, Seitenverhältnis und Ausrichtung. Annotationen, Zuschnitt und Zielauflösung behalten ihre bisherigen Quellkoordinaten; die gesamte fertige Komposition wird für Vorschau und Ausgabe gestaltet. Eigene Bilder sind orientierungsnormalisierte PNG-Assets bis 4096 Pixel und 8 MB mit Digest; externe Dateipfade werden in Projekten abgelehnt. Die Gestaltung ist Teil von History/Undo, Revisionen, Autosave, Projektkopien/-transfer und Backups. Format 15 migriert ohne Verlust der vorhandenen Vierteldrehung/Spiegelung. Frühere Formate dürfen keine Gestaltungsfelder einschleusen. Ältere Apps lehnen Format 16 ab. Vorlagennamen/-listen und Exportformat/-qualität bleiben appweite Einstellungen.
+
+## Bildränder – Format 17
+
+`presentation.border` ist optional und speichert Randbreite und sRGB-Farbe der ganzen Komposition. Der Rand liegt innerhalb der gerundeten Bildgrenzen und vergrößert die Ausgabe nicht. Eingefügte Bildobjekte verwenden `cornerRadius` und explizites aktiviertes `stroke` mit `color`/`lineWidth`; fehlendes `stroke` bedeutet bei Bildern weiterhin keinen Rand. Format 16 migriert mit unveränderter Gestaltung und ohne Rand. Frühere Formate dürfen keine neuen Randfelder einschleusen. Projektkopien und Backups erhalten beide Rahmenarten. Der winkelunabhängige Vorschau-Rahmen ist reiner UI-Zustand; nur die tatsächliche passende Pixelgröße wird ausgegeben.
+
+
+## Unschärfedarstellungen – Format 18
+
+`EditorObject.blurStyle` ist optional und nur für `.blur` zulässig. Werte: `gaussian`, `pixelate`, `mosaic`. Fehlendes Feld erhält exakt das frühere Weichzeichnen. `blurRadius` bleibt der gemeinsame Stärke-/Block-/Zellgrößenwert; Koordinaten und alle übrigen Objekteigenschaften bleiben unverändert. Versionen 1–17 werden migriert, sofern sie kein neues `blurStyle`-Feld enthalten; unbekannte Varianten werden abgelehnt. Ältere Apps müssen Format 18 ablehnen statt Pixel/Mosaik beim Speichern in Gaussian umzudeuten.
+
+Eigene Stile speichern dieselbe optionale Art. Alte Stilbibliotheken bleiben Gaussian, neue Stile enthalten keine Quellpixel oder Koordinaten. Projektkopien und Bibliotheksbackups übertragen das reguläre Dokument. Die flache Vorschau-/Ausgabekomposition verwendet dieselbe Filterwahl; deckende Abdeckungen bleiben darüber.
+
+## Individuelle Bilddrehung – Format 19
+
+`EditorObject.imageRotationDegrees` ist optional, endlich, von −180° bis 180° und ausschließlich für eingefügte Bilder (`.image`) zulässig. Fehlend bedeutet unveränderte Ausrichtung. Die Drehung erfolgt um die Mitte des vorhandenen Bildrechtecks; Quellasset und Rahmen bleiben unverändert. Renderer, Auswahl und Resize bilden dieselbe Rotation ab. Bei Abschluss kann die Leinwand in derselben History-Transaktion wachsen. Versionen 1–18 werden nur ohne dieses neue Feld migriert; ältere Apps müssen Format 19 ablehnen. OCR-/QR-Ergebnisse sind kein Bestandteil des Dokuments.
+
+## Anleitungen – Format 2 und lokaler Speicher, 26. Oktober 2026
+
+Portable Dateien enthalten zusätzlich `includesCover` sowie optional eine lokale `sourceRevision` pro Schritt. Format 1 migriert mit eigener Titelseite und unbekannter Quellrevision. Alle portablen Einzeltransfers entfernen Quell-ID, Bibliotheksidentität und Quellrevision. Unbekannte Versionen bleiben geschützt.
+
+Nur der lokale `GuideStore` schreibt einen `storageVersion: 1`-Umschlag mit einem Metadatendokument (leere PNG-Felder) und geordneten SHA-256-Digests. Die PNGs liegen unter `.assets/<Anleitungs-ID>/<Digest>.png`. Laden prüft sichere Pfadkomponenten, reguläre Dateien, Größen, Digests und PNG-Grenzen; die App prüft zusätzlich die echte Bilddekodierung. Aktuelle und `.previous`-Generation referenzieren unveränderliche Assets. Neue Assets werden zuerst, danach vorheriges und aktuelles Manifest atomar geschrieben. Erst anschließend dürfen unreferenzierte ältere Assets entfallen. Eine alte eigenständige Datei wird beim nächsten Sichern migriert; Exporte und Backups hydratisieren alle Bilder wieder.
+
+`<ID>.trashed` ist ein kleiner atomarer Papierkorbmarker. Bilder und beide Manifestgenerationen bleiben bis zum ausdrücklichen endgültigen Löschen erhalten. Sichern lehnt inzwischen gelöschte IDs ab. Gesamtsicherungen ab Version 2 enthalten zusätzlich `guide-trash/*.snaprivoguide`; Wiederherstellung erzeugt neue IDs und erhält den Papierkorbstatus. Verknüpfungen zu wiederhergestellten Bildprojekten werden neu zugeordnet, ihre lokale Quellrevision ist zunächst unbekannt.

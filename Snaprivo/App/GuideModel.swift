@@ -10,7 +10,58 @@ import SnagForgeDomain
     let store: GuideStore
     private(set) var documents: [GuideSummary] = []
     private(set) var document: GuideDocument?
+    private(set) var trash: [GuideSummary] = []
+    var showsTrash = false
+    struct ImageRequest: Identifiable {
+        let id = UUID()
+        let documentID: UUID
+        let replacing: UUID?
+        let position: GuideInsertion
+    }
+    var searchQuery = "" { didSet { if searchQuery != oldValue { searchResults = [] }; scheduleSearch() } }
+    private(set) var searchResults: [GuideSearchMatch] = []
+    private(set) var isSearching = false
+    private(set) var searchError: String?
+    @ObservationIgnored private var searchTask: Task<Void, Never>?
+    @ObservationIgnored private var searchRequest = UUID()
+    private func scheduleSearch() {
+        searchTask?.cancel(); searchRequest = UUID()
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        searchError = nil
+        guard !query.isEmpty else { searchResults = []; isSearching = false; return }
+        isSearching = true
+        let request = searchRequest
+        searchTask = Task { [weak self, store] in
+            do {
+                try await Task.sleep(for: .milliseconds(180))
+                var matches = try await store.search(query)
+                guard let self, !Task.isCancelled, request == searchRequest else { return }
+                // Unsaved text is searchable immediately; the current manifest may be older.
+                if let current = document {
+                    matches.removeAll { $0.documentID == current.id }
+                    matches.insert(contentsOf: GuideSearchMatch.matches(in: current, query: query), at: 0)
+                }
+                searchResults = matches; isSearching = false
+            } catch {
+                guard let self, !Task.isCancelled, request == searchRequest else { return }
+                searchError = error.localizedDescription; isSearching = false
+            }
+        }
+    }
+    var imageRequest: ImageRequest?
+    enum FailureContext: Equatable { case save, output(Output), preview, operation }
+    private(set) var failureContext: FailureContext = .operation
+    private struct HistoryEntry { let document: GuideDocument; let selection: UUID? }
+    private var past: [HistoryEntry] = []
+    private var future: [HistoryEntry] = []
+    @ObservationIgnored private var textGroup: String?
+    @ObservationIgnored private var lastTextEdit = Date.distantPast
+    var canUndo: Bool { !past.isEmpty && !isBusy && !isSuspended }
+    var canRedo: Bool { !future.isEmpty && !isBusy && !isSuspended }
     var selectedStep: UUID?
+    var stepToReveal: UUID?
+    /// Set by `create()`; the view focuses the title field once and resets it.
+    var focusesTitle = false
     private(set) var isBusy = false
     // Workspace holds this for the entire quit sequence, including other editors' saves.
     var isSuspended = false
@@ -36,34 +87,53 @@ import SnagForgeDomain
         }
     }
     func refresh() async {
-        do { let result = try await store.list(); documents = result.documents; issues = result.issues }
+        do {
+            let result = try await store.list(), removed = try await store.listTrash()
+            documents = result.documents; trash = removed.documents; issues = result.issues + removed.issues
+            scheduleSearch()
+        }
         catch { issues = [error.localizedDescription] }
     }
-    private func run(_ action: @escaping @MainActor () async throws -> Void) {
+    private func run(context: FailureContext = .operation, _ action: @escaping @MainActor () async throws -> Void) {
         guard !isBusy, !isSuspended, panel == nil else { return }
-        isBusy = true; error = nil; notice = nil
+        isBusy = true; error = nil; failureContext = context; notice = nil
         operation = Task {
             defer { isBusy = false; operation = nil }
             do { try await action() }
-            catch { self.error = Self.message(error) }
+            catch { self.failureContext = context; self.error = Self.message(error) }
         }
     }
     func create() {
-        guard requestFeature(.guides) else { return }
+        guard requestFeature(.guides), !isBusy, !isSuspended else { return }
+        // Repeated clicks reuse the untouched new guide instead of listing empty copies.
+        if let document, document.steps.isEmpty, document.introduction.isEmpty, document.title == String(localized: "Neue Anleitung") {
+            showsTrash = false; focusesTitle = true; return
+        }
         run { [self] in
             guard await flush() else { return }
             let value = GuideDocument(title: String(localized: "Neue Anleitung"))
-            try await store.create(value); document = value; selectedStep = nil
+            try await store.create(value); install(value); focusesTitle = true
             await refresh()
         }
     }
-    func open(_ id: UUID) {
-        guard id != document?.id else { return }
+    func open(_ id: UUID, revealing step: UUID? = nil, fromSearch: Bool = false) {
+        guard id != document?.id else {
+            showsTrash = false
+            if fromSearch {
+                selectedStep = step.flatMap { target in document?.steps.contains(where: { $0.id == target }) == true ? target : nil }
+                stepToReveal = selectedStep ?? id
+            }
+            return
+        }
         run { [self] in
             guard await flush() else { return }
             let loaded = try await store.load(id), value = loaded.document
             try await Task.detached { try GuideExporter.validateImages(value) }.value
-            document = value; selectedStep = value.steps.first?.id; preview = nil
+            install(value)
+            if fromSearch {
+                selectedStep = step.flatMap { id in value.steps.contains { $0.id == id } ? id : nil }
+                stepToReveal = selectedStep ?? value.id
+            }
             if loaded.recovered { notice = String(localized: "Vorheriger Speicherstand wiederhergestellt") }
         }
     }
@@ -74,33 +144,123 @@ import SnagForgeDomain
             guard var value = document else { return }
             value.id = UUID(); value.revision = 0; value.modifiedAt = .now
             try await store.create(value)
-            document = value; isDirty = false; preview = nil; error = nil
+            install(value); error = nil
             await refresh()
         }
     }
-    func edit(_ mutation: (inout GuideDocument) -> Void) {
-        guard requestFeature(.guides) else { return }
-        guard !isBusy, !isSuspended, var value = document else { return }
-        mutation(&value)
-        guard value != document else { return }
-        document = value; change += 1; isDirty = true; preview = nil
+    private func install(_ value: GuideDocument) {
+        document = value; selectedStep = value.steps.first?.id; preview = nil; isDirty = false
+        past = []; future = []; textGroup = nil; stepToReveal = nil; showsTrash = false
+    }
+    private func remember() {
+        guard let document else { return }
+        past.append(HistoryEntry(document: document, selection: selectedStep)); future.removeAll(); textGroup = nil
+        // Data shares unchanged PNG buffers. The conservative byte budget also bounds replaced images.
+        while past.count > 1 && (past.count > 40 || past.reduce(0, { $0 + $1.document.steps.reduce(0, { $0 + $1.png.count }) }) > 128_000_000) { past.removeFirst() }
+    }
+    private func changed() {
+        change += 1; isDirty = true; preview = nil
+        scheduleSearch()
         timer?.cancel()
         timer = Task { [weak self] in
-            do { try await Task.sleep(for: .milliseconds(450)) } catch { return }
+            do { try await Task.sleep(for: .milliseconds(750)) } catch { return }
             _ = await self?.flush()
         }
     }
-    func editStep(_ id: UUID, _ mutation: (inout GuideStep) -> Void) {
-        edit { value in
+    func chooseImages(replacing: UUID? = nil, at position: GuideInsertion = .end) {
+        guard requestFeature(.guides), let document, !isBusy, !isSuspended else { return }
+        if let replacing { guard document.steps.contains(where: { $0.id == replacing }) else { return } }
+        else {
+            guard document.steps.count < 100 else { return }
+            switch position {
+            case .end: break
+            case .before(let id), .after(let id): guard document.steps.contains(where: { $0.id == id }) else { return }
+            }
+        }
+        imageRequest = ImageRequest(documentID: document.id, replacing: replacing, position: position)
+    }
+    func duplicateStep(_ id: UUID) {
+        guard requestFeature(.guides), !isBusy, !isSuspended, var value = document else { return }
+        do {
+            let copied = try value.duplicateStep(id)
+            remember(); document = value; selectedStep = copied; stepToReveal = copied; changed()
+        } catch { failureContext = .operation; self.error = Self.message(error) }
+    }
+    func edit(textGroup group: String? = nil, _ mutation: (inout GuideDocument) -> Void) {
+        guard requestFeature(.guides), !isBusy, !isSuspended, var value = document else { return }
+        mutation(&value)
+        guard value != document else { return }
+        if group == nil || group != textGroup || Date().timeIntervalSince(lastTextEdit) > 1.2 { remember() }
+        textGroup = group; lastTextEdit = .now
+        document = value; changed()
+    }
+    func editStep(_ id: UUID, textGroup: String? = nil, _ mutation: (inout GuideStep) -> Void) {
+        edit(textGroup: textGroup) { value in
             if let i = value.steps.firstIndex(where: { $0.id == id }) { mutation(&value.steps[i]) }
         }
+    }
+    private func restoreHistory(_ entry: HistoryEntry) {
+        guard let current = document else { return }
+        var value = entry.document
+        value.revision = current.revision; value.modifiedAt = current.modifiedAt
+        document = value; selectedStep = entry.selection.flatMap { id in value.steps.contains { $0.id == id } ? id : nil } ?? value.steps.first?.id
+        textGroup = nil; changed()
+    }
+    func undo() {
+        guard canUndo, requestFeature(.guides), let current = document, let entry = past.popLast() else { return }
+        future.append(HistoryEntry(document: current, selection: selectedStep)); restoreHistory(entry)
+    }
+    func redo() {
+        guard canRedo, requestFeature(.guides), let current = document, let entry = future.popLast() else { return }
+        past.append(HistoryEntry(document: current, selection: selectedStep)); restoreHistory(entry)
+    }
+    /// A local step drag carries only two IDs, never image or text content.
+    @discardableResult func moveStep(payload: String, documentID: UUID, before target: UUID?) -> UUID? {
+        guard !isBusy, !isSuspended, let current = document, current.id == documentID, payload.count == 73 else { return nil }
+        let parts = payload.split(separator: ":")
+        guard parts.count == 2, UUID(uuidString: String(parts[0])) == documentID,
+              let id = UUID(uuidString: String(parts[1])), current.steps.contains(where: { $0.id == id }),
+              target == nil || current.steps.contains(where: { $0.id == target }), requestFeature(.guides) else { return nil }
+        edit { $0.moveStep(id, before: target) }; selectedStep = id; return id
+    }
+    func removeStep(_ id: UUID) {
+        edit { $0.steps.removeAll { $0.id == id } }
+        if selectedStep == id { selectedStep = document?.steps.first?.id }
+    }
+    func duplicate(_ id: UUID? = nil) {
+        guard requestFeature(.guides), id != nil || document != nil else { return }
+        run { [self] in
+            guard await flush() else { return }
+            var value: GuideDocument
+            if let id { value = try await store.load(id).document }
+            else if let current = document { value = current }
+            else { return }
+            value.id = UUID(); value.revision = 0; value.modifiedAt = .now
+            value.title = String(value.title.prefix(240)) + String(localized: " – Kopie")
+            try await store.create(value); install(value); await refresh()
+        }
+    }
+    func moveToTrash(_ id: UUID) {
+        run { [self] in
+            guard await flush() else { return }
+            let value = try await store.load(id).document
+            try await store.moveToTrash(id, expectedRevision: value.revision)
+            if document?.id == id { document = nil; selectedStep = nil; past = []; future = []; preview = nil }
+            await refresh()
+        }
+    }
+    func restore(_ id: UUID) {
+        run { [self] in try await store.restore(id); await refresh() }
+    }
+    func permanentlyDelete(_ id: UUID) {
+        run { [self] in try await store.permanentlyDelete(id); await refresh() }
     }
     @discardableResult func flush() async -> Bool {
         timer?.cancel(); timer = nil
         if let saving, !(await saving.value) { return false }
         guard isDirty, let snapshot = document else { return true }
         guard !snapshot.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            error = String(localized: "Bitte gib einen Anleitungstitel ein."); return false
+            failureContext = .save; error = String(localized: "Bitte gib einen Anleitungstitel ein."); return false
         }
         let stamp = change
         isSaving = true
@@ -109,11 +269,12 @@ import SnagForgeDomain
             do {
                 let saved = try await store.save(snapshot, expectedRevision: snapshot.revision)
                 document?.revision = saved.revision; document?.modifiedAt = saved.modifiedAt
-                isDirty = change != stamp; error = nil
+                isDirty = change != stamp; if failureContext == .save { error = nil }
                 documents.removeAll { $0.id == saved.id }; documents.append(GuideSummary(saved))
                 documents.sort { $0.modifiedAt > $1.modifiedAt }
+                scheduleSearch()
                 return true
-            } catch { self.error = Self.message(error); return false }
+            } catch { self.failureContext = .save; self.error = Self.message(error); return false }
         }
         saving = task
         guard await task.value else { return false }
@@ -127,10 +288,10 @@ import SnagForgeDomain
     static func libraryKey(_ store: ProjectStore) -> String {
         ProjectArchive.hash(Data(store.root.standardizedFileURL.resolvingSymlinksInPath().path.utf8))
     }
-    func addProjects(_ ids: [UUID], from projects: ProjectStore, replacing: UUID? = nil,
+    func addProjects(_ ids: [UUID], from projects: ProjectStore, replacing: UUID? = nil, at position: GuideInsertion = .end,
                      prepare: @escaping @MainActor () async -> Bool) {
         guard requestFeature(.guides) else { return }
-        guard document != nil, !ids.isEmpty else { return }
+        guard let documentID = document?.id, !ids.isEmpty else { return }
         run { [self] in
             guard await prepare(), await flush() else { return }
             guard replacing != nil || (document?.steps.count ?? 0) + ids.count <= 100 else { throw ProjectError.documentTooLarge }
@@ -144,24 +305,28 @@ import SnagForgeDomain
                 return result
             }.value
             guard requestFeature(.guides) else { return }
-            guard var value = document else { return }
-            if let replacing, let index = value.steps.firstIndex(where: { $0.id == replacing }), let step = steps.first {
+            guard var value = document, value.id == documentID else { throw ProjectError.staleRevision }
+            if let replacing {
+                guard let index = value.steps.firstIndex(where: { $0.id == replacing }), let step = steps.first else { throw ProjectError.invalidDocument }
                 value.steps[index].png = step.png
                 value.steps[index].sourceProjectID = step.sourceProjectID; value.steps[index].sourceLibrary = step.sourceLibrary
-            } else { value.steps += steps; selectedStep = steps.first?.id }
+                value.steps[index].sourceRevision = step.sourceRevision
+            } else { try value.insertSteps(steps, at: position) }
             _ = try value.validated()
-            document = value; change += 1; isDirty = true; preview = nil
+            remember(); document = value
+            selectedStep = replacing ?? steps.first?.id; stepToReveal = selectedStep
+            changed()
             _ = await flush()
         }
     }
     func showPreview() {
-        guard let value = document, !value.steps.isEmpty else { return }
-        run { [self] in
-            guard await flush() else { return }
+        guard document?.steps.isEmpty == false else { return }
+        run(context: .preview) { [self] in
+            guard await flush(), let value = document else { return }
             preview = try await Task.detached(priority: .userInitiated) { try GuideExporter.pdf(value) }.value
         }
     }
-    enum Output { case pdf, markdown, workingCopy }
+    enum Output: Equatable { case pdf, markdown, workingCopy }
     static var guideType: UTType { UTType(exportedAs: "com.snaprivo.guide", conformingTo: .data) }
     func chooseExport(_ output: Output) {
         guard !isBusy, !isSuspended, panel == nil, let document else { return }
@@ -189,7 +354,7 @@ import SnagForgeDomain
         else { dialog.begin(completionHandler: completion) }
     }
     func export(_ output: Output, to url: URL, access: URL? = nil) {
-        run { [self] in
+        run(context: .output(output)) { [self] in
             guard await flush(), let value = document else { return }
             let scope = access ?? url, granted = scope.startAccessingSecurityScopedResource()
             defer { if granted { scope.stopAccessingSecurityScopedResource() } }
@@ -226,9 +391,9 @@ import SnagForgeDomain
         defer { if granted { url.stopAccessingSecurityScopedResource() } }
         var value = try await Task.detached { try GuideExporter.cleanCopy(GuideDocument.read(url)) }.value
         value.id = UUID(); value.revision = 0; value.modifiedAt = .now
-        for i in value.steps.indices { value.steps[i].sourceProjectID = nil; value.steps[i].sourceLibrary = nil }
+        for i in value.steps.indices { value.steps[i].sourceProjectID = nil; value.steps[i].sourceLibrary = nil; value.steps[i].sourceRevision = nil }
         try await store.create(value)
-        document = value; selectedStep = value.steps.first?.id; preview = nil
+        install(value)
         await refresh()
     }
     func createFromProjects(_ ids: [UUID], from projects: ProjectStore, prepare: @escaping @MainActor () async -> Bool) {
@@ -243,9 +408,9 @@ import SnagForgeDomain
                 return result
             }.value
             guard requestFeature(.guides) else { return }
-            let value = GuideDocument(title: String(localized: "Neue Anleitung"), style: style, steps: steps)
+            let value = GuideDocument(title: String(localized: "Neue Anleitung"), style: style, steps: steps, includesCover: document?.includesCover ?? true)
             try await store.create(value)
-            document = value; selectedStep = steps.first?.id; preview = nil
+            install(value)
             await refresh()
         }
     }

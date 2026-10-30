@@ -18,24 +18,28 @@ struct VideoLibraryView: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
+            // Same button and menu family as the image library header.
+            HStack(spacing: 8) {
                 Text(String(localized: "\(displayed.count) Videos")).font(.headline)
                 Spacer()
-                Toggle(String(localized: "Papierkorb"), isOn: $showsTrash).toggleStyle(.button)
+                Menu {
+                    Picker(String(localized: "Sortieren"), selection: $nameOrder) {
+                        Text(String(localized: "Neueste zuerst")).tag(false)
+                        Text(String(localized: "Name")).tag(true)
+                    }.pickerStyle(.inline).labelsHidden()
+                } label: { Label(nameOrder ? String(localized: "Name") : String(localized: "Neueste zuerst"), systemImage: "arrow.up.arrow.down") }
+                    .fixedSize().accessibilityLabel(String(localized: "Sortieren"))
+                Toggle(String(localized: "Papierkorb"), systemImage: "trash", isOn: $showsTrash).toggleStyle(.button).fixedSize()
                 Menu(String(localized: "Dateien"), systemImage: "folder") {
                     if let allBackup { Button(String(localized: "Alles sichern …"), action: allBackup) }
                     if let allRestore { Button(String(localized: "Alles wiederherstellen …"), action: allRestore) }
                     Divider()
                     Button(String(localized: "Videos sichern …")) { model.chooseBackup(restoring: false) }
                     Button(String(localized: "Videosicherung wiederherstellen …")) { model.chooseBackup(restoring: true) }
-                }
-                Picker(String(localized: "Sortieren"), selection: $nameOrder) {
-                    Text(String(localized: "Neueste zuerst")).tag(false)
-                    Text(String(localized: "Name")).tag(true)
-                }.frame(maxWidth: 200)
-                Button { Task { await model.refresh() } } label: { Image(systemName: "arrow.clockwise") }
-                    .help(String(localized: "Erneut laden")).accessibilityLabel(String(localized: "Erneut laden"))
-            }.padding()
+                }.fixedSize()
+                Button(String(localized: "Erneut laden"), systemImage: "arrow.clockwise") { Task { await model.refresh() } }
+                    .labelStyle(.iconOnly).help(String(localized: "Erneut laden"))
+            }.padding(16)
             Text(ByteCountFormatter.string(fromByteCount: model.items.filter { ($0.document.trashedAt != nil) == showsTrash }.reduce(0) { $0 + $1.bytes }, countStyle: .file))
                 .font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal).padding(.bottom, 12)
             if !model.issues.isEmpty {

@@ -16,9 +16,15 @@ final class ScreenshotSelector {
     private var hovered: CapturableWindow?
     private var primaryHeight: CGFloat = 0
     private var isFinishing = false
+    private var scrollOverlay: CaptureSelectionOverlay?
+    private var videoOverlay: CaptureSelectionOverlay?
 
-    func select(source: CaptureSource, windows: [CapturableWindow], desktop: FrozenDesktop, media: CaptureMedia = .image, allowsVideoAction: Bool = true) async throws -> ScreenshotSelection? {
+    func select(source: CaptureSource, windows: [CapturableWindow], desktop: FrozenDesktop, media: CaptureMedia = .image, allowsVideoAction: Bool = true, scrolling: Bool = false, allowsScrolling: Bool = true, destination: CaptureImageDestination = .image) async throws -> ScreenshotSelection? {
         let screens = NSScreen.screens
+        let screenChoices = screens.compactMap { screen -> CaptureScreenChoice? in
+            guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32 else { return nil }
+            return CaptureScreenChoice(id: id, name: screen.localizedName, frame: screen.frame)
+        }
         guard desktop.displays.count == screens.count, screens.allSatisfy({ screen in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32 else { return false }
             return desktop.displays.contains { $0.displayID == id && $0.screenFrame == screen.frame }
@@ -43,11 +49,26 @@ final class ScreenshotSelector {
                 panel.acceptsMouseMovedEvents = true
                 let view = SelectionView(frame: CGRect(origin: .zero, size: screen.frame.size))
                 view.screenFrame = screen.frame
+                view.displayID = id; view.screenChoices = screenChoices
+                view.onSelectScreen = { [weak self, weak view] displayID in
+                    guard let self, let view else { return }
+                    self.selectScreen(displayID, keeping: view)
+                }
+                view.onSelectSource = { [weak self, weak view] source in
+                    guard let self, let view else { return }
+                    self.selectSource(source, keeping: view)
+                }
                 view.frozenImage = frozen.image
                 view.pixelScale = frozen.scale
                 view.mode = mode
                 view.allowsVideoAction = allowsVideoAction
+                view.allowsScrolling = allowsScrolling
                 view.isVideo = media == .video
+                view.isScrolling = scrolling
+                view.imageDestination = destination
+                view.onDestinationChange = { [weak self] value in
+                    self?.views.forEach { $0.imageDestination = value }
+                }
                 view.onMediaChange = { [weak self] video in
                     self?.views.forEach { $0.isVideo = video }
                 }
@@ -68,17 +89,12 @@ final class ScreenshotSelector {
                         let windowRect = CaptureGeometry.appKitRect(fromQuartz: hovered.frame, primaryHeight: self.primaryHeight)
                         draft = CaptureSelectionDraft(rect: windowRect.intersection(screen.frame), windowID: hovered.id)
                     } else { return }
-                    self.reviewView = view
-                    for candidate in self.views {
-                        candidate.isReviewing = true
-                        candidate.highlight = nil
-                        candidate.reviewDraft = candidate === view ? draft : nil
-                    }
+                    self.review(draft, in: view)
                     panel?.makeKey()
                     panel?.makeFirstResponder(view)
                 }
                 view.onConfirm = { [weak self, weak view] draft in
-                    self?.finish(ScreenshotSelection(displayID: id, draft: draft, screenFrame: screen.frame, media: view?.isVideo == true ? .video : .image))
+                    self?.finish(ScreenshotSelection(displayID: id, draft: draft, screenFrame: screen.frame, media: view?.isVideo == true ? .video : .image, isScrolling: view?.isScrolling == true, destination: view?.imageDestination ?? .image))
                 }
                 view.onRestart = { [weak self] in self?.restart() }
                 view.onCancel = { [weak self] in self?.finish(nil) }
@@ -87,8 +103,8 @@ final class ScreenshotSelector {
                 views.append(view)
             }
             guard !panels.isEmpty else { finish(nil); return }
-            // The frozen desktop appears at its final size and stays opaque.
-            // Only the shade/frame/hints fade, never the desktop-sized panel.
+            // Draw the desktop, shade and first frame together. Starting either
+            // chrome or hover fades here delays feedback after New Capture.
             hover(at: NSEvent.mouseLocation)
             views.forEach { $0.preparePresentation() }
             NSAnimationContext.runAnimationGroup { context in
@@ -96,23 +112,32 @@ final class ScreenshotSelector {
                 context.allowsImplicitAnimation = false
                 panels.forEach { $0.orderFrontRegardless(); $0.displayIfNeeded() }
             }
-            CaptureOverlayMotion.animate { self.views.forEach { $0.setChromeVisible(true) } }
             let active = panels.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? panels[0]
             active.makeKey()
             active.makeFirstResponder(active.contentView)
+            refreshCursorAtMouseLocation()
+            // Ordering/focus can enqueue a final AppKit cursor reset. Reapply
+            // once after that handoff, even if the pointer has already stopped.
+            DispatchQueue.main.async { [weak self] in self?.refreshCursorAtMouseLocation() }
             for name in [NSApplication.didBecomeActiveNotification, NSWindow.didBecomeKeyNotification] {
                 focusObservers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
                     let changedWindow = notification.object as? NSWindow
                     MainActor.assumeIsolated {
                         if let changedWindow, changedWindow.level.rawValue >= NSWindow.Level.statusBar.rawValue { return }
+                        if self?.reviewView?.isEditingSize == true { return }
                         self?.hideAppWindows()
                         let panel = self?.reviewView?.window ?? self?.panels.first(where: { $0.frame.contains(NSEvent.mouseLocation) })
                         panel?.makeKey()
                         panel?.makeFirstResponder(panel?.contentView)
+                        self?.refreshCursorAtMouseLocation()
                     }
                 })
             }
             keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                if let view = self?.reviewView, view.isEditingSize {
+                    if event.keyCode == 53 { view.dismissSizeEditor(); return nil }
+                    return event
+                }
                 if event.keyCode == 53 { self?.finish(nil); return nil }
                 if (event.keyCode == 36 || event.keyCode == 76), self?.reviewView != nil {
                     self?.reviewView?.confirm(); return nil
@@ -128,7 +153,27 @@ final class ScreenshotSelector {
         }
     }
 
-    func cancel() { finish(nil) }
+    func cancel() {
+        finish(nil)
+        scrollOverlay?.close(); scrollOverlay = nil
+        videoOverlay?.close(); videoOverlay = nil
+    }
+
+    func takeScrollOverlay() -> CaptureSelectionOverlay? {
+        defer { scrollOverlay = nil }
+        return scrollOverlay
+    }
+
+    func takeVideoOverlay() -> CaptureSelectionOverlay? {
+        defer { videoOverlay = nil }
+        return videoOverlay
+    }
+
+    private func refreshCursorAtMouseLocation() {
+        guard !isFinishing else { return }
+        let panel = panels.first { $0.frame.contains(NSEvent.mouseLocation) }
+        (panel?.contentView as? SelectionView)?.refreshCursorAtMouseLocation()
+    }
 
     private func hideAppWindows() {
         NSApp.windows.filter { $0.isVisible && $0.level.rawValue < NSWindow.Level.statusBar.rawValue }.forEach { $0.orderOut(nil) }
@@ -145,6 +190,36 @@ final class ScreenshotSelector {
         reviewView = nil
         views.forEach { $0.isReviewing = false; $0.reviewDraft = nil; $0.highlight = nil }
         hover(at: NSEvent.mouseLocation)
+    }
+
+    private func review(_ draft: CaptureSelectionDraft, in view: SelectionView) {
+        reviewView = view
+        for candidate in views {
+            candidate.isReviewing = true; candidate.highlight = nil
+            candidate.reviewDraft = candidate === view ? draft : nil
+        }
+        NSAccessibility.post(element: view, notification: .valueChanged)
+    }
+
+    private func selectScreen(_ id: CGDirectDisplayID, keeping source: SelectionView) {
+        guard !isFinishing, let target = views.first(where: { $0.displayID == id }) else { return }
+        source.dismissSizeEditor()
+        target.isVideo = source.isVideo; target.isScrolling = source.isScrolling
+        review(CaptureSelectionDraft(rect: target.screenFrame), in: target)
+        target.window?.makeKey(); target.window?.makeFirstResponder(target)
+    }
+
+    private func selectSource(_ source: CaptureSource, keeping view: SelectionView) {
+        guard !isFinishing, source != .display else { return }
+        view.dismissSizeEditor()
+        mode = source
+        views.forEach { $0.mode = source }
+        if source == .region, let draft = view.reviewDraft {
+            review(CaptureSelectionDraft(rect: draft.rect), in: view)
+        } else if source == .window {
+            restart()
+        }
+        view.window?.makeKey(); view.window?.makeFirstResponder(view)
     }
 
     private func hover(at point: CGPoint) {
@@ -167,7 +242,7 @@ final class ScreenshotSelector {
     }
 
     private func finish(_ result: ScreenshotSelection?, animated: Bool = true) {
-        guard !isFinishing else { return }
+        guard continuation != nil, !isFinishing else { return }
         isFinishing = true
         focusObservers.forEach { NotificationCenter.default.removeObserver($0) }
         focusObservers.removeAll()
@@ -176,7 +251,20 @@ final class ScreenshotSelector {
         if let screenObserver { NotificationCenter.default.removeObserver(screenObserver) }
         screenObserver = nil
         views.forEach { $0.isFinishing = true }
-        if animated, panels.contains(where: \.isVisible) {
+        if result?.isScrolling == true || result?.media == .video {
+            // Transfer these exact windows, shade and selection chrome. Only the
+            // selected content goes live while the source app/capture prepares.
+            let overlay = CaptureSelectionOverlay(panels: panels, views: views,
+                identifierPrefix: result?.media == .video ? "video.selection" : "scroll")
+            if result?.media == .video { videoOverlay = overlay }
+            else { scrollOverlay = overlay }
+            panels.removeAll(); views.removeAll()
+            completeFinish(result)
+            return
+        }
+        // Confirmed photos can start encoding/opening immediately. Cancellation
+        // keeps the gentle fade back to the desktop.
+        if animated, result == nil, panels.contains(where: \.isVisible) {
             CaptureOverlayMotion.animate({ self.views.forEach { $0.setChromeVisible(false) } }) { [weak self] in
                 self?.completeFinish(result)
             }
@@ -195,6 +283,35 @@ final class ScreenshotSelector {
         isFinishing = false
         pending?.resume(returning: result)
     }
+}
+
+extension CaptureSelectionOverlay {
+    convenience init(panels: [NSPanel], views: [SelectionView], identifierPrefix: String = "scroll") {
+        self.init(panels: panels)
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0; context.allowsImplicitAnimation = false
+            for (panel, view) in zip(panels, views) {
+                panel.isOpaque = false; panel.backgroundColor = .clear
+                panel.ignoresMouseEvents = true; panel.resignKey()
+                panel.setAccessibilityIdentifier(identifierPrefix + (view.reviewDraft == nil ? ".mask" : ".border"))
+                panel.setAccessibilityElement(false)
+                view.prepareForLiveCapture()
+                panel.displayIfNeeded()
+            }
+        }
+    }
+
+    convenience init(selection: ScreenshotSelection) {
+        let panel = SelectionPanel(screenFrame: selection.screenFrame)
+        panel.level = Self.level
+        let view = SelectionView(frame: CGRect(origin: .zero, size: selection.screenFrame.size))
+        view.screenFrame = selection.screenFrame; view.isReviewing = true
+        view.reviewDraft = CaptureSelectionDraft(rect: selection.rect)
+        panel.contentView = view
+        self.init(panels: [panel], views: [view])
+        panel.orderFrontRegardless()
+    }
+
 }
 
 @MainActor
@@ -295,11 +412,19 @@ final class SelectionPanel: NSPanel {
     }
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+    override func becomeKey() {
+        super.becomeKey()
+        (contentView as? SelectionView)?.refreshCursorAtMouseLocation()
+    }
 }
 
 @MainActor
 final class SelectionView: NSView {
     var screenFrame = CGRect.zero
+    var displayID: CGDirectDisplayID = 0
+    var screenChoices: [CaptureScreenChoice] = []
+    var onSelectScreen: ((CGDirectDisplayID) -> Void)?
+    var onSelectSource: ((CaptureSource) -> Void)?
     var frozenImage: CGImage? {
         didSet {
             backgroundImage = frozenImage.map { NSImage(cgImage: $0, size: bounds.size) }
@@ -308,8 +433,12 @@ final class SelectionView: NSView {
     }
     var pixelScale: CGFloat?
     private var backgroundImage: NSImage?
-    var mode = CaptureSource.automatic
+    var mode = CaptureSource.automatic { didSet { updateReview() } }
     var allowsVideoAction = true
+    var allowsScrolling = true
+    var isScrolling = false
+    var imageDestination: CaptureImageDestination = .image { didSet { updateReview() } }
+    var onDestinationChange: ((CaptureImageDestination) -> Void)?
     var onMediaChange: ((Bool) -> Void)?
     var isVideo = false {
         didSet {
@@ -356,10 +485,13 @@ final class SelectionView: NSView {
     private var adjustment: (start: CGPoint, draft: CaptureSelectionDraft, handle: CaptureSelectionHandle?)?
     private var toolbar: CaptureReviewToolbar?
     private let chrome = CaptureSelectionChrome()
+    private var sizePopover: NSPopover?
+    var isEditingSize: Bool { sizePopover?.isShown == true }
+    private(set) var isLiveCapture = false
     var isSelectingRegion: Bool { start != nil && isDragging }
 
     override var acceptsFirstResponder: Bool { true }
-    override var isOpaque: Bool { true }
+    override var isOpaque: Bool { !isLiveCapture }
     override var mouseDownCanMoveWindow: Bool { false }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
@@ -406,11 +538,24 @@ final class SelectionView: NSView {
     }
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
-        if newWindow == nil { stopHoverDisplayLink() }
+        if newWindow == nil { stopHoverDisplayLink(); dismissSizeEditor() }
         super.viewWillMove(toWindow: newWindow)
     }
 
-    func preparePresentation() { chrome.alphaValue = 0 }
+    func preparePresentation() {
+        setHoveredWindow(highlight, animated: false)
+        chrome.alphaValue = 1
+        toolbar?.alphaValue = 1
+        chrome.needsDisplay = true
+    }
+    func prepareForLiveCapture() {
+        dismissSizeEditor()
+        isLiveCapture = true
+        isFinishing = true
+        toolbar?.removeFromSuperview(); toolbar = nil
+        chrome.alphaValue = 1; chrome.needsDisplay = true
+        window?.invalidateCursorRects(for: self)
+    }
     func setChromeVisible(_ visible: Bool) {
         chrome.animator().alphaValue = visible ? 1 : 0
         toolbar?.animator().alphaValue = visible ? 1 : 0
@@ -440,6 +585,11 @@ final class SelectionView: NSView {
         return NSCursor(image: image, hotSpot: CGPoint(x: 20, y: 20))
     }()
     override func resetCursorRects() {
+        guard !isFinishing, !isLiveCapture else { return }
+        if start != nil || adjustment != nil {
+            addCursorRect(bounds, cursor: selectionCursor(at: .zero))
+            return
+        }
         addCursorRect(bounds, cursor: Self.captureCursor)
         if let draft = reviewDraft {
             let local = localRect(draft.rect)
@@ -451,12 +601,22 @@ final class SelectionView: NSView {
         if let toolbar { addCursorRect(toolbar.frame, cursor: .arrow) }
     }
     override func cursorUpdate(with event: NSEvent) {
+        guard !isFinishing, !isLiveCapture else { return }
         selectionCursor(at: convert(event.locationInWindow, from: nil)).set()
+    }
+    func refreshCursorAtMouseLocation() {
+        guard !isFinishing, !isLiveCapture, !isEditingSize,
+              let window, window.isVisible else { return }
+        let point = convert(window.mouseLocationOutsideOfEventStream, from: nil)
+        guard bounds.contains(point) else { return }
+        selectionCursor(at: point).set()
     }
     override func mouseEntered(with event: NSEvent) {
         cursorUpdate(with: event)
     }
     func selectionCursor(at point: CGPoint) -> NSCursor {
+        if let adjustment { return adjustment.handle.map(Self.resizeCursor) ?? .openHand }
+        if start != nil { return Self.captureCursor }
         if let toolbar, toolbar.frame.contains(point) { return .arrow }
         if let draft = reviewDraft {
             let local = localRect(draft.rect)
@@ -512,6 +672,10 @@ final class SelectionView: NSView {
     }
     override func mouseDown(with event: NSEvent) {
         guard !isFinishing else { return }
+        defer {
+            window?.invalidateCursorRects(for: self)
+            cursorUpdate(with: event)
+        }
         start = nil
         isDragging = false
         adjustment = nil
@@ -532,6 +696,7 @@ final class SelectionView: NSView {
     }
     override func mouseDragged(with event: NSEvent) {
         guard !isFinishing else { return }
+        defer { cursorUpdate(with: event) }
         let point = screenPoint(event)
         if let adjustment {
             let delta = CGSize(width: point.x - adjustment.start.x, height: point.y - adjustment.start.y)
@@ -546,6 +711,10 @@ final class SelectionView: NSView {
     }
     override func mouseUp(with event: NSEvent) {
         guard !isFinishing else { return }
+        defer {
+            window?.invalidateCursorRects(for: self)
+            cursorUpdate(with: event)
+        }
         if adjustment != nil { adjustment = nil; return }
         guard let start else { return }
         let point = screenPoint(event)
@@ -584,26 +753,50 @@ final class SelectionView: NSView {
     private func updateReview() {
         if let draft = reviewDraft {
             if toolbar == nil {
-                let controls = CaptureReviewToolbar(isVideo: isVideo, allowsVideoAction: allowsVideoAction)
+                let controls = CaptureReviewToolbar(isVideo: isVideo, allowsVideoAction: allowsVideoAction, allowsScrolling: allowsScrolling)
                 controls.onCapture = { [weak self] video in
                     guard let self else { return }
                     self.isVideo = video
+                    self.isScrolling = false
                     self.onMediaChange?(video)
                     self.confirm()
                 }
+                controls.onDestinationCapture = { [weak self] destination in
+                    guard let self else { return }
+                    self.imageDestination = destination
+                    self.isScrolling = false; self.isVideo = false
+                    self.onDestinationChange?(destination); self.onMediaChange?(false)
+                    self.confirm()
+                }
+                controls.onScrollCapture = { [weak self] in
+                    guard let self else { return }
+                    guard self.allowsScrolling else { return }
+                    self.isScrolling = true; self.isVideo = false
+                    self.onMediaChange?(false); self.confirm()
+                }
                 controls.onRestart = { [weak self] in self?.onRestart?() }
                 controls.onCancel = { [weak self] in self?.onCancel?() }
+                controls.onSelectScreen = { [weak self] id in self?.onSelectScreen?(id) }
+                controls.onSelectSource = { [weak self] source in self?.onSelectSource?(source) }
+                controls.onEditSize = { [weak self] button in self?.showSizeEditor(from: button) }
                 addSubview(controls)
                 toolbar = controls
             }
             let local = localRect(draft.rect)
             toolbar?.setVideo(isVideo)
-            let width: CGFloat = allowsVideoAction ? 448 : 336, height: CGFloat = 52, margin: CGFloat = 12
+            toolbar?.setScrolling(isScrolling)
+            toolbar?.setDestination(imageDestination)
+            toolbar?.source = mode
+            toolbar?.screenChoices = screenChoices
+            toolbar?.selectedScreenID = draft.rect == screenFrame ? displayID : nil
+            let margin: CGFloat = 12, height = CaptureReviewToolbar.height
+            let width = min(CaptureReviewToolbar.preferredWidth(allowsVideoAction: allowsVideoAction), bounds.width - 2 * margin)
             let x = min(max(local.midX - width / 2, margin), bounds.maxX - width - margin)
             let below = local.minY - height - 8, above = local.maxY + 8
             let y = below >= margin ? below : above + height <= bounds.maxY - margin ? above : margin
             toolbar?.frame = CGRect(x: x, y: y, width: width, height: height)
-            toolbar?.dimensions.stringValue = pixelDimensions(draft.rect)
+            toolbar?.dimensions.stringValue = pixelDimensions(draft.rect).replacingOccurrences(of: " px", with: "")
+            toolbar?.needsLayout = true
             if isVideo && draft.windowID != nil {
                 caption = String(localized: "Ganzes Fenster aufnehmen und beim Verschieben folgen. Rahmen ändern: fester Bereich. Enter: Bestätigen. Esc: Abbrechen.")
             } else {
@@ -611,6 +804,7 @@ final class SelectionView: NSView {
             }
             toolbar?.toolTip = String(localized: "Im Bild ziehen: neuer Bereich · Rahmenkante ziehen: verschieben · Griffe ziehen: Größe ändern")
         } else {
+            dismissSizeEditor()
             toolbar?.removeFromSuperview()
             toolbar = nil
         }
@@ -619,7 +813,54 @@ final class SelectionView: NSView {
         window?.invalidateCursorRects(for: self)
     }
 
+    func resizeSelection(to pixels: CGSize) {
+        guard !isFinishing, let draft = reviewDraft, pixels.width.isFinite, pixels.height.isFinite else { return }
+        let scale = pixelScale ?? window?.backingScaleFactor ?? 1
+        guard let source = CaptureGeometry.sourceRect(selection: draft.rect, screen: screenFrame, scale: scale) else { return }
+        let left = screenFrame.minX + source.minX, top = screenFrame.maxY - source.minY
+        let width = min(max(ceil(2 * scale), pixels.width.rounded()) / scale, screenFrame.maxX - left)
+        let height = min(max(ceil(2 * scale), pixels.height.rounded()) / scale, top - screenFrame.minY)
+        let rect = CGRect(x: left, y: top - height, width: width, height: height)
+        reviewDraft = CaptureSelectionDraft(rect: rect, windowID: rect == draft.rect ? draft.windowID : nil)
+        NSAccessibility.post(element: self, notification: .valueChanged)
+    }
+
+    private func showSizeEditor(from button: NSButton) {
+        guard let draft = reviewDraft else { return }
+        dismissSizeEditor()
+        let scale = pixelScale ?? window?.backingScaleFactor ?? 1
+        guard let source = CaptureGeometry.sourceRect(selection: draft.rect, screen: screenFrame, scale: scale) else { return }
+        let editor = CaptureSizeEditor(size: CGSize(width: (source.width * scale).rounded(), height: (source.height * scale).rounded()),
+            maximum: CGSize(width: ((screenFrame.width - source.minX) * scale).rounded(.down),
+                            height: ((screenFrame.height - source.minY) * scale).rounded(.down)), minimum: ceil(2 * scale))
+        editor.onApply = { [weak self] size in self?.resizeSelection(to: size); self?.dismissSizeEditor() }
+        let popover = NSPopover(); popover.contentViewController = editor; popover.behavior = .semitransient
+        popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        sizePopover = popover
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .maxY)
+    }
+    func dismissSizeEditor() { sizePopover?.close(); sizePopover = nil }
+
     override func draw(_ dirtyRect: NSRect) {
+        if isLiveCapture {
+            guard let context = NSGraphicsContext.current?.cgContext else { return }
+            context.clear(bounds)
+            // Preserve the exact frozen surround as well as its shade. Only the
+            // selected hole goes live; changing applications cannot brighten or
+            // rearrange the outside of the selection during this handoff.
+            guard backgroundImage != nil else { return }
+            context.saveGState()
+            let outside = NSBezierPath(rect: bounds)
+            if let rect = reviewDraft?.rect {
+                outside.append(NSBezierPath(rect: localRect(rect)))
+                outside.windingRule = .evenOdd
+            }
+            outside.addClip()
+            NSColor.black.setFill(); bounds.fill()
+            backgroundImage?.draw(in: bounds, from: .zero, operation: .sourceOver, fraction: 1)
+            context.restoreGState()
+            return
+        }
         // Draw the unchanged desktop beneath every highlight and selection.
         // The selected hole is visual only; no pixel becomes click-through.
         NSColor.black.setFill()
@@ -684,162 +925,254 @@ private final class CaptureSelectionChrome: NSView {
     override func draw(_ dirtyRect: NSRect) { owner?.drawSelectionChrome() }
 }
 
+struct CaptureScreenChoice: Equatable {
+    let id: CGDirectDisplayID
+    let name: String
+    let frame: CGRect
+}
+
 @MainActor
-private final class CaptureReviewToolbar: NSVisualEffectView {
+final class CaptureReviewToolbar: CaptureToolbarSurface {
+    static let height = CaptureToolbarSurface.barHeight
+    static func preferredWidth(allowsVideoAction: Bool) -> CGFloat { allowsVideoAction ? 728 : 640 }
     let dimensions = NSTextField(labelWithString: "")
     var onCapture: ((Bool) -> Void)?
-    private let capture = CaptureActionButton()
-    private var videoButton: NSButton?
+    var onScrollCapture: (() -> Void)?
+    var onDestinationCapture: ((CaptureImageDestination) -> Void)?
     var onRestart: (() -> Void)?
     var onCancel: (() -> Void)?
+    var onSelectScreen: ((CGDirectDisplayID) -> Void)?
+    var onSelectSource: ((CaptureSource) -> Void)?
+    var onEditSize: ((NSButton) -> Void)?
+    var screenChoices: [CaptureScreenChoice] = []
+    var selectedScreenID: CGDirectDisplayID?
+    var source = CaptureSource.automatic {
+        didSet { sourceButton.title = source == .window ? String(localized: "Fenster") : String(localized: "Bereich") }
+    }
+    private let capture = CaptureFlatButton(frame: .zero)
+    private let choices = CaptureFlatButton(frame: .zero)
+    private let mediaGroup = NSView()
+    private let photoSelection = NSView()
+    private let screen = CaptureFlatButton(frame: .zero)
+    private let sourceButton = CaptureFlatButton(frame: .zero)
+    private let settings = CaptureFlatButton(frame: .zero)
+    private let restart = CaptureFlatButton(frame: .zero)
+    private let cancel = CaptureFlatButton(frame: .zero)
+    private var dividers: [NSView] = []
+    private var isScrolling = false
+    private var destination: CaptureImageDestination = .image
+    private var videoButton: CaptureFlatButton?
+    private(set) var actionButtons: [NSButton] = []
 
-    init(isVideo: Bool = false, allowsVideoAction: Bool = true) {
-        super.init(frame: CGRect(x: 0, y: 0, width: 448, height: 52))
-        material = .hudWindow
-        blendingMode = .withinWindow
-        state = .active
-        appearance = NSAppearance(named: .darkAqua)
-        wantsLayer = true
-        layer?.cornerRadius = 10
-        layer?.masksToBounds = true
+    private let allowsScrolling: Bool
+    init(isVideo: Bool = false, allowsVideoAction: Bool = true, allowsScrolling: Bool = true) {
+        self.allowsScrolling = allowsScrolling
+        super.init(frame: CGRect(x: 0, y: 0, width: Self.preferredWidth(allowsVideoAction: allowsVideoAction), height: Self.height), subdued: true)
         setAccessibilityLabel(String(localized: "Aufnahme bestätigen"))
         setAccessibilityIdentifier("capture.reviewToolbar")
-        let offset: CGFloat = allowsVideoAction ? 112 : 0
-        capture.cell = CaptureActionCell()
-        capture.hoverColor = .white
-        capture.target = self; capture.action = #selector(capturePressed)
-        capture.title = String(localized: "Foto")
-        capture.image = NSImage(systemSymbolName: "camera", accessibilityDescription: nil)
-        capture.imagePosition = .imageLeading
-        capture.bezelStyle = .rounded
-        capture.controlSize = .large
-        capture.font = .systemFont(ofSize: 15, weight: .semibold)
-        capture.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 22, weight: .medium)
-        capture.frame = CGRect(x: 8, y: 8, width: 116, height: 36)
-        capture.setAccessibilityIdentifier("capture.confirm")
-        addSubview(capture)
+        mediaGroup.wantsLayer = true; mediaGroup.layer?.cornerRadius = 18; mediaGroup.layer?.masksToBounds = true
+        mediaGroup.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.055).cgColor
+        controls.addSubview(mediaGroup)
+        photoSelection.wantsLayer = true; photoSelection.layer?.cornerRadius = 16
+        photoSelection.layer?.backgroundColor = Self.accent.cgColor
+        mediaGroup.addSubview(photoSelection)
+        configure(capture, title: String(localized: "Foto"), symbol: "camera", action: #selector(capturePressed), identifier: "capture.confirm", parent: mediaGroup)
+        capture.flatCell.iconSize = 24
+        configure(choices, title: "", symbol: "chevron.down", action: #selector(showPhotoChoices(_:)), identifier: "capture.photoChoices", parent: mediaGroup)
+        choices.isHidden = false
+        choices.flatCell.iconSize = 10
+        choices.setAccessibilityLabel(String(localized: "Aufnahmeart wählen"))
+        choices.toolTip = String(localized: "Foto, Textaufnahme oder QR-Code")
         if allowsVideoAction {
-            let video = CaptureActionButton()
-            video.cell = CaptureActionCell()
-            video.hoverColor = .white
-            video.title = String(localized: "Video"); video.target = self; video.action = #selector(videoPressed)
-            video.image = NSImage(systemSymbolName: "video", accessibilityDescription: nil)
-            video.imagePosition = .imageLeading
-            video.bezelStyle = .rounded
-            video.controlSize = .large
-            video.font = .systemFont(ofSize: 15, weight: .semibold)
-            video.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 22, weight: .medium)
-            video.frame = CGRect(x: 132, y: 8, width: 104, height: 36)
-            video.setAccessibilityIdentifier("capture.video")
-            videoButton = video
-            addSubview(video)
+            let video = CaptureFlatButton(frame: .zero)
+            configure(video, title: String(localized: "Video"), symbol: "video", action: #selector(videoPressed), identifier: "capture.video", parent: mediaGroup)
+            video.flatCell.iconSize = 24; videoButton = video
         }
-        dimensions.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
-        dimensions.alignment = .center
-        dimensions.textColor = .white
-        dimensions.frame = CGRect(x: 132 + offset, y: 16, width: 104, height: 20)
-        dimensions.setAccessibilityLabel(String(localized: "Auswahlgröße"))
-        addSubview(dimensions)
-        let restart = CaptureActionButton(image: NSImage(systemSymbolName: "arrow.counterclockwise", accessibilityDescription: nil)!, target: self, action: #selector(restartPressed))
-        restart.bezelStyle = .rounded
-        restart.frame = CGRect(x: 244 + offset, y: 8, width: 36, height: 36)
-        restart.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        restart.toolTip = String(localized: "Neu auswählen")
-        restart.setAccessibilityLabel(String(localized: "Neu auswählen"))
-        restart.setAccessibilityIdentifier("capture.restart")
-        addSubview(restart)
-        let cancel = CaptureActionButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: nil)!, target: self, action: #selector(cancelPressed))
-        cancel.bezelStyle = .rounded
-        cancel.frame = CGRect(x: 288 + offset, y: 8, width: 36, height: 36)
-        cancel.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        cancel.hoverColor = .systemRed
-        cancel.toolTip = String(localized: "Abbrechen (Esc)")
-        cancel.setAccessibilityLabel(String(localized: "Abbrechen"))
-        cancel.setAccessibilityIdentifier("capture.cancel")
-        addSubview(cancel)
-        setVideo(isVideo)
+        configure(screen, title: String(localized: "Bildschirm"), symbol: "display", action: #selector(showScreenChoices(_:)), identifier: "capture.screenChoices")
+        screen.flatCell.showsChevron = true
+        screen.flatCell.iconSize = 22
+        screen.setAccessibilityRole(.popUpButton)
+        screen.setAccessibilityLabel(String(localized: "Ganzen Bildschirm auswählen"))
+        screen.toolTip = String(localized: "Ganzen Bildschirm auswählen")
+        configure(sourceButton, title: String(localized: "Bereich"), symbol: "rectangle.split.2x2", action: #selector(showSourceChoices(_:)), identifier: "capture.sourceChoices")
+        sourceButton.flatCell.showsChevron = true
+        sourceButton.flatCell.iconSize = 20
+        sourceButton.setAccessibilityRole(.popUpButton)
+        sourceButton.setAccessibilityLabel(String(localized: "Auswahlart"))
+        dimensions.alignment = .center; dimensions.textColor = NSColor.white.withAlphaComponent(0.68)
+        dimensions.setAccessibilityLabel(String(localized: "Auswahlgröße")); controls.addSubview(dimensions)
+        configure(settings, title: "", symbol: "gearshape", action: #selector(editSize(_:)), identifier: "capture.settings")
+        settings.flatCell.iconSize = 22
+        settings.setAccessibilityLabel(String(localized: "Auswahlgröße")); settings.toolTip = String(localized: "Auswahlgröße")
+        configure(restart, title: "", symbol: "arrow.counterclockwise", action: #selector(restartPressed), identifier: "capture.restart")
+        restart.flatCell.iconSize = 24
+        restart.setAccessibilityLabel(String(localized: "Neu auswählen")); restart.toolTip = String(localized: "Neu auswählen")
+        configure(cancel, title: "", symbol: "xmark", action: #selector(cancelPressed), identifier: "capture.cancel")
+        cancel.flatCell.iconSize = 20
+        cancel.setAccessibilityLabel(String(localized: "Abbrechen")); cancel.toolTip = String(localized: "Abbrechen (Esc)")
+        for _ in 0..<5 {
+            let divider = Self.divider()
+            controls.addSubview(divider); dividers.append(divider)
+        }
+        setVideo(isVideo); setScrolling(false)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    private func configure(_ button: CaptureFlatButton, title: String, symbol: String, action: Selector, identifier: String, parent: NSView? = nil) {
+        button.title = title; button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        button.imagePosition = title.isEmpty ? .imageOnly : .imageLeading
+        button.target = self; button.action = action; button.setAccessibilityIdentifier(identifier)
+        (parent ?? controls).addSubview(button); actionButtons.append(button)
+    }
+    override func layout() {
+        super.layout()
+        let withoutVideo: CGFloat = videoButton == nil ? 88 : 0
+        let baseWidth = Self.preferredWidth(allowsVideoAction: videoButton != nil)
+        let scale = min(1, bounds.width / baseWidth)
+        let left = (bounds.width - baseWidth * scale) / 2
+        let height = Self.controlHeight * scale, y = (bounds.height - height) / 2
+        func rect(_ x: CGFloat, _ width: CGFloat) -> NSRect {
+            NSRect(x: left + x * scale, y: y, width: width * scale, height: height)
+        }
+        mediaGroup.frame = rect(10, 196 - withoutVideo)
+        mediaGroup.layer?.cornerRadius = 18 * scale
+        photoSelection.frame = NSRect(x: 0, y: 0, width: 108 * scale, height: height)
+        photoSelection.layer?.cornerRadius = 16 * scale
+        capture.frame = NSRect(x: 0, y: 0, width: 86 * scale, height: height)
+        choices.frame = NSRect(x: 86 * scale, y: 0, width: 22 * scale, height: height)
+        videoButton?.frame = NSRect(x: 108 * scale, y: 0, width: 88 * scale, height: height)
+        for (button, x, width) in [(screen, CGFloat(226), CGFloat(116)), (sourceButton, 362, 96), (settings, 584, 36), (restart, 626, 36), (cancel, 682, 36)] {
+            button.frame = rect(x - withoutVideo, width)
+        }
+        dimensions.frame = rect(478 - withoutVideo, 86)
+        let size = min(12 * scale, 12 * scale * dimensions.frame.width / max(1, (dimensions.stringValue as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12 * scale, weight: .medium)]).width))
+        dimensions.font = .monospacedDigitSystemFont(ofSize: size, weight: .medium)
+        // A label uses its natural height; centering its cell in a tall frame
+        // otherwise leaves it aligned with the top rather than the icons.
+        dimensions.frame.size.height = ceil(dimensions.intrinsicContentSize.height)
+        dimensions.frame.origin.y = (bounds.height - dimensions.frame.height) / 2
+        for button in actionButtons.compactMap({ $0 as? CaptureFlatButton }) {
+            let primary = button === capture || button === videoButton
+            button.font = .systemFont(ofSize: (primary ? 14 : 12) * scale,
+                                      weight: button === capture ? .semibold : primary ? .medium : .regular)
+            button.flatCell.contentScale = scale; button.needsDisplay = true
+        }
+        for (divider, x) in zip(dividers, [CGFloat(216), 352, 468, 574, 672]) {
+            divider.frame = NSRect(x: left + (x - withoutVideo) * scale, y: (bounds.height - 32 * scale) / 2, width: 1, height: 32 * scale)
+        }
+    }
     func setVideo(_ video: Bool) {
-        capture.bezelColor = .systemBlue
-        videoButton?.bezelColor = .systemBlue
+        photoSelection.isHidden = video
+        capture.flatCell.foreground = .white; choices.flatCell.foreground = .white
+        videoButton?.flatCell.fill = video ? Self.accent : nil
+        videoButton?.flatCell.foreground = .white
         capture.toolTip = video ? String(localized: "Screenshot aufnehmen") : String(localized: "Screenshot aufnehmen (Enter)")
         videoButton?.toolTip = video ? String(localized: "Video aufnehmen (Enter)") : String(localized: "Video aufnehmen")
+        capture.needsDisplay = true; choices.needsDisplay = true; videoButton?.needsDisplay = true
     }
-    @objc private func capturePressed() { onCapture?(false) }
+    func setScrolling(_ scrolling: Bool) {
+        isScrolling = scrolling
+        updateDestinationLabel()
+    }
+    func setDestination(_ value: CaptureImageDestination) {
+        destination = value; updateDestinationLabel()
+    }
+    private func updateDestinationLabel() {
+        let title: String, symbol: String, hint: String
+        if isScrolling {
+            title = String(localized: "Scrollen"); symbol = "arrow.down.square"; hint = String(localized: "Scroll-Aufnahme starten (Enter)")
+        } else {
+            switch destination {
+            case .image: title = String(localized: "Foto"); symbol = "camera"; hint = String(localized: "Screenshot aufnehmen (Enter)")
+            case .text: title = String(localized: "Text"); symbol = "text.viewfinder"; hint = String(localized: "Text erfassen und kopieren (Enter)")
+            case .code: title = String(localized: "QR"); symbol = "qrcode.viewfinder"; hint = String(localized: "QR-Code scannen (Enter)")
+            }
+        }
+        capture.title = title; capture.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        capture.toolTip = hint; capture.setAccessibilityLabel(hint)
+    }
+    func photoChoicesMenu() -> NSMenu {
+        let menu = NSMenu()
+        let entries = [(String(localized: "Foto aufnehmen"), #selector(photoChosen)), (String(localized: "Textaufnahme – nur Text kopieren"), #selector(textChosen)), (String(localized: "QR-Code scannen"), #selector(codeChosen))] + (allowsScrolling ? [(String(localized: "Scroll-Aufnahme"), #selector(scrollChosen))] : [])
+        for (title, action) in entries {
+            let item = NSMenuItem(title: title, action: action, keyEquivalent: ""); item.target = self; menu.addItem(item)
+        }
+        return menu
+    }
+    func screenChoicesMenu() -> NSMenu {
+        let menu = NSMenu()
+        let title = NSMenuItem(title: String(localized: "Bildschirm"), action: nil, keyEquivalent: "")
+        title.image = NSImage(systemSymbolName: "display", accessibilityDescription: nil); menu.addItem(title)
+        for choice in screenChoices {
+            let item = NSMenuItem(title: choice.name, action: #selector(screenChosen(_:)), keyEquivalent: "")
+            item.target = self; item.representedObject = NSNumber(value: choice.id)
+            item.state = selectedScreenID == choice.id ? .on : .off
+            menu.addItem(item)
+        }
+        return menu
+    }
+    func sourceChoicesMenu() -> NSMenu {
+        let menu = NSMenu()
+        for (title, value) in [(String(localized: "Automatisch"), CaptureSource.automatic), (String(localized: "Bereich"), .region), (String(localized: "Fenster"), .window)] {
+            let item = NSMenuItem(title: title, action: #selector(sourceChosen(_:)), keyEquivalent: "")
+            item.target = self; item.representedObject = value.rawValue; item.state = source == value ? .on : .off
+            menu.addItem(item)
+        }
+        return menu
+    }
+    @objc private func showPhotoChoices(_ sender: NSButton) { show(photoChoicesMenu(), from: sender) }
+    @objc private func showScreenChoices(_ sender: NSButton) { show(screenChoicesMenu(), from: sender) }
+    @objc private func showSourceChoices(_ sender: NSButton) { show(sourceChoicesMenu(), from: sender) }
+    private func show(_ menu: NSMenu, from button: NSButton) {
+        menu.popUp(positioning: nil, at: CGPoint(x: button.bounds.minX, y: button.bounds.minY), in: button)
+    }
+    @objc private func photoChosen() { setScrolling(false); setDestination(.image); onDestinationCapture?(.image) }
+    @objc private func textChosen() { onDestinationCapture?(.text) }
+    @objc private func codeChosen() { onDestinationCapture?(.code) }
+    @objc private func scrollChosen() { onScrollCapture?() }
+    @objc private func capturePressed() { if isScrolling { onScrollCapture?() } else { onDestinationCapture?(destination) } }
     @objc private func videoPressed() { onCapture?(true) }
+    @objc private func screenChosen(_ sender: NSMenuItem) { if let id = sender.representedObject as? NSNumber { onSelectScreen?(id.uint32Value) } }
+    @objc private func sourceChosen(_ sender: NSMenuItem) {
+        if let raw = sender.representedObject as? String, let value = CaptureSource(rawValue: raw) { onSelectSource?(value) }
+    }
+    @objc private func editSize(_ sender: NSButton) { onEditSize?(sender) }
     @objc private func restartPressed() { onRestart?() }
     @objc private func cancelPressed() { onCancel?() }
 }
 
-
-/// Keeps the visible symbol box and label gap identical for both capture actions,
-/// independent of the symbol's intrinsic width and AppKit's image/title allocation.
 @MainActor
-private final class CaptureActionCell: NSButtonCell {
-    override func drawInterior(withFrame frame: NSRect, in view: NSView) {
-        let label = NSAttributedString(string: title, attributes: [
-            .font: font ?? NSFont.systemFont(ofSize: 15, weight: .semibold),
-            .foregroundColor: NSColor.white
-        ])
-        let labelSize = label.size()
-        let iconWidth: CGFloat = 26, gap: CGFloat = 6
-        let start = frame.midX - (iconWidth + gap + labelSize.width) / 2
-        if let image {
-            let symbol = image.withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 22, weight: .medium)) ?? image
-            super.drawImage(symbol, withFrame: CGRect(x: start, y: frame.midY - 13, width: iconWidth, height: 26), in: view)
+private final class CaptureSizeEditor: NSViewController {
+    private let size: CGSize
+    private let maximum: CGSize
+    private let minimum: CGFloat
+    private let width = NSTextField(), height = NSTextField()
+    var onApply: ((CGSize) -> Void)?
+    init(size: CGSize, maximum: CGSize, minimum: CGFloat) { self.size = size; self.maximum = maximum; self.minimum = minimum; super.init(nibName: nil, bundle: nil) }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func loadView() {
+        view = NSView(frame: CGRect(x: 0, y: 0, width: 260, height: 172))
+        let title = NSTextField(labelWithString: String(localized: "Auswahlgröße"))
+        title.font = .systemFont(ofSize: 13, weight: .semibold); title.frame = CGRect(x: 16, y: 138, width: 228, height: 20); view.addSubview(title)
+        for (field, label, value, limit, y) in [
+            (width, String(localized: "Breite"), size.width, maximum.width, CGFloat(96)),
+            (height, String(localized: "Höhe"), size.height, maximum.height, CGFloat(60))
+        ] {
+            let caption = NSTextField(labelWithString: label); caption.frame = CGRect(x: 16, y: y + 4, width: 76, height: 20); view.addSubview(caption)
+            field.frame = CGRect(x: 100, y: y, width: 108, height: 28)
+            let formatter = NumberFormatter(); formatter.numberStyle = .decimal; formatter.maximumFractionDigits = 0
+            formatter.minimum = NSNumber(value: Double(minimum)); formatter.maximum = NSNumber(value: Double(limit))
+            field.formatter = formatter; field.doubleValue = value; field.alignment = .right
+            field.setAccessibilityLabel(label); field.setAccessibilityIdentifier(field === width ? "capture.size.width" : "capture.size.height")
+            view.addSubview(field)
+            let unit = NSTextField(labelWithString: "px"); unit.frame = CGRect(x: 216, y: y + 4, width: 28, height: 20); unit.textColor = .secondaryLabelColor; view.addSubview(unit)
         }
-        super.drawTitle(label, withFrame: CGRect(x: start + iconWidth + gap,
-            y: frame.midY - labelSize.height / 2, width: labelSize.width, height: labelSize.height), in: view)
+        let apply = NSButton(title: String(localized: "Übernehmen"), target: self, action: #selector(applySize))
+        apply.frame = CGRect(x: 132, y: 12, width: 112, height: 32); apply.bezelStyle = .glass; apply.keyEquivalent = "\r"
+        apply.setAccessibilityIdentifier("capture.size.apply"); view.addSubview(apply)
     }
-}
-
-/// Retains native button actions, focus and accessibility while adding a short
-/// hover tint. Reduced motion applies the same feedback without interpolation.
-@MainActor
-private final class CaptureActionButton: NSButton {
-    var hoverColor: NSColor = .systemBlue
-    private var hoverTracking: NSTrackingArea?
-    private let hoverLayer = CALayer()
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let hoverTracking { removeTrackingArea(hoverTracking) }
-        let tracking = NSTrackingArea(rect: bounds, options: [.activeAlways, .mouseEnteredAndExited, .inVisibleRect],
-                                      owner: self)
-        addTrackingArea(tracking); hoverTracking = tracking
-    }
-
-    override func layout() {
-        super.layout()
-        wantsLayer = true
-        if hoverLayer.superlayer == nil {
-            hoverLayer.opacity = 0
-            layer?.addSublayer(hoverLayer)
-        }
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        hoverLayer.frame = bounds.insetBy(dx: 1, dy: 3)
-        hoverLayer.cornerRadius = title.isEmpty ? 7 : hoverLayer.bounds.height / 2
-        hoverLayer.backgroundColor = hoverColor.withAlphaComponent(hoverColor == .white ? 0.16 : 0.28).cgColor
-        CATransaction.commit()
-    }
-
-    override func mouseEntered(with event: NSEvent) { super.mouseEntered(with: event); setHovered(true) }
-    override func mouseExited(with event: NSEvent) { super.mouseExited(with: event); setHovered(false) }
-
-    private func setHovered(_ hovered: Bool) {
-        guard isEnabled else { return }
-        let target: Float = hovered ? 1 : 0
-        let previous = hoverLayer.presentation()?.opacity ?? hoverLayer.opacity
-        hoverLayer.removeAnimation(forKey: "hover")
-        CATransaction.begin(); CATransaction.setDisableActions(true)
-        hoverLayer.opacity = target
-        CATransaction.commit()
-        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
-        let animation = CABasicAnimation(keyPath: "opacity")
-        animation.fromValue = previous; animation.toValue = target
-        animation.duration = 0.14
-        animation.timingFunction = CAMediaTimingFunction(name: .easeOut)
-        hoverLayer.add(animation, forKey: "hover")
+    @objc private func applySize() {
+        guard view.window?.makeFirstResponder(nil) != false else { return }
+        onApply?(CGSize(width: width.doubleValue, height: height.doubleValue))
     }
 }

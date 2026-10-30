@@ -3,19 +3,43 @@ import SnagForgeDomain
 
 struct LibraryIndexControls: View {
     let workspace: WorkspaceModel
+    @State private var showsOptions = false
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Toggle(String(localized: "Bildinhalt lokal durchsuchen (OCR)"), isOn: Binding(
+        HStack(spacing: 8) {
+            // Button style matches the other library toggles in height and shape.
+            Toggle(String(localized: "Bildtext (OCR)"), systemImage: "text.viewfinder", isOn: Binding(
                 get: { workspace.purchases.hasPro && workspace.preferences.ocrIndexingEnabled }, set: { workspace.setOCRIndexing($0) }))
-                .accessibilityIdentifier("library.index.enabled")
+                .toggleStyle(.button).accessibilityIdentifier("library.index.enabled")
+            if workspace.search.isIndexing {
+                ProgressView().controlSize(.small).accessibilityLabel(String(localized: "Bildtext wird erkannt"))
+            }
+            Button(String(localized: "Suchoptionen"), systemImage: "slider.horizontal.3") { showsOptions.toggle() }
+                .labelStyle(.iconOnly).help(String(localized: "Suchoptionen"))
+                .accessibilityIdentifier("library.index.options")
+                .popover(isPresented: $showsOptions, arrowEdge: .bottom) { options }
+            if workspace.search.error != nil || workspace.search.failures > 0 {
+                Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                    .accessibilityLabel(String(localized: "Suchindex prüfen"))
+                    .help(workspace.search.error ?? String(localized: "Suchindex prüfen"))
+            }
+        }.fixedSize()
+    }
+
+    private var options: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(String(localized: "Suchoptionen")).font(.headline)
             Text(String(localized: "Titelsuche bleibt kostenlos. Pro ergänzt Tags, Sammlungen und OCR. Der erkannte Bildtext bleibt im lokalen Suchcache; Ausschalten entfernt diesen Cache."))
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             if workspace.purchases.hasPro && workspace.preferences.ocrIndexingEnabled {
-                HStack {
+                Divider()
+                HStack(spacing: 8) {
                     if workspace.search.isIndexing { ProgressView().controlSize(.small) }
-                    Text(String(localized: "Suchindex: \(workspace.search.completed) von \(workspace.search.total) Projekten verarbeitet"))
+                    Text(String(localized: "Bildtext erkannt: \(workspace.search.completed) / \(workspace.search.total)"))
                         .font(.caption).monospacedDigit()
-                    Spacer(minLength: 8)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack {
                     if workspace.search.isIndexing {
                         Button(String(localized: "Abbrechen")) { workspace.search.cancel() }.accessibilityIdentifier("library.index.cancel")
                     } else {
@@ -26,7 +50,7 @@ struct LibraryIndexControls: View {
                     }
                 }
                 if workspace.search.failures > 0 {
-                    Text(String(localized: "\(workspace.search.failures) Projekte konnten nicht erkannt werden. Setze die Indexierung erneut fort."))
+                    Text(String(localized: "\(workspace.search.failures) Bilder konnten nicht erkannt werden. Setze die Indexierung erneut fort."))
                         .font(.caption).foregroundStyle(.orange)
                 }
             }
@@ -35,7 +59,7 @@ struct LibraryIndexControls: View {
                 Button(String(localized: "Suchcache entfernen")) { workspace.synchronizeSearch(retry: true) }
             }
             if let notice = workspace.search.notice { Text(notice).font(.caption).foregroundStyle(.secondary) }
-        }.frame(maxWidth: .infinity, alignment: .leading)
+        }.padding(16).frame(width: 360, alignment: .leading)
     }
 }
 
@@ -86,7 +110,7 @@ struct ProjectOrganizationSheet: View {
                     }.disabled(existingCollections.isEmpty)
                 }
             }.frame(height: 180).disabled(saving)
-            Text(String(localized: "Eine neue Sammlung entsteht durch Zuordnen eines Projekts. Gleiche Namen gruppieren Projekte; Entfernen einer Zuordnung löscht kein Projekt. Tags und Zuordnungen bleiben in Projekt und Backup erhalten."))
+            Text(String(localized: "Eine neue Sammlung entsteht durch Zuordnen eines Bildes. Gleiche Namen gruppieren Bilder; Entfernen einer Zuordnung löscht kein Bild. Tags und Zuordnungen bleiben im bearbeitbaren Projekt und in Sicherungen erhalten."))
                 .font(.caption).foregroundStyle(.secondary)
             if normalizedTags == nil || normalizedCollections == nil {
                 Text(String(localized: "Prüfe die Anzahl und Länge der Einträge. Steuerzeichen sind nicht erlaubt."))

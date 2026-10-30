@@ -1,9 +1,13 @@
 import Foundation
 import CoreGraphics
 
+public enum EditorBlurStyle: String, CaseIterable, Codable, Sendable {
+    case gaussian, pixelate, mosaic
+}
+
 public struct EditorObject: Identifiable, Equatable, Codable, Sendable {
     public enum Kind: String, Equatable, Codable, Sendable {
-        case image, arrow, text, rectangle, ellipse, triangle, diamond, star, callout, blur, redact, highlight, step
+        case image, arrow, text, rectangle, ellipse, triangle, diamond, star, callout, blur, redact, highlight, step, magnifier, pen, spotlight
         public var isShape: Bool {
             switch self {
             case .rectangle, .ellipse, .triangle, .diamond, .star: true
@@ -13,6 +17,17 @@ public struct EditorObject: Identifiable, Equatable, Codable, Sendable {
     }
     public private(set) var id: UUID
     public var imageAsset: EditorImageAsset?
+    public var imageRotationDegrees: Double?
+    public var imageRotationTransform: CGAffineTransform {
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        let angle = (imageRotationDegrees ?? 0) * .pi / 180
+        let c = abs(cos(angle)) < 0.000000000001 ? 0 : cos(angle)
+        let s = abs(sin(angle)) < 0.000000000001 ? 0 : sin(angle)
+        return CGAffineTransform(translationX: -center.x, y: -center.y)
+            .concatenating(CGAffineTransform(a: c, b: s, c: -s, d: c, tx: 0, ty: 0))
+            .concatenating(CGAffineTransform(translationX: center.x, y: center.y))
+    }
+    public var rotatedImageBounds: CGRect { rect.applying(imageRotationTransform) }
     public var groupID: UUID?
     public var name: String?
     public var kind: Kind
@@ -25,17 +40,33 @@ public struct EditorObject: Identifiable, Equatable, Codable, Sendable {
     public var textHeight: CGFloat?
     public var textStyle: EditorTextStyle?
     public var calloutTip: CGPoint?
+    /// A point on the shaft at t = 0.5. Nil retains the original straight/hand-drawn curve.
+    public var arrowBend: CGPoint?
+    public var penStroke: EditorPenStroke?
+    public var spotlightStyle: EditorSpotlightStyle?
+    public var effectiveSpotlightStyle: EditorSpotlightStyle { spotlightStyle ?? .init() }
+    public var magnifierSource: CGPoint?
+    public var magnifierSourceRect: CGRect {
+        let center = magnifierSource ?? CGPoint(x: rect.midX, y: rect.midY)
+        let radius = rect.width / effectiveMagnification / 2
+        return CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
+    }
+    public var magnification: CGFloat?
+    public var effectiveMagnification: CGFloat { magnification ?? 2 }
     public var effectiveTextStyle: EditorTextStyle { textStyle ?? EditorTextStyle() }
     public var fontSize: CGFloat
     public var color = EditorColor()
     public var blurRadius: CGFloat = 12
+    /// Missing on older projects: retain Gaussian blur exactly.
+    public var blurStyle: EditorBlurStyle?
+    public var effectiveBlurStyle: EditorBlurStyle { blurStyle ?? .gaussian }
     /// Optional additions to format 1. Missing fill preserves the original callout background.
     public var fill: EditorFill?
     public var cornerRadius: CGFloat?
     /// Missing stroke keeps the solid, enabled outline of existing projects.
     public var drawingStyle: EditorDrawingStyle?
     public var effectiveDrawingStyle: EditorDrawingStyle { drawingStyle ?? .precise }
-    public var supportsHandDrawn: Bool { kind == .arrow || kind == .ellipse }
+    public var supportsHandDrawn: Bool { kind == .arrow || kind.isShape }
     public var stroke: EditorStroke?
     public var highlightStyle: EditorHighlightStyle?
     public var stepStyle: EditorStepStyle?
@@ -56,7 +87,13 @@ public struct EditorObject: Identifiable, Equatable, Codable, Sendable {
         var result = self
         result.start.x += delta.width; result.start.y += delta.height
         result.end.x += delta.width; result.end.y += delta.height
+        if let source = magnifierSource { result.magnifierSource = CGPoint(x: source.x + delta.width, y: source.y + delta.height) }
         if let tip = calloutTip { result.calloutTip = CGPoint(x: tip.x + delta.width, y: tip.y + delta.height) }
+        if let bend = arrowBend { result.arrowBend = CGPoint(x: bend.x + delta.width, y: bend.y + delta.height) }
+        if var pen = penStroke {
+            pen.points = pen.points.map { CGPoint(x: $0.x + delta.width, y: $0.y + delta.height) }
+            result.penStroke = pen
+        }
         if var highlight = highlightStyle {
             highlight.points = highlight.points.map { CGPoint(x: $0.x + delta.width, y: $0.y + delta.height) }
             result.highlightStyle = highlight
@@ -72,8 +109,8 @@ public struct EditorObject: Identifiable, Equatable, Codable, Sendable {
     }
 
     public func hitsArrow(_ point: CGPoint, tolerance: CGFloat) -> Bool {
-        if effectiveDrawingStyle == .handDrawn {
-            return EditorHandDrawn.path(for: self).copy(strokingWithWidth: tolerance * 2, lineCap: .round, lineJoin: .round, miterLimit: 10).contains(point)
+        if effectiveDrawingStyle != .precise || arrowBend != nil {
+            return EditorArrow.path(for: self).copy(strokingWithWidth: tolerance * 2, lineCap: .round, lineJoin: .round, miterLimit: 10).contains(point)
         }
         let dx = end.x - start.x, dy = end.y - start.y
         let squaredLength = dx * dx + dy * dy
@@ -85,15 +122,18 @@ public struct EditorObject: Identifiable, Equatable, Codable, Sendable {
 
 /// A completed gesture is committed once. Previews do not enter history.
 public struct EditorHistory: Sendable {
-    private struct State: Equatable, Sendable { var objects: [EditorObject]; var crop: CGRect?; var resizedSize: PixelSize? }
+    private struct State: Equatable, Sendable { var objects: [EditorObject]; var crop: CGRect?; var resizedSize: PixelSize?; var canvasRect: CGRect?; var transform: EditorImageTransform; var presentation: EditorPresentation }
     private var state: State
     public var objects: [EditorObject] { state.objects }
     public var crop: CGRect? { state.crop }
     public var resizedSize: PixelSize? { state.resizedSize }
+    public var canvasRect: CGRect? { state.canvasRect }
+    public var transform: EditorImageTransform { state.transform }
+    public var presentation: EditorPresentation { state.presentation }
     private var past: [State] = []
     private var future: [State] = []
     private var transactionStart: State?
-    public init(objects: [EditorObject] = [], crop: CGRect? = nil, resizedSize: PixelSize? = nil) { state = State(objects: objects, crop: crop, resizedSize: resizedSize) }
+    public init(objects: [EditorObject] = [], crop: CGRect? = nil, resizedSize: PixelSize? = nil, canvasRect: CGRect? = nil, transform: EditorImageTransform = .identity, presentation: EditorPresentation = .init()) { state = State(objects: objects, crop: crop, resizedSize: resizedSize, canvasRect: canvasRect, transform: transform, presentation: presentation) }
     public var canUndo: Bool { !past.isEmpty || transactionStart.map { $0 != state } == true }
     public var canRedo: Bool { !future.isEmpty && (transactionStart == nil || transactionStart == state) }
     public mutating func beginTransaction() {
@@ -104,6 +144,10 @@ public struct EditorHistory: Sendable {
     public mutating func updateTransaction(_ next: [EditorObject]) {
         guard transactionStart != nil else { commit(next); return }
         state.objects = next
+    }
+    public mutating func updateTransaction(_ next: [EditorObject], canvasRect: CGRect?, crop: CGRect?, resizedSize: PixelSize?) {
+        guard transactionStart != nil else { commit(next, canvasRect: canvasRect, crop: crop, resizedSize: resizedSize); return }
+        state.objects = next; state.canvasRect = canvasRect; state.crop = crop; state.resizedSize = resizedSize
     }
     public mutating func endTransaction() {
         guard let previous = transactionStart else { return }
@@ -119,13 +163,26 @@ public struct EditorHistory: Sendable {
         transactionStart = nil
     }
     public mutating func commit(_ next: [EditorObject]) {
-        commit(State(objects: next, crop: crop, resizedSize: resizedSize))
+        commit(State(objects: next, crop: crop, resizedSize: resizedSize, canvasRect: canvasRect, transform: transform, presentation: presentation))
+    }
+    public mutating func commit(_ next: [EditorObject], canvasRect: CGRect?, crop: CGRect?, resizedSize: PixelSize?) {
+        commit(State(objects: next, crop: crop, resizedSize: resizedSize, canvasRect: canvasRect, transform: transform, presentation: presentation))
     }
     public mutating func commitCrop(_ next: CGRect?, resizedSize: PixelSize? = nil) {
-        commit(State(objects: objects, crop: next, resizedSize: resizedSize))
+        commit(State(objects: objects, crop: next, resizedSize: resizedSize, canvasRect: canvasRect, transform: transform, presentation: presentation))
     }
     public mutating func commitResize(_ size: PixelSize?) {
-        commit(State(objects: objects, crop: crop, resizedSize: size))
+        commit(State(objects: objects, crop: crop, resizedSize: size, canvasRect: canvasRect, transform: transform, presentation: presentation))
+    }
+    public mutating func commitTransform(_ next: EditorImageTransform) {
+        commit(State(objects: objects, crop: crop, resizedSize: resizedSize, canvasRect: canvasRect, transform: next, presentation: presentation))
+    }
+    public mutating func commitPresentation(_ next: EditorPresentation) {
+        var nextState = state; nextState.presentation = next; commit(nextState)
+    }
+    public mutating func updatePresentationTransaction(_ next: EditorPresentation) {
+        guard transactionStart != nil else { commitPresentation(next); return }
+        state.presentation = next
     }
     private mutating func commit(_ next: State) {
         endTransaction()

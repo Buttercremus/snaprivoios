@@ -6,9 +6,10 @@ public enum EditorLayerMove: CaseIterable, Hashable, Sendable { case forward, ba
 /// Original-image filters form the lower stratum; vectors form the upper one.
 /// Within each stratum, document order is back to front for both painting and picking.
 public enum EditorLayers {
-    private static func stratum(_ object: EditorObject) -> Int { object.kind == .blur ? 0 : object.kind == .redact ? 2 : 1 }
+    private static func stratum(_ object: EditorObject) -> Int { object.kind == .blur ? 0 : object.kind == .spotlight ? 1 : object.kind == .redact ? 3 : 2 }
     public static func paintOrder(_ objects: [EditorObject]) -> [EditorObject] {
-        objects.filter { $0.kind == .blur } + objects.filter { $0.kind != .blur && $0.kind != .redact } + objects.filter { $0.kind == .redact }
+        objects.filter { $0.kind == .blur } + objects.filter { $0.kind == .spotlight }
+            + objects.filter { $0.kind != .blur && $0.kind != .redact && $0.kind != .spotlight } + objects.filter { $0.kind == .redact }
     }
     public static func canMove(_ id: UUID, in objects: [EditorObject], direction: EditorLayerMove) -> Bool {
         guard let object = objects.first(where: { $0.id == id }) else { return false }

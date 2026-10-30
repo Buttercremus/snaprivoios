@@ -14,6 +14,7 @@ import SnagForgeDomain
         let doc = ProjectDocument(title: "Crop-Test", pixelSize: PixelSize(width: 640, height: 480)!, objects: [arrow])
         try await store.create(doc, original: EditorRenderer.png(image: image, objects: []), thumbnail: nil)
         let model = EditorModel(image: image, document: doc, generation: 0, store: store, onSaved: {})
+        model.snapsToObjects = false
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 800, height: 600), styleMask: .borderless, backing: .buffered, defer: false)
         let canvas = CanvasView(model: model); window.contentView = canvas; canvas.frame.size = CGSize(width: 800, height: 600)
         canvas.synchronizeViewport(); window.makeFirstResponder(canvas)
@@ -131,6 +132,7 @@ import SnagForgeDomain
         let saved = await model.flush(); precondition(saved)
         let loaded = try await ProjectStore(root: root).load(doc.id)
         let reopened = EditorModel(image: image, document: loaded.document, generation: loaded.generation, store: store, onSaved: {})
+        reopened.snapsToObjects = false
         precondition(reopened.sourceRect == crop && reopened.history.objects == committed && !reopened.history.canUndo)
         reopened.beginCrop(); reopened.cropDraft = CGRect(x: 100, y: 80, width: 400, height: 300); reopened.applyCrop(); reopened.undo()
         precondition(reopened.document.crop == crop, "Reopened crop cannot be adjusted and undone")

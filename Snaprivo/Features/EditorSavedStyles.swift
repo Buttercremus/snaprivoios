@@ -4,6 +4,7 @@ import SnagForgeDomain
 struct EditorSavedStyles: View {
     let model: EditorModel
     let preferences: AppPreferences
+    var compact = false
     @State private var saving: SavedStyleDraft?
     @State private var isManaging = false
     private var matchingStyles: [EditorNamedStyle] {
@@ -13,6 +14,7 @@ struct EditorSavedStyles: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Menu {
+                if compact, let error = preferences.styleLibraryError { Text(error) }
                 if !matchingStyles.isEmpty {
                     Section(String(localized: "Stil anwenden")) {
                         ForEach(matchingStyles) { item in
@@ -29,15 +31,21 @@ struct EditorSavedStyles: View {
                     || preferences.savedStyles.count >= EditorStyleLibrary.maximumStyles)
                 Button(String(localized: "Stile verwalten …"), systemImage: "slider.horizontal.3") { isManaging = true }
             } label: {
-                Label(model.hasProAccess() ? String(localized: "Eigene Stile") : String(localized: "Eigene Stile · Pro"), systemImage: "paintpalette")
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                if compact {
+                    Label(model.hasProAccess() ? String(localized: "Eigene Stile") : String(localized: "Eigene Stile · Pro"), systemImage: "paintpalette")
+                        .labelStyle(.iconOnly)
+                } else {
+                    Label(model.hasProAccess() ? String(localized: "Eigene Stile") : String(localized: "Eigene Stile · Pro"), systemImage: "paintpalette")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .menuStyle(.borderedButton).controlSize(.small)
             .accessibilityIdentifier("editor.savedStyles.menu")
+            .accessibilityLabel(model.hasProAccess() ? String(localized: "Eigene Stile") : String(localized: "Eigene Stile · Pro"))
             .help(String(localized: "Werkzeugstil speichern, anwenden oder verwalten"))
-            if let error = preferences.styleLibraryError {
+            if !compact, let error = preferences.styleLibraryError {
                 Text(error).font(.caption).foregroundStyle(.red)
-            } else if preferences.savedStyles.count >= EditorStyleLibrary.maximumStyles {
+            } else if !compact, preferences.savedStyles.count >= EditorStyleLibrary.maximumStyles {
                 Text(String(localized: "Es sind höchstens 100 eigene Stile möglich.")).font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -165,6 +173,9 @@ private extension EditorStyleFamily {
         case .text: String(localized: "Text")
         case .shape: String(localized: "Formen")
         case .callout: String(localized: "Callout")
+        case .pen: String(localized: "Stift")
+        case .spotlight: String(localized: "Spotlight")
+        case .magnifier: String(localized: "Lupe")
         case .blur: String(localized: "Unschärfe")
         case .redact: String(localized: "Abdecken")
         case .highlight: String(localized: "Markieren")

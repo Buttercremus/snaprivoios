@@ -110,6 +110,30 @@ import SnagForgeDomain
         require(model.items.first { $0.id == first.id }?.document.trim == VideoTrim(start: 0.1, end: 0.9), "Saved preview did not refresh the library")
         require(await model.finishPendingWork())
         preview.stopPreview(); model.preview = nil
+        // Disposable caches must not hide the recording; oversized metadata must
+        // fail before decoding or publishing a restore. Sparse files use no large buffers.
+        func oversized(_ url: URL, bytes: UInt64) throws {
+            FileManager.default.createFile(atPath: url.path, contents: nil)
+            let handle = try FileHandle(forWritingTo: url); defer { try? handle.close() }
+            try handle.truncate(atOffset: bytes)
+        }
+        let thumb = folder.appendingPathComponent(".library/\(first.id).jpg")
+        try oversized(thumb, bytes: UInt64(ProjectArchive.maximumThumbnailBytes + 1))
+        let withoutCache = try await files.list()
+        require(withoutCache.items.first { $0.id == first.id }?.thumbnail == nil)
+        require(withoutCache.items.first { $0.id == first.id }?.document.state == .finished)
+        let firstMetadata = folder.appendingPathComponent(".library/\(first.id).json")
+        try oversized(firstMetadata, bytes: 1_048_577)
+        let limited = try await files.list()
+        require(!limited.items.contains { $0.id == first.id } && !limited.issues.isEmpty)
+        let badBackup = root.appendingPathComponent("OversizedBackup")
+        try FileManager.default.createDirectory(at: badBackup, withIntermediateDirectories: true)
+        try oversized(badBackup.appendingPathComponent("manifest.json"), bytes: 16_777_217)
+        let beforeRestore = try await destination.list().items.count
+        do { _ = try await destination.restore(from: badBackup); preconditionFailure("Oversized video manifest accepted") }
+        catch ProjectError.fileTooLarge { }
+        require(try await destination.list().items.count == beforeRestore)
+        print("Video file limits passed: oversized thumbnail discarded, metadata bounded, oversized backup rejected before import.")
         print("Video library passed: finalized-only opening, thumbnail/duration/dimensions, rename preserves movie bytes/inode/date, restart, failed/interrupted journal, legacy adoption, invalid/newer metadata, backup checksums, new-copy restore, duplicate import, invalid backup atomicity and model opening.")
     }
     static func restart(write: Bool, key: String) async throws {

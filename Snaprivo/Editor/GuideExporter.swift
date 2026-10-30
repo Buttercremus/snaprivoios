@@ -23,7 +23,7 @@ enum GuideExporter {
             try Task.checkCancellation()
             // Re-encode imported pixels too: PNG ancillary metadata is never an output asset.
             value.steps[i].png = try EditorRenderer.png(image: image(value.steps[i].png), objects: [])
-            value.steps[i].sourceProjectID = nil; value.steps[i].sourceLibrary = nil
+            value.steps[i].sourceProjectID = nil; value.steps[i].sourceLibrary = nil; value.steps[i].sourceRevision = nil
         }
         return value
     }
@@ -36,9 +36,9 @@ enum GuideExporter {
               original.height == loaded.document.pixelSize.height else { throw ProjectError.invalidDocument }
         let document = loaded.document
         let flat = try EditorRenderer.render(image: original, objects: document.objects, crop: document.crop,
-                                             resizedSize: document.resizedSize, maxDimension: 2560)
+                                             resizedSize: document.resizedSize, maxDimension: 2560, canvasRect: document.canvasRect, transform: document.transform, presentation: document.presentation)
         return GuideStep(title: String(document.title.prefix(256)), png: try EditorRenderer.png(image: flat, objects: []),
-                         sourceProjectID: document.id, sourceLibrary: library)
+                         sourceProjectID: document.id, sourceLibrary: library, sourceRevision: loaded.generation)
     }
     static func pdf(_ document: GuideDocument) throws -> Data {
         try validateImages(document)
@@ -53,19 +53,31 @@ enum GuideExporter {
         try writer.text(document.introduction, size: 12)
         for (index, step) in document.steps.enumerated() {
             try Task.checkCancellation()
-            try writer.newPage()
-            try writer.text("\(index + 1). \(step.title)", size: 20, bold: true)
-            writer.cursor += 16
             let image = try image(step.png)
+            let title = "\(index + 1). \(step.title)", captionSize: CGFloat = document.style == .compact ? 11 : 12
+            let imageHeight = min(document.style == .compact ? 220.0 : 420.0, writer.width * CGFloat(image.height) / CGFloat(image.width))
+            let titleHeight = writer.textHeight(title, size: 20, bold: true)
+            let captionHeight = writer.textHeight(step.caption, size: captionSize)
+            let entireStep = titleHeight + 16 + imageHeight + 16 + captionHeight + 16
+            let minimumStep = titleHeight + 16 + imageHeight + 16 + min(captionHeight, captionSize * 3)
+            let needed = entireStep <= writer.pageHeight ? entireStep : minimumStep
+            if document.style == .standard && (document.includesCover || index > 0) {
+                try writer.newPage()
+            } else if index == 0 && document.includesCover || writer.available < needed {
+                try writer.newPage()
+            }
+            try writer.text(title, size: 20, bold: true)
+            writer.cursor += 16
             if writer.available < 120 { try writer.newPage() }
-            let maxHeight = min(writer.available - 16, document.style == .compact ? 330 : 420)
+            let maxHeight = min(writer.available - 16, imageHeight)
             let scale = min(writer.width / CGFloat(image.width), maxHeight / CGFloat(image.height))
             let rect = CGRect(x: box.midX - CGFloat(image.width) * scale / 2,
                               y: box.height - writer.cursor - CGFloat(image.height) * scale,
                               width: CGFloat(image.width) * scale, height: CGFloat(image.height) * scale)
             context.interpolationQuality = .high; context.draw(image, in: rect)
             writer.cursor += rect.height + 16
-            try writer.text(step.caption, size: document.style == .compact ? 11 : 12)
+            try writer.text(step.caption, size: captionSize)
+            writer.cursor += 16
         }
         writer.endPage(); context.closePDF()
         return bytes as Data
@@ -98,6 +110,7 @@ private final class PDFWriter {
     var page = 0
     var width: CGFloat { box.width - 2 * margin }
     var available: CGFloat { box.height - margin - cursor }
+    var pageHeight: CGFloat { box.height - 2 * margin }
     init(context: CGContext, box: CGRect) { self.context = context; self.box = box }
     func newPage() throws {
         try Task.checkCancellation()
@@ -116,6 +129,13 @@ private final class PDFWriter {
         let font = CTFontCreateWithName((bold ? "Helvetica-Bold" : "Helvetica") as CFString, size, nil)
         return CFAttributedStringCreate(nil, value as CFString,
             [kCTFontAttributeName: font, kCTForegroundColorAttributeName: CGColor(gray: 0.12, alpha: 1)] as CFDictionary)!
+    }
+    func textHeight(_ value: String, size: CGFloat, bold: Bool = false) -> CGFloat {
+        guard !value.isEmpty else { return 0 }
+        let setter = CTFramesetterCreateWithAttributedString(attributed(value, size: size, bold: bold))
+        let measured = CTFramesetterSuggestFrameSizeWithConstraints(setter, CFRange(location: 0, length: 0), nil,
+            CGSize(width: width, height: .greatestFiniteMagnitude), nil)
+        return ceil(measured.height) + size * 0.5 + 6
     }
     func text(_ value: String, size: CGFloat, bold: Bool = false) throws {
         guard !value.isEmpty else { return }

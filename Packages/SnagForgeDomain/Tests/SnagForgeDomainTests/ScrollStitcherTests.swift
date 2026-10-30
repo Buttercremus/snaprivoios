@@ -8,7 +8,7 @@ private func page(_ start: Int, height: Int = 240) throws -> ScrollFrame {
 }
 @Test func verticalScrollMatchesExactOverlap() throws {
     let first = try page(0)
-    for delta in [4, 33, 87, 166] { #expect(try ScrollStitcher.displacement(from: first, to: page(delta)) == delta) }
+    for delta in [1, 2, 3, 4, 33, 87, 166] { #expect(try ScrollStitcher.displacement(from: first, to: page(delta)) == delta) }
     #expect(throws: ScrollStitchError.uncertain) { try ScrollStitcher.displacement(from: first, to: page(200)) }
 }
 @Test func scrollRejectsBlankRepeatedAndMovingContent() throws {
@@ -72,4 +72,12 @@ private func page(_ start: Int, height: Int = 240) throws -> ScrollFrame {
     #expect(try ScrollStitcher.displacement(from: trimmedA, to: trimmedB) == 80)
     #expect(throws: ScrollStitchError.dimensions) { try ScrollContentInsets(topPercent: 21).rect(width: 100, height: 240) }
     #expect(throws: ScrollStitchError.dimensions) { try ScrollContentInsets(topPercent: 20, bottomPercent: 20).rect(width: 100, height: 100) }
+}
+
+@Test func livePanoramaUsesPixelBoundsRatherThanManualSectionCount() throws {
+    try ScrollStitcher.validateOutputSize(width: 2000, height: 20000)
+    #expect(throws: ScrollStitchError.limit) { try ScrollStitcher.validateOutputSize(width: 2001, height: 20000) }
+    #expect(throws: ScrollStitchError.limit) { try ScrollStitcher.validateOutputSize(width: 2000, height: 20001) }
+    #expect(throws: ScrollStitchError.limit) { try ScrollStitcher.validateOutputSize(width: 4097, height: 100) }
+    #expect(throws: ScrollStitchError.limit) { try ScrollStitcher.validateOutputSize(width: 0, height: 100) }
 }

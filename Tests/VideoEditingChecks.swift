@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import ImageIO
 import SnagForgeDomain
 
 /// File-only fixtures: never opens a microphone, capture source or audio device.
@@ -17,6 +18,7 @@ import SnagForgeDomain
         let bytes = try Data(contentsOf: original), attributes = try FileManager.default.attributesOfItem(atPath: original.path)
         let model = VideoEditorModel(document: document, url: original, files: files)
         model.player.isMuted = true
+        try await VideoTimelineChecks.run(model: model, original: original)
         defer { model.stopPreview() }
         model.start = 0.9; model.end = 0.1
         require(!model.isValid && !model.canApply)
@@ -110,6 +112,25 @@ import SnagForgeDomain
         _ = try await files.setTrim(silent.id, trim: selection, expectedRevision: 0)
         try await files.exportEdited(silent.id, to: root.appendingPathComponent("SilentTrim.mp4"))
         try await checkExport(original: silentOriginal, output: root.appendingPathComponent("SilentTrim.mp4"), audio: false)
+        let gif = root.appendingPathComponent("SilentTrim.gif")
+        do {
+            try await files.exportGIF(silent.id, to: root.appendingPathComponent("TooLong.gif"), options: .init(maximumDuration: 0.25))
+            preconditionFailure("GIF export silently truncated the selection")
+        } catch VideoRecordingError.gifDurationExceeded { }
+        try await files.exportGIF(silent.id, to: gif, options: .init(framesPerSecond: 8, maximumDimension: 320, maximumDuration: 2))
+        try checkGIF(gif, expectedMaximumFrames: 16, maximumDimension: 320)
+        let priorGIF = try Data(contentsOf: gif)
+        let gifGate = ExportPublishGate()
+        let cancelledGIF = Task { try await files.exportGIF(silent.id, to: gif, options: .init(framesPerSecond: 8), beforePublish: { await gifGate.pause() }) }
+        for _ in 0..<3000 { if await gifGate.reached { break }; try await Task.sleep(for: .milliseconds(5)) }
+        require(await gifGate.reached, "GIF encoding never reached publication checkpoint")
+        cancelledGIF.cancel(); await gifGate.resume()
+        do { try await cancelledGIF.value; preconditionFailure("Cancelled GIF export published") } catch is CancellationError { }
+        require(try Data(contentsOf: gif) == priorGIF, "Cancelled GIF export replaced destination")
+        do { try await files.exportGIF(silent.id, to: silentOriginal); preconditionFailure("GIF export accepted library original") }
+        catch VideoEditError.originalTarget { }
+        do { try await files.exportGIF(silent.id, to: root.appendingPathComponent("Stale.gif"), expectedRevision: 0); preconditionFailure("GIF export accepted stale revision") }
+        catch ProjectError.staleRevision { }
         _ = try await files.setTrim(silent.id, trim: .init(start: 0.2, end: 0.2 + 1.0 / 30), expectedRevision: 1)
         let oneFrame = root.appendingPathComponent("OneFrame.mp4")
         try await files.exportEdited(silent.id, to: oneFrame)
@@ -126,6 +147,27 @@ import SnagForgeDomain
         catch ProjectError.invalidDocument { }
         require(!FileManager.default.fileExists(atPath: files.root.appendingPathComponent(".library/\(mismatched.id).json").path))
         print("Video editing passed: invalid bounds, applied-only export, saved revisions, Undo/Redo, full-original reset, reopened AVPlayer bounds and automatic stop, stale save/export refusal, reload, immutable bytes/inode/date, backup/restore with full original and trim, H.264 cuts between keyframes, AAC pulse timeline, silent cuts, atomic overwrite, cancellation before publish and protected library targets.")
+    }
+
+    private static func checkGIF(_ url: URL, expectedMaximumFrames: Int, maximumDimension: Int) throws {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { preconditionFailure("GIF source unreadable") }
+        let count = CGImageSourceGetCount(source)
+        guard count > 0, count <= expectedMaximumFrames else { preconditionFailure("GIF frame count invalid") }
+        var firstByte: UInt8?
+        var lastByte: UInt8?
+        for index in 0..<count {
+            guard let image = CGImageSourceCreateImageAtIndex(source, index, nil), max(image.width, image.height) <= maximumDimension else {
+                preconditionFailure("GIF frame dimensions exceed bound")
+            }
+            if let data = image.dataProvider?.data as Data?, let byte = data.first {
+                firstByte = firstByte ?? byte; lastByte = byte
+            }
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as NSDictionary?
+            let gif = properties?[kCGImagePropertyGIFDictionary as String] as? NSDictionary
+            require((gif?[kCGImagePropertyGIFDelayTime as String] as? NSNumber)?.doubleValue ?? 0 > 0, "GIF frame delay missing")
+        }
+        require(firstByte != nil && lastByte != nil && abs(Int(firstByte!) - Int(lastByte!)) > 2,
+                "GIF frames did not preserve distinct source sections")
     }
 
     static func checkExport(original: URL, output: URL, audio: Bool) async throws {

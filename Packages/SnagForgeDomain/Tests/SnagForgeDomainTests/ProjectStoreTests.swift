@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import Testing
 @testable import SnagForgeDomain
 
@@ -24,6 +25,48 @@ private func temporaryLibrary() -> URL {
 }
 private func package(_ root: URL, _ id: UUID) -> URL {
     root.appendingPathComponent("\(id.uuidString).snagforge")
+}
+
+@Test func projectStoreLockHasBoundedWaitAndPreservesExistingData() async throws {
+    let root = temporaryLibrary(); defer { try? FileManager.default.removeItem(at: root) }
+    let initial = projectFixture(), writer = ProjectStore(root: root)
+    try await writer.create(initial, original: Data([1, 2, 3]), thumbnail: nil)
+    let descriptor = Darwin.open(root.appendingPathComponent(".library-lock").path, O_RDWR)
+    #expect(descriptor >= 0); defer { Darwin.close(descriptor) }
+    #expect(flock(descriptor, LOCK_EX | LOCK_NB) == 0)
+    let blocked = ProjectStore(root: root, lockTimeout: .milliseconds(80))
+    do {
+        _ = try await blocked.list()
+        Issue.record("Contended project lock unexpectedly completed")
+    } catch ProjectError.libraryBusy { }
+    catch { Issue.record("Expected ProjectError.libraryBusy, got \(error)") }
+    #expect(flock(descriptor, LOCK_UN) == 0)
+    #expect(try await writer.load(initial.id).document == initial)
+    #expect(try await blocked.list().items.count == 1)
+}
+
+@Test func projectStoreLockWaitHonorsCancellation() async throws {
+    let root = temporaryLibrary(); defer { try? FileManager.default.removeItem(at: root) }
+    try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    let descriptor = Darwin.open(root.appendingPathComponent(".library-lock").path, O_CREAT | O_RDWR, mode_t(0o600))
+    #expect(descriptor >= 0); defer { Darwin.close(descriptor) }
+    #expect(flock(descriptor, LOCK_EX | LOCK_NB) == 0)
+    let store = ProjectStore(root: root, lockTimeout: .seconds(2))
+    let task = Task { try await store.list() }
+    try await Task.sleep(for: .milliseconds(60))
+    task.cancel()
+    do {
+        _ = try await task.value
+        Issue.record("Cancelled project lock wait unexpectedly completed")
+    } catch is CancellationError { }
+    catch { Issue.record("Expected cancellation, got \(error)") }
+    #expect(flock(descriptor, LOCK_UN) == 0)
+
+    let remaining = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
+    #expect(remaining.allSatisfy { $0.lastPathComponent == ".library-lock" })
+    let document = projectFixture()
+    try await store.create(document, original: Data([4, 5, 6]), thumbnail: nil)
+    #expect(try await store.load(document.id).document == document)
 }
 
 @Test func projectRoundTripPreservesEveryEditableProperty() async throws {

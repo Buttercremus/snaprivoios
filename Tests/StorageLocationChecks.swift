@@ -30,6 +30,7 @@ import SnagForgeDomain
     static func run() async throws {
         try checkAppearance()
         try checkBookmarkLifecycle()
+        try await checkLiveRestoreReadiness()
         try await checkLibrarySwitchAndRestart()
         print("Storage checks passed: System/Hell/Dunkel and restart, PNG save-panel directory, balanced/stale/denied bookmarks, transactional library copy with trash, open-editor Undo after relocation, restart and unavailable-folder recovery.")
     }
@@ -88,6 +89,71 @@ import SnagForgeDomain
         precondition(brokenLibrary.libraryError != nil && brokenLibrary.libraryURL == nil)
         precondition(!FileManager.default.fileExists(atPath: StorageLocations.libraryURL(in: root).path))
         brokenLibrary.endAccess(); probe.assertReleased()
+    }
+
+    private static func checkLiveRestoreReadiness() async throws {
+        let suite = "Snaprivo-LiveRestore-\(UUID())", defaults = UserDefaults(suiteName: suite)!
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("Snaprivo-LiveRestore-\(UUID())", isDirectory: true)
+        try FileManager.default.createDirectory(at: StorageLocations.libraryURL(in: root), withIntermediateDirectories: true)
+        defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: root) }
+        // Live bookmark restoration is deliberately deferred: construction must not touch
+        // the file system or block the MainActor while the persisted grant is resolved.
+        let empty = StorageLocations(defaults: defaults)
+        precondition(empty.isReady && empty.libraryError == nil)
+        defaults.set("/persisted/custom", forKey: "storage.library.path")
+        let locations = StorageLocations(defaults: defaults)
+        precondition(!locations.isReady)
+        precondition(locations.libraryError != nil)
+        await locations.restoreIfNeeded()
+        precondition(locations.isReady && locations.libraryError != nil)
+        locations.endAccess()
+
+
+        defaults.set(Data([1, 2, 3]), forKey: "storage.library.path")
+        let invalidPath = StorageLocations(defaults: defaults)
+        precondition(!invalidPath.isReady)
+        await invalidPath.restoreIfNeeded()
+        precondition(invalidPath.isReady && invalidPath.libraryError != nil, "A malformed persisted path enabled an unrelated default library")
+        invalidPath.endAccess()
+
+        defaults.set("wrong bookmark type", forKey: "storage.library.bookmark")
+        let malformed = StorageLocations(defaults: defaults)
+        precondition(!malformed.isReady)
+        await malformed.restoreIfNeeded()
+        precondition(malformed.isReady && malformed.libraryError != nil)
+
+        // A persisted custom library is resolved and scoped before its directory
+        // metadata is read, then the retained lease is balanced on shutdown.
+        defaults.set(try root.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil), forKey: "storage.library.bookmark")
+        let restored = StorageLocations(defaults: defaults)
+        await restored.restoreIfNeeded()
+        precondition(restored.libraryURL?.resolvingSymlinksInPath() == StorageLocations.libraryURL(in: root).resolvingSymlinksInPath(),
+                     "Live restore mismatch: actual=\(restored.libraryURL?.path ?? "nil"), expected=\(StorageLocations.libraryURL(in: root).path), error=\(restored.libraryError ?? "none")")
+        restored.endAccess()
+
+        // Two callers share the same delayed background restore, while the
+        // MainActor remains available for a heartbeat. Cancelling that restore
+        // before publication must not leave a late grant behind.
+        let gatedDefaults = UserDefaults(suiteName: suite)!
+        gatedDefaults.set(try root.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil), forKey: "storage.library.bookmark")
+        let gateClient = FolderBookmarkClient(create: { _ in Data() }, resolve: { _ in fatalError() },
+                                               start: { _ in true }, stop: { _ in }, isLive: true,
+                                               restoreGate: { try? await Task.sleep(for: .milliseconds(40)) })
+        let gated = StorageLocations(defaults: gatedDefaults, client: gateClient)
+        let first = Task { await gated.restoreIfNeeded() }
+        let second = Task { await gated.restoreIfNeeded() }
+        var heartbeat = 0
+        for _ in 0..<3 { try await Task.sleep(for: .milliseconds(5)); heartbeat += 1 }
+        precondition(heartbeat == 3)
+        await first.value; await second.value
+        precondition(gated.libraryURL?.resolvingSymlinksInPath() == StorageLocations.libraryURL(in: root).resolvingSymlinksInPath())
+        gated.endAccess()
+
+        let late = StorageLocations(defaults: gatedDefaults, client: gateClient)
+        let lateRestore = Task { await late.restoreIfNeeded() }
+        try await Task.sleep(for: .milliseconds(5)); late.endAccess()
+        await lateRestore.value
+        precondition(late.libraryURL == nil)
     }
     private static func checkLibrarySwitchAndRestart() async throws {
         let suite = "Snaprivo-Locations-\(UUID())", defaults = UserDefaults(suiteName: suite)!

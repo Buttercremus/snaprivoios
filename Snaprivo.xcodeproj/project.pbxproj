@@ -7,112 +7,148 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-50A1DDFB563F4E4EA80C1B3C = {isa = PBXBuildFile; fileRef = AAF9DA5E2285429B9A4DC6F9; };
-		2C2AAAB7F163448BBE6897C5 = {isa = PBXBuildFile; fileRef = 987C5E2889BB4C1A8B784DD2; };
-		C3F7BFA4664B4777B6ADA388 = {isa = PBXBuildFile; fileRef = 92EFA4CEDDD14CB18EEFFFEE; };
-		B74F445EE61A4288B0E4D8BD = {isa = PBXBuildFile; fileRef = 4D77ABCA8393479699C0EB66; };
-		FA4103F9F9444DB48BDDDEF3 /* Snaprivo/Features/QuickCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A55918D303F4048AE811ACA; };
-		F5BCF8A9D2C1443E9D8F75BA /* Snaprivo/Features/ProPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0FBB059B4B41C087D9F15C; };
-		7DA746B107A14EBEB1D83866 /* Snaprivo/Features/EditorObjectList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2407F9DB1C1E4BDABD1E2E07; };
-		C1AAD9C8F2EE4FC4A5474407 /* Snaprivo/App/ProPurchaseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92EFA4CEDDD14CB18EEFFFEE; };
-		C575B0B9ABCF4ED2946CDA64 /* Snaprivo/App/CompleteBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44D4F674C43E422EA54DACB2; };
-		A03100000000000000000004 /* Snaprivo/Features/VideoEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03100000000000000000003; };
-		A03100000000000000000002 /* Snaprivo/App/VideoEditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03100000000000000000001; };
-		A03000000000000000000006 /* Snaprivo/Features/VideoLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000005; };
-		A03000000000000000000004 /* Snaprivo/App/VideoLibraryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000003; };
-		A03000000000000000000002 /* Snaprivo/Capture/VideoRecordingFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000001; };
-		A02900000000000000000002 /* Snaprivo/Features/EditorFilmstripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02900000000000000000001; };
-		A02800000000000000000006 /* Snaprivo/Features/GuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000005; };
-		A02800000000000000000004 /* Snaprivo/Editor/GuideExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000003; };
-		A02800000000000000000002 /* Snaprivo/App/GuideModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000001; };
-		A02700000000000000000004 /* Snaprivo/Features/LibraryOrganizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02700000000000000000003 /* Snaprivo/Features/LibraryOrganizationView.swift */; };
-		A02700000000000000000002 /* Snaprivo/App/LibrarySearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02700000000000000000001 /* Snaprivo/App/LibrarySearchModel.swift */; };
-		A02600000000000000000004 /* Snaprivo/Features/TextRecognitionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02600000000000000000003 /* Snaprivo/Features/TextRecognitionView.swift */; };
-		A02600000000000000000002 /* Snaprivo/Editor/TextRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02600000000000000000001 /* Snaprivo/Editor/TextRecognitionService.swift */; };
-		A02500000000000000000002 /* Snaprivo/Features/EditorSavedStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02500000000000000000001 /* Snaprivo/Features/EditorSavedStyles.swift */; };
-		A01400000000000000000042 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000041 /* InfoPlist.xcstrings */; };
-		A01400000000000000000032 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000031 /* Localizable.xcstrings */; };
-		A01400000000000000000022 /* Snaprivo/App/SupportFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000021 /* Snaprivo/App/SupportFeedback.swift */; };
-		A01400000000000000000012 /* Snaprivo/App/StorageLocations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000011 /* Snaprivo/App/StorageLocations.swift */; };
-		A01400000000000000000002 /* Snaprivo/Features/SelectionGrips.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000001 /* Snaprivo/Features/SelectionGrips.swift */; };
 		04200CFFD12D083534B07BB1 /* Snaprivo/Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3685E330EC5277A9DD5661C6 /* Snaprivo/Resources/Assets.xcassets */; };
+		0EF57D748BA824C82273C438 /* Snaprivo/Features/ImageOutputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 797A8EDCC344ADDEC6661094 /* Snaprivo/Features/ImageOutputView.swift */; };
 		1CA16D4FA9AC8CC85315D2A6 /* Snaprivo/Editor/EditorRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7550116397EB6ECD1335D87 /* Snaprivo/Editor/EditorRenderer.swift */; };
+		1D2AD8BD2F7A458C8E8F116C /* Snaprivo/Editor/EditorArrangementModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BDAC80283E441EF909785E4 /* Snaprivo/Editor/EditorArrangementModel.swift */; };
+		2C2AAAB7F163448BBE6897C5 /* Tests/StoreKitChecks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 987C5E2889BB4C1A8B784DD2 /* Tests/StoreKitChecks.swift */; };
+		2D2E9886DCC086A8591E4C1D /* Snaprivo/Features/PinnedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E60C1941897DEDE9953DB41 /* Snaprivo/Features/PinnedImage.swift */; };
+		2E3D4CE7BA7EB76958F673AF /* Snaprivo/Editor/ImageOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7D40CA80DF573EC78C4042 /* Snaprivo/Editor/ImageOutput.swift */; };
 		36A212508B48DECD667726B9 /* Snaprivo/Features/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF1B1338E3F6CC8C57014169 /* Snaprivo/Features/SettingsView.swift */; };
 		3BE2C5053690FF0CE9128A98 /* Snaprivo/Capture/ScreenshotSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DE08F986872A399411C6008 /* Snaprivo/Capture/ScreenshotSelector.swift */; };
+		48808A1EFAD94AEA81B0BC5D /* Snaprivo/Features/EditorArrangementControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31124976CA05442AA46A8B11 /* Snaprivo/Features/EditorArrangementControls.swift */; };
 		4FA9C3A39E7FF9345269B236 /* Snaprivo/Features/EditorResizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94667EADA7B6102DB6A85D1F /* Snaprivo/Features/EditorResizeView.swift */; };
+		50A1DDFB563F4E4EA80C1B3C /* Tests/Fixtures/StoreKitHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAF9DA5E2285429B9A4DC6F9 /* Tests/Fixtures/StoreKitHost.swift */; };
 		5399D133C81028BDDBB09D6B /* Snaprivo/Capture/ScreenshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AB443887F015A08D3818B2F /* Snaprivo/Capture/ScreenshotService.swift */; };
 		74845199132FC3F0B8595FDA /* Snaprivo/Editor/EditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26112BD77DE7698F1305052D /* Snaprivo/Editor/EditorModel.swift */; };
 		75D8C32F11B283CBFAFB76E8 /* Snaprivo/Features/CaptureSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63E26AAF31A05627F4098C11 /* Snaprivo/Features/CaptureSetupView.swift */; };
+		7DA746B107A14EBEB1D83866 /* Snaprivo/Features/EditorObjectList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2407F9DB1C1E4BDABD1E2E07 /* Snaprivo/Features/EditorObjectList.swift */; };
+		878D13D927503566F5D4F5B5 /* Snaprivo/Features/ImageColorPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C3CE2CE8DADFF25ACBA8B3 /* Snaprivo/Features/ImageColorPicker.swift */; };
 		8956DAAC76E7D9021DB8C279 /* Snaprivo/Capture/ScreenshotCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80099B792C8092E770DE03FC /* Snaprivo/Capture/ScreenshotCoordinator.swift */; };
+		89D1F6DB6EE4A843D7B09D27 /* Snaprivo/Features/OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601F7105D3C3A1F115608485 /* Snaprivo/Features/OnboardingView.swift */; };
 		8D59FF5D583909403993BBF0 /* Snaprivo/App/CaptureShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5107370CFA5DC8C6589BD33 /* Snaprivo/App/CaptureShortcuts.swift */; };
 		8DB56DD9BC90386BF8A194DC /* Snaprivo/Features/LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F3B99984832C76E984618CC /* Snaprivo/Features/LibraryView.swift */; };
 		91A607C62D544784AE70C3B0 /* Snaprivo/App/CaptureActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC74D895AFF4BB6ABCB4132 /* Snaprivo/App/CaptureActions.swift */; };
 		9A6549AA131AAE20D80B76A4 /* Snaprivo/Features/EditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F23CD1067E611FB64D0CFF78 /* Snaprivo/Features/EditorView.swift */; };
 		9E652F32962EBB8CDC3E58D9 /* Snaprivo/App/AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8FC4C0CCB4F50E2B966AF1 /* Snaprivo/App/AppPreferences.swift */; };
+		A01400000000000000000002 /* Snaprivo/Features/SelectionGrips.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000001 /* Snaprivo/Features/SelectionGrips.swift */; };
+		A01400000000000000000012 /* Snaprivo/App/StorageLocations.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000011 /* Snaprivo/App/StorageLocations.swift */; };
+		A01400000000000000000022 /* Snaprivo/App/SupportFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000021 /* Snaprivo/App/SupportFeedback.swift */; };
+		A01400000000000000000032 /* Snaprivo/Resources/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000031 /* Snaprivo/Resources/Localizable.xcstrings */; };
+		A01400000000000000000042 /* Snaprivo/Resources/InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A01400000000000000000041 /* Snaprivo/Resources/InfoPlist.xcstrings */; };
 		A02100000000000000000002 /* Snaprivo/Capture/VideoRecording.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02100000000000000000001 /* Snaprivo/Capture/VideoRecording.swift */; };
+		A02500000000000000000002 /* Snaprivo/Features/EditorSavedStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02500000000000000000001 /* Snaprivo/Features/EditorSavedStyles.swift */; };
+		A02600000000000000000002 /* Snaprivo/Editor/TextRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02600000000000000000001 /* Snaprivo/Editor/TextRecognitionService.swift */; };
+		A02600000000000000000004 /* Snaprivo/Features/TextRecognitionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02600000000000000000003 /* Snaprivo/Features/TextRecognitionView.swift */; };
+		A02700000000000000000002 /* Snaprivo/App/LibrarySearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02700000000000000000001 /* Snaprivo/App/LibrarySearchModel.swift */; };
+		A02700000000000000000004 /* Snaprivo/Features/LibraryOrganizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02700000000000000000003 /* Snaprivo/Features/LibraryOrganizationView.swift */; };
+		A02800000000000000000002 /* Snaprivo/App/GuideModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000001 /* Snaprivo/App/GuideModel.swift */; };
+		A02800000000000000000004 /* Snaprivo/Editor/GuideExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000003 /* Snaprivo/Editor/GuideExporter.swift */; };
+		A02800000000000000000006 /* Snaprivo/Features/GuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000005 /* Snaprivo/Features/GuideView.swift */; };
+		A02900000000000000000002 /* Snaprivo/Features/EditorFilmstripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02900000000000000000001 /* Snaprivo/Features/EditorFilmstripView.swift */; };
+		A03000000000000000000002 /* Snaprivo/Capture/VideoRecordingFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000001 /* Snaprivo/Capture/VideoRecordingFiles.swift */; };
+		A03000000000000000000004 /* Snaprivo/App/VideoLibraryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000003 /* Snaprivo/App/VideoLibraryModel.swift */; };
+		A03000000000000000000006 /* Snaprivo/Features/VideoLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000005 /* Snaprivo/Features/VideoLibraryView.swift */; };
+		A03100000000000000000002 /* Snaprivo/App/VideoEditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03100000000000000000001 /* Snaprivo/App/VideoEditorModel.swift */; };
+		A03100000000000000000004 /* Snaprivo/Features/VideoEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03100000000000000000003 /* Snaprivo/Features/VideoEditorView.swift */; };
+		A03500000000000000000002 /* Snaprivo/Features/EditorQuickOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03500000000000000000001 /* Snaprivo/Features/EditorQuickOptions.swift */; };
+		A03600000000000000000002 /* Snaprivo/Capture/CaptureToolbarSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03600000000000000000001 /* Snaprivo/Capture/CaptureToolbarSurface.swift */; };
+		A03700000000000000000002 /* Snaprivo/Features/VideoTrimTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03700000000000000000001 /* Snaprivo/Features/VideoTrimTimeline.swift */; };
+		A03700000000000000000004 /* Snaprivo/Features/VideoSecondsField.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03700000000000000000003 /* Snaprivo/Features/VideoSecondsField.swift */; };
+		A03700000000000000000006 /* Snaprivo/Features/VideoTrimHandle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03700000000000000000005 /* Snaprivo/Features/VideoTrimHandle.swift */; };
+		A60C501750BEBF7F4FE85FE0 /* Snaprivo/Features/InsertImageButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 147A7302576B19F2F5285652 /* Snaprivo/Features/InsertImageButton.swift */; };
 		A89218FB7F924D39A8430762 /* Snaprivo/Features/EditorShapeOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E43BD12023AF44D9A42ED991 /* Snaprivo/Features/EditorShapeOptions.swift */; };
 		B65D38F2C814DD3652D8B837 /* Snaprivo/App/WorkspaceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72DAB7F309B0536D24A03688 /* Snaprivo/App/WorkspaceModel.swift */; };
+		B74F445EE61A4288B0E4D8BD /* Tests/Fixtures/Snaprivo.storekit in Resources */ = {isa = PBXBuildFile; fileRef = 4D77ABCA8393479699C0EB66 /* Tests/Fixtures/Snaprivo.storekit */; };
+		C1AAD9C8F2EE4FC4A5474407 /* Snaprivo/App/ProPurchaseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92EFA4CEDDD14CB18EEFFFEE /* Snaprivo/App/ProPurchaseModel.swift */; };
+		C3F7BFA4664B4777B6ADA388 /* Snaprivo/App/ProPurchaseModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92EFA4CEDDD14CB18EEFFFEE /* Snaprivo/App/ProPurchaseModel.swift */; };
+		C575B0B9ABCF4ED2946CDA64 /* Snaprivo/App/CompleteBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44D4F674C43E422EA54DACB2 /* Snaprivo/App/CompleteBackup.swift */; };
 		C6098C7C1739CD5FBFB03914 /* Snaprivo/Features/WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 550DBAF939ECF00CC2861D8A /* Snaprivo/Features/WorkspaceView.swift */; };
 		C8ABC08508DFA752764689B7 /* Snaprivo/App/SnagForgeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF89746B79F853D2D4BAFD84 /* Snaprivo/App/SnagForgeApp.swift */; };
+		E5EDA3CB8A6A4D9787B941DD /* Snaprivo/Features/RedactionSuggestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE2C7788D5D4709BB70DFCF /* Snaprivo/Features/RedactionSuggestionView.swift */; };
+		E6C703E4D0FE4034ABF7A5B0 /* Snaprivo/Editor/RedactionSuggestionModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80BD275633874A0D900DF72B /* Snaprivo/Editor/RedactionSuggestionModel.swift */; };
 		E93FBD51D626A50EF955F042 /* Snaprivo/Features/ShortcutRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7BC63675721D72557E6FBAC /* Snaprivo/Features/ShortcutRecorder.swift */; };
 		ED5515BE9EC5C2E8DC76B514 /* SnagForgeDomain in Frameworks */ = {isa = PBXBuildFile; productRef = 7AA26C3280477D396814ED27 /* SnagForgeDomain */; };
 		F357987B378C4F82AC3215D9 /* Snaprivo/Features/EditorToolPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = F01A7061394F4212AE9EE039 /* Snaprivo/Features/EditorToolPalette.swift */; };
+		F5BCF8A9D2C1443E9D8F75BA /* Snaprivo/Features/ProPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C0FBB059B4B41C087D9F15C /* Snaprivo/Features/ProPaywallView.swift */; };
+		FA4103F9F9444DB48BDDDEF3 /* Snaprivo/Features/QuickCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A55918D303F4048AE811ACA /* Snaprivo/Features/QuickCaptureView.swift */; };
 		FC2C002882183AF4A13E0E2D /* Snaprivo/Editor/EditorCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39B14FE663E999352FC4866 /* Snaprivo/Editor/EditorCanvas.swift */; };
-		2D2E9886DCC086A8591E4C1D /* Snaprivo/Features/PinnedImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E60C1941897DEDE9953DB41; };
-		878D13D927503566F5D4F5B5 /* Snaprivo/Features/ImageColorPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6C3CE2CE8DADFF25ACBA8B3; };
-		A60C501750BEBF7F4FE85FE0 /* Snaprivo/Features/InsertImageButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 147A7302576B19F2F5285652; };
-		2E3D4CE7BA7EB76958F673AF /* Snaprivo/Editor/ImageOutput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C7D40CA80DF573EC78C4042; };
-		0EF57D748BA824C82273C438 /* Snaprivo/Features/ImageOutputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 797A8EDCC344ADDEC6661094; };
-		89D1F6DB6EE4A843D7B09D27 /* Snaprivo/Features/OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 601F7105D3C3A1F115608485; };
+		A10400000000000000000002 /* Snaprivo/Editor/PresentationBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10400000000000000000001 /* Snaprivo/Editor/PresentationBackground.swift */; };
+		A10400000000000000000004 /* Snaprivo/Editor/PresentationPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10400000000000000000003 /* Snaprivo/Editor/PresentationPresets.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		25FF6DBD5AE94351B2927185 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 416DBFD78C4446D9BE7B6D04;
+			remoteInfo = SnaprivoStoreHost;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
-AAF9DA5E2285429B9A4DC6F9 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/Fixtures/StoreKitHost.swift; sourceTree = SOURCE_ROOT; };
-D450F83BF91F4C429CA1EBB2 = {isa = PBXFileReference; explicitFileType = wrapper.application; path = SnaprivoStoreHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9287F7BE55B548D7B369565F = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = SnaprivoStoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		987C5E2889BB4C1A8B784DD2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/StoreKitChecks.swift; sourceTree = SOURCE_ROOT; };
-		4D77ABCA8393479699C0EB66 = {isa = PBXFileReference; lastKnownFileType = text; path = Tests/Fixtures/Snaprivo.storekit; sourceTree = SOURCE_ROOT; };
-		5A55918D303F4048AE811ACA /* Snaprivo/Features/QuickCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/QuickCaptureView.swift; sourceTree = SOURCE_ROOT; };
-		4C0FBB059B4B41C087D9F15C /* Snaprivo/Features/ProPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/ProPaywallView.swift; sourceTree = SOURCE_ROOT; };
+		147A7302576B19F2F5285652 /* Snaprivo/Features/InsertImageButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/InsertImageButton.swift; sourceTree = SOURCE_ROOT; };
+		1AE2C7788D5D4709BB70DFCF /* Snaprivo/Features/RedactionSuggestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/RedactionSuggestionView.swift; sourceTree = SOURCE_ROOT; };
 		2407F9DB1C1E4BDABD1E2E07 /* Snaprivo/Features/EditorObjectList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorObjectList.swift; sourceTree = SOURCE_ROOT; };
-		92EFA4CEDDD14CB18EEFFFEE /* Snaprivo/App/ProPurchaseModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/ProPurchaseModel.swift; sourceTree = SOURCE_ROOT; };
-		44D4F674C43E422EA54DACB2 /* Snaprivo/App/CompleteBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/CompleteBackup.swift; sourceTree = SOURCE_ROOT; };
-		A03100000000000000000003 /* Snaprivo/Features/VideoEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoEditorView.swift; sourceTree = SOURCE_ROOT; };
-		A03100000000000000000001 /* Snaprivo/App/VideoEditorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/VideoEditorModel.swift; sourceTree = SOURCE_ROOT; };
-		A03000000000000000000005 /* Snaprivo/Features/VideoLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoLibraryView.swift; sourceTree = SOURCE_ROOT; };
-		A03000000000000000000003 /* Snaprivo/App/VideoLibraryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/VideoLibraryModel.swift; sourceTree = SOURCE_ROOT; };
-		A03000000000000000000001 /* Snaprivo/Capture/VideoRecordingFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/VideoRecordingFiles.swift; sourceTree = SOURCE_ROOT; };
-		A02900000000000000000001 /* Snaprivo/Features/EditorFilmstripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorFilmstripView.swift; sourceTree = SOURCE_ROOT; };
-		A02800000000000000000005 /* Snaprivo/Features/GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/GuideView.swift; sourceTree = SOURCE_ROOT; };
-		A02800000000000000000003 /* Snaprivo/Editor/GuideExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/GuideExporter.swift; sourceTree = SOURCE_ROOT; };
-		A02800000000000000000001 /* Snaprivo/App/GuideModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/GuideModel.swift; sourceTree = SOURCE_ROOT; };
-		A02700000000000000000003 /* Snaprivo/Features/LibraryOrganizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/LibraryOrganizationView.swift; sourceTree = SOURCE_ROOT; };
-		A02700000000000000000001 /* Snaprivo/App/LibrarySearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/LibrarySearchModel.swift; sourceTree = SOURCE_ROOT; };
-		A02600000000000000000003 /* Snaprivo/Features/TextRecognitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/TextRecognitionView.swift; sourceTree = SOURCE_ROOT; };
-		A02600000000000000000001 /* Snaprivo/Editor/TextRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/TextRecognitionService.swift; sourceTree = SOURCE_ROOT; };
-		A02500000000000000000001 /* Snaprivo/Features/EditorSavedStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorSavedStyles.swift; sourceTree = SOURCE_ROOT; };
-		A01400000000000000000041 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Snaprivo/Resources/InfoPlist.xcstrings; sourceTree = SOURCE_ROOT; };
-		A01400000000000000000031 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Snaprivo/Resources/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
-		A01400000000000000000021 /* Snaprivo/App/SupportFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/SupportFeedback.swift; sourceTree = SOURCE_ROOT; };
-		A01400000000000000000011 /* Snaprivo/App/StorageLocations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/StorageLocations.swift; sourceTree = SOURCE_ROOT; };
-		A01400000000000000000001 /* Snaprivo/Features/SelectionGrips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/SelectionGrips.swift; sourceTree = SOURCE_ROOT; };
 		26112BD77DE7698F1305052D /* Snaprivo/Editor/EditorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/EditorModel.swift; sourceTree = SOURCE_ROOT; };
+		31124976CA05442AA46A8B11 /* Snaprivo/Features/EditorArrangementControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorArrangementControls.swift; sourceTree = SOURCE_ROOT; };
 		3685E330EC5277A9DD5661C6 /* Snaprivo/Resources/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Snaprivo/Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 		38A007151ABE87CC01A5B6E9 /* Snaprivo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Snaprivo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AB443887F015A08D3818B2F /* Snaprivo/Capture/ScreenshotService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/ScreenshotService.swift; sourceTree = SOURCE_ROOT; };
 		3DE08F986872A399411C6008 /* Snaprivo/Capture/ScreenshotSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/ScreenshotSelector.swift; sourceTree = SOURCE_ROOT; };
+		44D4F674C43E422EA54DACB2 /* Snaprivo/App/CompleteBackup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/CompleteBackup.swift; sourceTree = SOURCE_ROOT; };
+		4C0FBB059B4B41C087D9F15C /* Snaprivo/Features/ProPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/ProPaywallView.swift; sourceTree = SOURCE_ROOT; };
+		4D77ABCA8393479699C0EB66 /* Tests/Fixtures/Snaprivo.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Tests/Fixtures/Snaprivo.storekit; sourceTree = SOURCE_ROOT; };
 		550DBAF939ECF00CC2861D8A /* Snaprivo/Features/WorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/WorkspaceView.swift; sourceTree = SOURCE_ROOT; };
+		5A55918D303F4048AE811ACA /* Snaprivo/Features/QuickCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/QuickCaptureView.swift; sourceTree = SOURCE_ROOT; };
 		5AC74D895AFF4BB6ABCB4132 /* Snaprivo/App/CaptureActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/CaptureActions.swift; sourceTree = SOURCE_ROOT; };
+		5BDAC80283E441EF909785E4 /* Snaprivo/Editor/EditorArrangementModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/EditorArrangementModel.swift; sourceTree = SOURCE_ROOT; };
+		601F7105D3C3A1F115608485 /* Snaprivo/Features/OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/OnboardingView.swift; sourceTree = SOURCE_ROOT; };
 		63E26AAF31A05627F4098C11 /* Snaprivo/Features/CaptureSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/CaptureSetupView.swift; sourceTree = SOURCE_ROOT; };
+		6C7D40CA80DF573EC78C4042 /* Snaprivo/Editor/ImageOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/ImageOutput.swift; sourceTree = SOURCE_ROOT; };
 		6F3B99984832C76E984618CC /* Snaprivo/Features/LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/LibraryView.swift; sourceTree = SOURCE_ROOT; };
 		72DAB7F309B0536D24A03688 /* Snaprivo/App/WorkspaceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/WorkspaceModel.swift; sourceTree = SOURCE_ROOT; };
+		797A8EDCC344ADDEC6661094 /* Snaprivo/Features/ImageOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/ImageOutputView.swift; sourceTree = SOURCE_ROOT; };
 		80099B792C8092E770DE03FC /* Snaprivo/Capture/ScreenshotCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/ScreenshotCoordinator.swift; sourceTree = SOURCE_ROOT; };
+		80BD275633874A0D900DF72B /* Snaprivo/Editor/RedactionSuggestionModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/RedactionSuggestionModel.swift; sourceTree = SOURCE_ROOT; };
+		8E60C1941897DEDE9953DB41 /* Snaprivo/Features/PinnedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/PinnedImage.swift; sourceTree = SOURCE_ROOT; };
+		9287F7BE55B548D7B369565F /* SnaprivoStoreTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = SnaprivoStoreTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		92EFA4CEDDD14CB18EEFFFEE /* Snaprivo/App/ProPurchaseModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/ProPurchaseModel.swift; sourceTree = SOURCE_ROOT; };
 		94667EADA7B6102DB6A85D1F /* Snaprivo/Features/EditorResizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorResizeView.swift; sourceTree = SOURCE_ROOT; };
+		987C5E2889BB4C1A8B784DD2 /* Tests/StoreKitChecks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/StoreKitChecks.swift; sourceTree = SOURCE_ROOT; };
+		A01400000000000000000001 /* Snaprivo/Features/SelectionGrips.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/SelectionGrips.swift; sourceTree = SOURCE_ROOT; };
+		A01400000000000000000011 /* Snaprivo/App/StorageLocations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/StorageLocations.swift; sourceTree = SOURCE_ROOT; };
+		A01400000000000000000021 /* Snaprivo/App/SupportFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/SupportFeedback.swift; sourceTree = SOURCE_ROOT; };
+		A01400000000000000000031 /* Snaprivo/Resources/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Snaprivo/Resources/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
+		A01400000000000000000041 /* Snaprivo/Resources/InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Snaprivo/Resources/InfoPlist.xcstrings; sourceTree = SOURCE_ROOT; };
 		A02100000000000000000001 /* Snaprivo/Capture/VideoRecording.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/VideoRecording.swift; sourceTree = SOURCE_ROOT; };
+		A02500000000000000000001 /* Snaprivo/Features/EditorSavedStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorSavedStyles.swift; sourceTree = SOURCE_ROOT; };
+		A02600000000000000000001 /* Snaprivo/Editor/TextRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/TextRecognitionService.swift; sourceTree = SOURCE_ROOT; };
+		A02600000000000000000003 /* Snaprivo/Features/TextRecognitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/TextRecognitionView.swift; sourceTree = SOURCE_ROOT; };
+		A02700000000000000000001 /* Snaprivo/App/LibrarySearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/LibrarySearchModel.swift; sourceTree = SOURCE_ROOT; };
+		A02700000000000000000003 /* Snaprivo/Features/LibraryOrganizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/LibraryOrganizationView.swift; sourceTree = SOURCE_ROOT; };
+		A02800000000000000000001 /* Snaprivo/App/GuideModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/GuideModel.swift; sourceTree = SOURCE_ROOT; };
+		A02800000000000000000003 /* Snaprivo/Editor/GuideExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/GuideExporter.swift; sourceTree = SOURCE_ROOT; };
+		A02800000000000000000005 /* Snaprivo/Features/GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/GuideView.swift; sourceTree = SOURCE_ROOT; };
+		A02900000000000000000001 /* Snaprivo/Features/EditorFilmstripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorFilmstripView.swift; sourceTree = SOURCE_ROOT; };
+		A03000000000000000000001 /* Snaprivo/Capture/VideoRecordingFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/VideoRecordingFiles.swift; sourceTree = SOURCE_ROOT; };
+		A03000000000000000000003 /* Snaprivo/App/VideoLibraryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/VideoLibraryModel.swift; sourceTree = SOURCE_ROOT; };
+		A03000000000000000000005 /* Snaprivo/Features/VideoLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoLibraryView.swift; sourceTree = SOURCE_ROOT; };
+		A03100000000000000000001 /* Snaprivo/App/VideoEditorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/VideoEditorModel.swift; sourceTree = SOURCE_ROOT; };
+		A03100000000000000000003 /* Snaprivo/Features/VideoEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoEditorView.swift; sourceTree = SOURCE_ROOT; };
+		A03500000000000000000001 /* Snaprivo/Features/EditorQuickOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorQuickOptions.swift; sourceTree = SOURCE_ROOT; };
+		A03600000000000000000001 /* Snaprivo/Capture/CaptureToolbarSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/CaptureToolbarSurface.swift; sourceTree = SOURCE_ROOT; };
+		A03700000000000000000001 /* Snaprivo/Features/VideoTrimTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoTrimTimeline.swift; sourceTree = SOURCE_ROOT; };
+		A03700000000000000000003 /* Snaprivo/Features/VideoSecondsField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoSecondsField.swift; sourceTree = SOURCE_ROOT; };
+		A03700000000000000000005 /* Snaprivo/Features/VideoTrimHandle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoTrimHandle.swift; sourceTree = SOURCE_ROOT; };
+		AAF9DA5E2285429B9A4DC6F9 /* Tests/Fixtures/StoreKitHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/Fixtures/StoreKitHost.swift; sourceTree = SOURCE_ROOT; };
 		B39B14FE663E999352FC4866 /* Snaprivo/Editor/EditorCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/EditorCanvas.swift; sourceTree = SOURCE_ROOT; };
 		B7BC63675721D72557E6FBAC /* Snaprivo/Features/ShortcutRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/ShortcutRecorder.swift; sourceTree = SOURCE_ROOT; };
 		BB8FC4C0CCB4F50E2B966AF1 /* Snaprivo/App/AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/AppPreferences.swift; sourceTree = SOURCE_ROOT; };
+		C6C3CE2CE8DADFF25ACBA8B3 /* Snaprivo/Features/ImageColorPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/ImageColorPicker.swift; sourceTree = SOURCE_ROOT; };
 		CF1B1338E3F6CC8C57014169 /* Snaprivo/Features/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		D450F83BF91F4C429CA1EBB2 /* SnaprivoStoreHost.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = SnaprivoStoreHost.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5107370CFA5DC8C6589BD33 /* Snaprivo/App/CaptureShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/CaptureShortcuts.swift; sourceTree = SOURCE_ROOT; };
 		D7550116397EB6ECD1335D87 /* Snaprivo/Editor/EditorRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/EditorRenderer.swift; sourceTree = SOURCE_ROOT; };
 		E43BD12023AF44D9A42ED991 /* Snaprivo/Features/EditorShapeOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorShapeOptions.swift; sourceTree = SOURCE_ROOT; };
@@ -120,21 +156,23 @@ D450F83BF91F4C429CA1EBB2 = {isa = PBXFileReference; explicitFileType = wrapper.a
 		EF89746B79F853D2D4BAFD84 /* Snaprivo/App/SnagForgeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/SnagForgeApp.swift; sourceTree = SOURCE_ROOT; };
 		F01A7061394F4212AE9EE039 /* Snaprivo/Features/EditorToolPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorToolPalette.swift; sourceTree = SOURCE_ROOT; };
 		F23CD1067E611FB64D0CFF78 /* Snaprivo/Features/EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorView.swift; sourceTree = SOURCE_ROOT; };
-		8E60C1941897DEDE9953DB41 /* Snaprivo/Features/PinnedImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/PinnedImage.swift; sourceTree = SOURCE_ROOT; };
-		C6C3CE2CE8DADFF25ACBA8B3 /* Snaprivo/Features/ImageColorPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/ImageColorPicker.swift; sourceTree = SOURCE_ROOT; };
-		147A7302576B19F2F5285652 /* Snaprivo/Features/InsertImageButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/InsertImageButton.swift; sourceTree = SOURCE_ROOT; };
-		6C7D40CA80DF573EC78C4042 /* Snaprivo/Editor/ImageOutput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/ImageOutput.swift; sourceTree = SOURCE_ROOT; };
-		797A8EDCC344ADDEC6661094 /* Snaprivo/Features/ImageOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/ImageOutputView.swift; sourceTree = SOURCE_ROOT; };
-		601F7105D3C3A1F115608485 /* Snaprivo/Features/OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/OnboardingView.swift; sourceTree = SOURCE_ROOT; };
+		A10400000000000000000001 /* Snaprivo/Editor/PresentationBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/PresentationBackground.swift; sourceTree = SOURCE_ROOT; };
+		A10400000000000000000003 /* Snaprivo/Editor/PresentationPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/PresentationPresets.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		7DAAA43F234244AAB49DE479 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
 		7561BFB015D8F536760CB671 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				ED5515BE9EC5C2E8DC76B514 /* SnagForgeDomain in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7DAAA43F234244AAB49DE479 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -144,9 +182,9 @@ D450F83BF91F4C429CA1EBB2 = {isa = PBXFileReference; explicitFileType = wrapper.a
 		3A2A88DEEFF3D1D23E496597 /* Snaprivo */ = {
 			isa = PBXGroup;
 			children = (
-AAF9DA5E2285429B9A4DC6F9,
-				987C5E2889BB4C1A8B784DD2,
-				4D77ABCA8393479699C0EB66,
+				AAF9DA5E2285429B9A4DC6F9 /* Tests/Fixtures/StoreKitHost.swift */,
+				987C5E2889BB4C1A8B784DD2 /* Tests/StoreKitChecks.swift */,
+				4D77ABCA8393479699C0EB66 /* Tests/Fixtures/Snaprivo.storekit */,
 				5A55918D303F4048AE811ACA /* Snaprivo/Features/QuickCaptureView.swift */,
 				4C0FBB059B4B41C087D9F15C /* Snaprivo/Features/ProPaywallView.swift */,
 				2407F9DB1C1E4BDABD1E2E07 /* Snaprivo/Features/EditorObjectList.swift */,
@@ -155,9 +193,14 @@ AAF9DA5E2285429B9A4DC6F9,
 				601F7105D3C3A1F115608485 /* Snaprivo/Features/OnboardingView.swift */,
 				797A8EDCC344ADDEC6661094 /* Snaprivo/Features/ImageOutputView.swift */,
 				6C7D40CA80DF573EC78C4042 /* Snaprivo/Editor/ImageOutput.swift */,
+				A10400000000000000000003 /* Snaprivo/Editor/PresentationPresets.swift */,
+				A10400000000000000000001 /* Snaprivo/Editor/PresentationBackground.swift */,
 				147A7302576B19F2F5285652 /* Snaprivo/Features/InsertImageButton.swift */,
 				C6C3CE2CE8DADFF25ACBA8B3 /* Snaprivo/Features/ImageColorPicker.swift */,
 				8E60C1941897DEDE9953DB41 /* Snaprivo/Features/PinnedImage.swift */,
+				A03700000000000000000003 /* Snaprivo/Features/VideoSecondsField.swift */,
+				A03700000000000000000005 /* Snaprivo/Features/VideoTrimHandle.swift */,
+				A03700000000000000000001 /* Snaprivo/Features/VideoTrimTimeline.swift */,
 				A03100000000000000000003 /* Snaprivo/Features/VideoEditorView.swift */,
 				A03100000000000000000001 /* Snaprivo/App/VideoEditorModel.swift */,
 				A03000000000000000000005 /* Snaprivo/Features/VideoLibraryView.swift */,
@@ -186,8 +229,8 @@ AAF9DA5E2285429B9A4DC6F9,
 		87DF60DE337FB58864343E39 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				A01400000000000000000041 /* InfoPlist.xcstrings */,
-				A01400000000000000000031 /* Localizable.xcstrings */,
+				A01400000000000000000041 /* Snaprivo/Resources/InfoPlist.xcstrings */,
+				A01400000000000000000031 /* Snaprivo/Resources/Localizable.xcstrings */,
 				3685E330EC5277A9DD5661C6 /* Snaprivo/Resources/Assets.xcassets */,
 				E7B1BFA482251F04722B6837 /* Snaprivo/Resources/SnagForge.entitlements */,
 			);
@@ -216,8 +259,8 @@ AAF9DA5E2285429B9A4DC6F9,
 		FBDC4F23F93125BBEEAE800C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-D450F83BF91F4C429CA1EBB2,
-				9287F7BE55B548D7B369565F,
+				D450F83BF91F4C429CA1EBB2 /* SnaprivoStoreHost.app */,
+				9287F7BE55B548D7B369565F /* SnaprivoStoreTests.xctest */,
 				38A007151ABE87CC01A5B6E9 /* Snaprivo.app */,
 			);
 			name = Products;
@@ -230,6 +273,12 @@ D450F83BF91F4C429CA1EBB2,
 				94667EADA7B6102DB6A85D1F /* Snaprivo/Features/EditorResizeView.swift */,
 				B7BC63675721D72557E6FBAC /* Snaprivo/Features/ShortcutRecorder.swift */,
 				E43BD12023AF44D9A42ED991 /* Snaprivo/Features/EditorShapeOptions.swift */,
+				A03600000000000000000001 /* Snaprivo/Capture/CaptureToolbarSurface.swift */,
+				A03500000000000000000001 /* Snaprivo/Features/EditorQuickOptions.swift */,
+				1AE2C7788D5D4709BB70DFCF /* Snaprivo/Features/RedactionSuggestionView.swift */,
+				80BD275633874A0D900DF72B /* Snaprivo/Editor/RedactionSuggestionModel.swift */,
+				31124976CA05442AA46A8B11 /* Snaprivo/Features/EditorArrangementControls.swift */,
+				5BDAC80283E441EF909785E4 /* Snaprivo/Editor/EditorArrangementModel.swift */,
 				A02500000000000000000001 /* Snaprivo/Features/EditorSavedStyles.swift */,
 				A02800000000000000000005 /* Snaprivo/Features/GuideView.swift */,
 				A02700000000000000000003 /* Snaprivo/Features/LibraryOrganizationView.swift */,
@@ -265,8 +314,6 @@ D450F83BF91F4C429CA1EBB2,
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-416DBFD78C4446D9BE7B6D04 = {isa = PBXNativeTarget; buildConfigurationList = 822256D7AE174A34B1CF6E87; buildPhases = (15A8AB2184514CCA8CF3CF0F,); buildRules = (); dependencies = (); name = SnaprivoStoreHost; productName = SnaprivoStoreHost; productReference = D450F83BF91F4C429CA1EBB2; productType = "com.apple.product-type.application"; };
-		7CA28AD7D4104674B9AFA3E2 = {isa = PBXNativeTarget; buildConfigurationList = C3268D2EBF624B9083E5A808; buildPhases = (13D82B7C961F455388FD1C7A, 7DAAA43F234244AAB49DE479, 674092B0F8CB4A7CA327B161,); buildRules = (); dependencies = (339A2C0B76F149E38A294A71,); name = SnaprivoStoreTests; productName = SnaprivoStoreTests; productReference = 9287F7BE55B548D7B369565F; productType = "com.apple.product-type.bundle.unit-test"; };
 		0E8A3AD980EC179856012B7E /* Snaprivo */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C57128001CE614BF8549D6BB /* Build configuration list for PBXNativeTarget "Snaprivo" */;
@@ -287,15 +334,40 @@ D450F83BF91F4C429CA1EBB2,
 			productReference = 38A007151ABE87CC01A5B6E9 /* Snaprivo.app */;
 			productType = "com.apple.product-type.application";
 		};
+		416DBFD78C4446D9BE7B6D04 /* SnaprivoStoreHost */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 822256D7AE174A34B1CF6E87 /* Build configuration list for PBXNativeTarget "SnaprivoStoreHost" */;
+			buildPhases = (
+				15A8AB2184514CCA8CF3CF0F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SnaprivoStoreHost;
+			productName = SnaprivoStoreHost;
+			productReference = D450F83BF91F4C429CA1EBB2 /* SnaprivoStoreHost.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7CA28AD7D4104674B9AFA3E2 /* SnaprivoStoreTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C3268D2EBF624B9083E5A808 /* Build configuration list for PBXNativeTarget "SnaprivoStoreTests" */;
+			buildPhases = (
+				13D82B7C961F455388FD1C7A /* Sources */,
+				7DAAA43F234244AAB49DE479 /* Frameworks */,
+				674092B0F8CB4A7CA327B161 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				339A2C0B76F149E38A294A71 /* PBXTargetDependency */,
+			);
+			name = SnaprivoStoreTests;
+			productName = SnaprivoStoreTests;
+			productReference = 9287F7BE55B548D7B369565F /* SnaprivoStoreTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
-
-/* Begin PBXContainerItemProxy section */
-25FF6DBD5AE94351B2927185 = {isa = PBXContainerItemProxy; containerPortal = 98F54143AB4E86B28C3AFEE0; proxyType = 1; remoteGlobalIDString = 416DBFD78C4446D9BE7B6D04; remoteInfo = SnaprivoStoreHost; };
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-339A2C0B76F149E38A294A71 = {isa = PBXTargetDependency; target = 416DBFD78C4446D9BE7B6D04; targetProxy = 25FF6DBD5AE94351B2927185; };
-/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		98F54143AB4E86B28C3AFEE0 /* Project object */ = {
@@ -322,30 +394,52 @@ D450F83BF91F4C429CA1EBB2,
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-416DBFD78C4446D9BE7B6D04,
-				7CA28AD7D4104674B9AFA3E2,
+				416DBFD78C4446D9BE7B6D04 /* SnaprivoStoreHost */,
+				7CA28AD7D4104674B9AFA3E2 /* SnaprivoStoreTests */,
 				0E8A3AD980EC179856012B7E /* Snaprivo */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		674092B0F8CB4A7CA327B161 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (B74F445EE61A4288B0E4D8BD,); runOnlyForDeploymentPostprocessing = 0; };
 		0189424A5A60FED329FA868E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A01400000000000000000042 /* InfoPlist.xcstrings in Resources */,
-				A01400000000000000000032 /* Localizable.xcstrings in Resources */,
+				A01400000000000000000042 /* Snaprivo/Resources/InfoPlist.xcstrings in Resources */,
+				A01400000000000000000032 /* Snaprivo/Resources/Localizable.xcstrings in Resources */,
 				04200CFFD12D083534B07BB1 /* Snaprivo/Resources/Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		674092B0F8CB4A7CA327B161 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B74F445EE61A4288B0E4D8BD /* Tests/Fixtures/Snaprivo.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-15A8AB2184514CCA8CF3CF0F = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (50A1DDFB563F4E4EA80C1B3C,); runOnlyForDeploymentPostprocessing = 0; };
-		13D82B7C961F455388FD1C7A = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (2C2AAAB7F163448BBE6897C5, C3F7BFA4664B4777B6ADA388,); runOnlyForDeploymentPostprocessing = 0; };
+		13D82B7C961F455388FD1C7A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C2AAAB7F163448BBE6897C5 /* Tests/StoreKitChecks.swift in Sources */,
+				C3F7BFA4664B4777B6ADA388 /* Snaprivo/App/ProPurchaseModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		15A8AB2184514CCA8CF3CF0F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				50A1DDFB563F4E4EA80C1B3C /* Tests/Fixtures/StoreKitHost.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BCE16DD0260827ECF338C787 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -358,9 +452,14 @@ D450F83BF91F4C429CA1EBB2,
 				89D1F6DB6EE4A843D7B09D27 /* Snaprivo/Features/OnboardingView.swift in Sources */,
 				0EF57D748BA824C82273C438 /* Snaprivo/Features/ImageOutputView.swift in Sources */,
 				2E3D4CE7BA7EB76958F673AF /* Snaprivo/Editor/ImageOutput.swift in Sources */,
+				A10400000000000000000004 /* Snaprivo/Editor/PresentationPresets.swift in Sources */,
+				A10400000000000000000002 /* Snaprivo/Editor/PresentationBackground.swift in Sources */,
 				A60C501750BEBF7F4FE85FE0 /* Snaprivo/Features/InsertImageButton.swift in Sources */,
 				878D13D927503566F5D4F5B5 /* Snaprivo/Features/ImageColorPicker.swift in Sources */,
 				2D2E9886DCC086A8591E4C1D /* Snaprivo/Features/PinnedImage.swift in Sources */,
+				A03700000000000000000004 /* Snaprivo/Features/VideoSecondsField.swift in Sources */,
+				A03700000000000000000006 /* Snaprivo/Features/VideoTrimHandle.swift in Sources */,
+				A03700000000000000000002 /* Snaprivo/Features/VideoTrimTimeline.swift in Sources */,
 				A03100000000000000000004 /* Snaprivo/Features/VideoEditorView.swift in Sources */,
 				A03100000000000000000002 /* Snaprivo/App/VideoEditorModel.swift in Sources */,
 				A03000000000000000000006 /* Snaprivo/Features/VideoLibraryView.swift in Sources */,
@@ -380,6 +479,12 @@ D450F83BF91F4C429CA1EBB2,
 				9E652F32962EBB8CDC3E58D9 /* Snaprivo/App/AppPreferences.swift in Sources */,
 				A02700000000000000000002 /* Snaprivo/App/LibrarySearchModel.swift in Sources */,
 				A89218FB7F924D39A8430762 /* Snaprivo/Features/EditorShapeOptions.swift in Sources */,
+				A03600000000000000000002 /* Snaprivo/Capture/CaptureToolbarSurface.swift in Sources */,
+				A03500000000000000000002 /* Snaprivo/Features/EditorQuickOptions.swift in Sources */,
+				E5EDA3CB8A6A4D9787B941DD /* Snaprivo/Features/RedactionSuggestionView.swift in Sources */,
+				E6C703E4D0FE4034ABF7A5B0 /* Snaprivo/Editor/RedactionSuggestionModel.swift in Sources */,
+				48808A1EFAD94AEA81B0BC5D /* Snaprivo/Features/EditorArrangementControls.swift in Sources */,
+				1D2AD8BD2F7A458C8E8F116C /* Snaprivo/Editor/EditorArrangementModel.swift in Sources */,
 				A02500000000000000000002 /* Snaprivo/Features/EditorSavedStyles.swift in Sources */,
 				A02700000000000000000004 /* Snaprivo/Features/LibraryOrganizationView.swift in Sources */,
 				A02600000000000000000004 /* Snaprivo/Features/TextRecognitionView.swift in Sources */,
@@ -404,11 +509,64 @@ D450F83BF91F4C429CA1EBB2,
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		339A2C0B76F149E38A294A71 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 416DBFD78C4446D9BE7B6D04 /* SnaprivoStoreHost */;
+			targetProxy = 25FF6DBD5AE94351B2927185 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-28BEDD10715E498B81E81C5E = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 24C8L59PV7; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 26.0; PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.storehost; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 6.0; }; name = Release; };
-08C7A8E0251B49E487A9ACEB = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 24C8L59PV7; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 26.0; PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.storehost; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 6.0; }; name = Debug; };
-		94C703F7D7BF4FA3ACED704D = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 24C8L59PV7; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 26.0; PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.storetests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SnaprivoStoreHost.app/Contents/MacOS/SnaprivoStoreHost"; BUNDLE_LOADER = "$(TEST_HOST)"; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@loader_path/../Frameworks", "@executable_path/../Frameworks",); }; name = Release; };
-		3C42177F038E4508B809E842 = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGN_STYLE = Automatic; DEVELOPMENT_TEAM = 24C8L59PV7; GENERATE_INFOPLIST_FILE = YES; MACOSX_DEPLOYMENT_TARGET = 26.0; PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.storetests; PRODUCT_NAME = "$(TARGET_NAME)"; SDKROOT = macosx; SWIFT_VERSION = 6.0; TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SnaprivoStoreHost.app/Contents/MacOS/SnaprivoStoreHost"; BUNDLE_LOADER = "$(TEST_HOST)"; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@loader_path/../Frameworks", "@executable_path/../Frameworks",); }; name = Debug; };
+		08C7A8E0251B49E487A9ACEB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 24C8L59PV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.storehost;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		28BEDD10715E498B81E81C5E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 24C8L59PV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.storehost;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		3C42177F038E4508B809E842 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 24C8L59PV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@loader_path/../Frameworks",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.storetests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SnaprivoStoreHost.app/Contents/MacOS/SnaprivoStoreHost";
+			};
+			name = Debug;
+		};
 		639A7CA24D39909E713B47F7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -430,10 +588,10 @@ D450F83BF91F4C429CA1EBB2,
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				SWIFT_EMIT_LOC_STRINGS = YES;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Release;
 		};
@@ -459,10 +617,10 @@ D450F83BF91F4C429CA1EBB2,
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.1.0;
-				SWIFT_EMIT_LOC_STRINGS = YES;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Debug;
 		};
@@ -482,6 +640,27 @@ D450F83BF91F4C429CA1EBB2,
 			};
 			name = Debug;
 		};
+		94C703F7D7BF4FA3ACED704D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 24C8L59PV7;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@loader_path/../Frameworks",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.snaprivo.storetests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/SnaprivoStoreHost.app/Contents/MacOS/SnaprivoStoreHost";
+			};
+			name = Release;
+		};
 		E6DE6C99132752C914FEF632 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -498,13 +677,29 @@ D450F83BF91F4C429CA1EBB2,
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-822256D7AE174A34B1CF6E87 = {isa = XCConfigurationList; buildConfigurations = (08C7A8E0251B49E487A9ACEB, 28BEDD10715E498B81E81C5E,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		C3268D2EBF624B9083E5A808 = {isa = XCConfigurationList; buildConfigurations = (3C42177F038E4508B809E842, 94C703F7D7BF4FA3ACED704D,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		822256D7AE174A34B1CF6E87 /* Build configuration list for PBXNativeTarget "SnaprivoStoreHost" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				08C7A8E0251B49E487A9ACEB /* Debug */,
+				28BEDD10715E498B81E81C5E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		862894B703A6DEDF96A9DD6C /* Build configuration list for PBXProject "Snaprivo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				89E1FD6268CC0F221A2BE178 /* Debug */,
 				E6DE6C99132752C914FEF632 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C3268D2EBF624B9083E5A808 /* Build configuration list for PBXNativeTarget "SnaprivoStoreTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3C42177F038E4508B809E842 /* Debug */,
+				94C703F7D7BF4FA3ACED704D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

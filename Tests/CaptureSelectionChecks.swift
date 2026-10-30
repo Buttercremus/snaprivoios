@@ -4,13 +4,14 @@ import SnagForgeDomain
 /// Offscreen view-handler checks, never input injection into another application.
 @main
 struct CaptureSelectionChecks {
-    @MainActor static func main() throws {
+    @MainActor static func main() async throws {
         _ = NSApplication.shared
         let window = SelectionPanel(screenFrame: CGRect(x: -800, y: 100, width: 800, height: 600))
         let view = SelectionView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
         window.contentView = view
         view.screenFrame = window.frame
         checkHoverMotion()
+        checkFastGestureCursor()
         precondition(window.animationBehavior == .none, "Desktop snapshot must not zoom when ordered in/out")
         precondition(window.styleMask.contains(.nonactivatingPanel) && window.canBecomeKey && !window.canBecomeMain,
                      "Selection must accept keyboard focus without activating the app")
@@ -58,8 +59,7 @@ struct CaptureSelectionChecks {
             preconditionFailure("Changed display geometry accepted")
         } catch ScreenshotError.invalidRegion { }
         func checkOpaqueFrozenPixels() {
-            let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
-            view.cacheDisplay(in: view.bounds, to: bitmap)
+            let bitmap = renderSelectionMask(view)
             for x in stride(from: 2, to: bitmap.pixelsWide, by: 41) {
                 for y in stride(from: 2, to: bitmap.pixelsHigh, by: 43) {
                     precondition(bitmap.colorAt(x: x, y: y)!.alphaComponent > 0.99, "Transparent hole in the selection surface")
@@ -91,8 +91,7 @@ struct CaptureSelectionChecks {
         precondition(!regions.contains { $0.id == 8 }, "Off-desktop SCK window entered the on-screen candidate list")
 
         func blue(at localPoint: CGPoint) -> CGFloat {
-            let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
-            view.cacheDisplay(in: view.bounds, to: bitmap)
+            let bitmap = renderSelectionMask(view)
             let scale = CGFloat(bitmap.pixelsWide) / view.bounds.width
             return bitmap.colorAt(x: Int(localPoint.x * scale), y: bitmap.pixelsHigh - 1 - Int(localPoint.y * scale))!.usingColorSpace(.deviceRGB)!.blueComponent
         }
@@ -102,10 +101,10 @@ struct CaptureSelectionChecks {
         precondition(blue(at: CGPoint(x: 250, y: 200)) > 0.95 && hoverOutside > 0.5 && hoverOutside < 0.65,
                      "Hover must leave the selected pixels bright and clearly dim the surroundings")
         view.isReviewing = true; view.reviewDraft = CaptureSelectionDraft(rect: highlighted)
-        precondition(blue(at: CGPoint(x: 250, y: 200)) > 0.95 && abs(blue(at: CGPoint(x: 650, y: 200)) - hoverOutside) < 0.01,
-                     "Shade changed or selection darkened after the window click")
-        let gripBitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
-        view.cacheDisplay(in: view.bounds, to: gripBitmap)
+        let selectedBlue = blue(at: CGPoint(x: 250, y: 200)), reviewOutside = blue(at: CGPoint(x: 650, y: 200))
+        precondition(selectedBlue > 0.95 && abs(reviewOutside - hoverOutside) < 0.01,
+                     "Shade changed or selection darkened after the window click (selected=\(selectedBlue), hover=\(hoverOutside), review=\(reviewOutside))")
+        let gripBitmap = renderSelectionMask(view)
         let gripScale = CGFloat(gripBitmap.pixelsWide) / view.bounds.width
         func isWhiteGrip(at point: CGPoint) -> Bool {
             let color = gripBitmap.colorAt(x: Int(point.x * gripScale),
@@ -124,8 +123,11 @@ struct CaptureSelectionChecks {
         }
         try gripBitmap.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: "/tmp/Snaprivo-CaptureGrips.png"))
         view.preparePresentation()
+        precondition(abs(blue(at: CGPoint(x: 650, y: 200)) - reviewOutside) < 0.01,
+                     "Initial selection waited for a chrome fade")
+        NSAnimationContext.runAnimationGroup({ context in context.duration = 0; view.setChromeVisible(false) }, completionHandler: nil)
         precondition(blue(at: CGPoint(x: 650, y: 200)) > 0.95, "Hiding capture chrome also faded the frozen desktop")
-        NSAnimationContext.runAnimationGroup { context in context.duration = 0; view.setChromeVisible(true) }
+        NSAnimationContext.runAnimationGroup({ context in context.duration = 0; view.setChromeVisible(true) }, completionHandler: nil)
         view.isReviewing = false; view.reviewDraft = nil; view.highlight = nil
         let cursor = view.selectionCursor(at: CGPoint(x: 400, y: 300))
         precondition(cursor.image.size == CGSize(width: 40, height: 40) && cursor.hotSpot == CGPoint(x: 20, y: 20),
@@ -171,8 +173,12 @@ struct CaptureSelectionChecks {
         precondition(NSCursor.current === NSCursor.arrow, "Confirmation toolbar cursor was overwritten")
         view.mouseMoved(with: event(.mouseMoved, 200, 380))
         precondition(NSCursor.current === view.selectionCursor(at: CGPoint(x: 200, y: 380)), "Leaving the toolbar lost the crosshair")
-        let buttons = toolbar.subviews.compactMap { $0 as? NSButton }
-        precondition(buttons.count == 4, "Missing native confirmation controls")
+        let buttons = (toolbar as! CaptureReviewToolbar).actionButtons
+        precondition(buttons.count == 8, "Missing native confirmation controls/photo/source choices")
+        toolbar.layoutSubtreeIfNeeded()
+        for button in buttons {
+            precondition(toolbar.bounds.contains(button.convert(button.bounds, to: toolbar)), "Compact capture control is clipped")
+        }
         precondition(view.bounds.contains(toolbar.frame), "Controls outside the display")
         // Moving the frame is live and becomes a crop, with no capture on release.
         view.mouseDown(with: event(.leftMouseDown, 100, 200))
@@ -273,8 +279,8 @@ struct CaptureSelectionChecks {
         let preservedDraft = view.reviewDraft!
         let actionToolbar = view.subviews.first { $0.accessibilityIdentifier() == "capture.reviewToolbar" }!
         precondition(!actionToolbar.subviews.contains { $0 is NSSegmentedControl })
-        let photoButton = actionToolbar.subviews.first { $0.accessibilityIdentifier() == "capture.confirm" } as! NSButton
-        let videoButton = actionToolbar.subviews.first { $0.accessibilityIdentifier() == "capture.video" } as! NSButton
+        let photoButton = (actionToolbar as! CaptureReviewToolbar).actionButtons.first { $0.accessibilityIdentifier() == "capture.confirm" }!
+        let videoButton = (actionToolbar as! CaptureReviewToolbar).actionButtons.first { $0.accessibilityIdentifier() == "capture.video" }!
         photoButton.performClick(nil)
         precondition(!view.isVideo && view.reviewDraft == preservedDraft && captures == 3,
                      "Photo must immediately confirm the existing selection")
@@ -303,9 +309,169 @@ struct CaptureSelectionChecks {
         view.allowsVideoAction = false
         view.reviewDraft = preservedDraft
         let scrollToolbar = view.subviews.first { $0.accessibilityIdentifier() == "capture.reviewToolbar" }!
-        precondition(!scrollToolbar.subviews.contains { $0.accessibilityIdentifier() == "capture.video" },
+        precondition(!(scrollToolbar as! CaptureReviewToolbar).actionButtons.contains { $0.accessibilityIdentifier() == "capture.video" },
                      "Scroll capture must only offer the photo action")
+        let choices = (scrollToolbar as! CaptureReviewToolbar).photoChoicesMenu()
+        let captureCount = captures
+        precondition((scrollToolbar as! CaptureReviewToolbar).actionButtons.contains { $0.accessibilityIdentifier() == "capture.photoChoices" })
+        _ = NSApp.sendAction(choices.items[3].action!, to: choices.items[3].target, from: choices.items[3])
+        precondition(view.isScrolling && !view.isVideo && captures == captureCount + 1 && view.reviewDraft == preservedDraft)
+        let scrollSelection = ScreenshotSelection(displayID: 1, draft: preservedDraft, screenFrame: view.screenFrame, media: .image, isScrolling: view.isScrolling)
+        precondition(scrollSelection.isScrolling && scrollSelection.windowID == nil && scrollSelection.rect == preservedDraft.rect)
+        _ = NSApp.sendAction(choices.items[0].action!, to: choices.items[0].target, from: choices.items[0])
+        precondition(!view.isScrolling && !view.isVideo && captures == captureCount + 2, "Photo choice kept the scrolling route")
+        for (index, destination) in [(1, CaptureImageDestination.text), (2, .code)] {
+            _ = NSApp.sendAction(choices.items[index].action!, to: choices.items[index].target, from: choices.items[index])
+            precondition(view.imageDestination == destination && !view.isVideo && !view.isScrolling)
+            let result = ScreenshotSelection(displayID: 1, draft: preservedDraft, screenFrame: view.screenFrame, media: .image, destination: view.imageDestination)
+            precondition(result.destination == destination && result.rect == preservedDraft.rect)
+        }
+        let textToolbar = CaptureReviewToolbar(allowsVideoAction: false, allowsScrolling: false)
+        textToolbar.setDestination(.text)
+        precondition(textToolbar.actionButtons.first { $0.accessibilityIdentifier() == "capture.confirm" }?.title == String(localized: "Text"))
+        precondition(textToolbar.photoChoicesMenu().items.count == 3, "Direct OCR must expose photo/text/code without video/scroll")
+        precondition(ScreenshotSelection(displayID: 1, rect: preservedDraft.rect, screenFrame: view.screenFrame, media: .video, destination: .text).destination == .image)
+
+        precondition(!ScreenshotSelection(displayID: 1, draft: preservedDraft, screenFrame: view.screenFrame, media: .video, isScrolling: true).isScrolling)
+        checkExactSizeEditing()
+        let screenMenu = (scrollToolbar as! CaptureReviewToolbar)
+        screenMenu.screenChoices = [CaptureScreenChoice(id: 11, name: "Display A", frame: CGRect(x: -800, y: 0, width: 800, height: 600)),
+                                    CaptureScreenChoice(id: 22, name: "Display B", frame: CGRect(x: 0, y: 600, width: 1200, height: 800))]
+        screenMenu.selectedScreenID = 22
+        var chosen: UInt32?
+        screenMenu.onSelectScreen = { chosen = $0 }
+        let displays = screenMenu.screenChoicesMenu()
+        precondition(displays.items.count == 3 && displays.items[2].state == .on)
+        _ = NSApp.sendAction(displays.items[1].action!, to: displays.items[1].target, from: displays.items[1])
+        precondition(chosen == 11, "Display menu selected an index rather than the actual display ID")
+        try await checkImmediatePhotoConfirmation()
         print("Capture selection checks passed: interruptible 180 ms window-hover motion, immediate target/click/drag/review, gap fades, reduced motion and display boundaries; round/pill white grips, expanded hit targets/all 8 resize directions and nearest small-selection handles; background-window ordering/current bounds/eligibility, consistent bright selection and shaded surroundings, chrome-only fading, larger centered cursor, dismissal input guard, nonzooming/nonactivating opaque overlay, immutable Retina crops, click/drag, adjustment, native controls, Enter and cancel.")
+    }
+
+    @MainActor private static func checkFastGestureCursor() {
+        let panel = SelectionPanel(screenFrame: CGRect(x: -800, y: 100, width: 800, height: 600))
+        let view = SelectionView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
+        panel.contentView = view; view.screenFrame = panel.frame
+        defer {
+            view.onRestart = nil; view.onPropose = nil
+            panel.contentView = nil; panel.close(); NSCursor.arrow.set()
+        }
+        func event(_ type: NSEvent.EventType, _ point: CGPoint) -> NSEvent {
+            NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: 0,
+                              windowNumber: panel.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!
+        }
+        let crosshair = view.selectionCursor(at: CGPoint(x: 400, y: 300))
+        view.onRestart = { view.isReviewing = false; view.reviewDraft = nil }
+        view.onPropose = { rect in
+            view.isReviewing = true; view.reviewDraft = rect.map { CaptureSelectionDraft(rect: $0) }
+        }
+        // Shortcut -> immediate press/drag: no mouseEntered/mouseMoved/cursorUpdate.
+        for _ in 0..<16 {
+            view.isReviewing = false; view.reviewDraft = nil
+            NSCursor.arrow.set()
+            view.mouseDown(with: event(.leftMouseDown, CGPoint(x: 120, y: 130)))
+            precondition(NSCursor.current === crosshair, "Fast capture press kept the previous application's arrow")
+            NSCursor.arrow.set()
+            view.mouseDragged(with: event(.leftMouseDragged, CGPoint(x: 500, y: 450)))
+            precondition(NSCursor.current === crosshair, "A system cursor reset survived capture dragging")
+            view.mouseUp(with: event(.leftMouseUp, CGPoint(x: 600, y: 470)))
+            precondition(NSCursor.current === view.selectionCursor(at: CGPoint(x: 600, y: 470)), "Release did not restore the selection handle cursor")
+        }
+        view.reviewDraft = CaptureSelectionDraft(rect: CGRect(x: -700, y: 200, width: 350, height: 260))
+        let corner = CGPoint(x: 100, y: 100), resize = view.selectionCursor(at: corner)
+        NSCursor.arrow.set(); view.mouseDown(with: event(.leftMouseDown, corner))
+        precondition(NSCursor.current === resize, "Fast resize press lost the handle cursor")
+        let toolbar = view.subviews.first { $0.accessibilityIdentifier() == "capture.reviewToolbar" }!
+        let toolbarPoint = CGPoint(x: toolbar.frame.midX, y: toolbar.frame.midY)
+        view.cursorUpdate(with: event(.mouseMoved, toolbarPoint))
+        precondition(NSCursor.current === resize, "A toolbar cursor update interrupted the active resize")
+        NSCursor.arrow.set(); view.mouseDragged(with: event(.leftMouseDragged, CGPoint(x: 150, y: 150)))
+        precondition(NSCursor.current === resize)
+        view.mouseUp(with: event(.leftMouseUp, CGPoint(x: 150, y: 150)))
+        view.reviewDraft = CaptureSelectionDraft(rect: CGRect(x: -700, y: 200, width: 350, height: 260))
+        let edge = CGPoint(x: 100, y: 200)
+        NSCursor.arrow.set(); view.mouseDown(with: event(.leftMouseDown, edge))
+        precondition(NSCursor.current === NSCursor.openHand, "Frame movement lost its hand cursor")
+        NSCursor.arrow.set(); view.mouseDragged(with: event(.leftMouseDragged, CGPoint(x: 150, y: 230)))
+        precondition(NSCursor.current === NSCursor.openHand)
+        view.mouseUp(with: event(.leftMouseUp, CGPoint(x: 150, y: 230)))
+        view.prepareForLiveCapture()
+        NSCursor.arrow.set(); view.cursorUpdate(with: event(.mouseMoved, CGPoint(x: 400, y: 300)))
+        precondition(NSCursor.current === NSCursor.arrow, "Live/pass-through capture restored the selection cursor")
+        print("Fast capture cursor checks passed: immediate press/drag without movement, 16 repeated resets, release, resize/move cursor ownership and live-overlay handoff.")
+    }
+
+    @MainActor private static func checkImmediatePhotoConfirmation() async throws {
+        let pixel = CGContext(data: nil, width: 2, height: 2, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!.makeImage()!
+        let desktop = FrozenDesktop(displays: NSScreen.screens.map {
+            FrozenDisplay(displayID: $0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as! UInt32,
+                          screenFrame: $0.frame, image: pixel)
+        })
+        let selector = ScreenshotSelector()
+        let primaryHeight = NSScreen.screens.first!.frame.height
+        let windows = desktop.displays.enumerated().map { index, display in
+            CapturableWindow(id: UInt32(index + 1), processID: 77, applicationName: "Synthetic",
+                frame: CaptureGeometry.appKitRect(fromQuartz: display.screenFrame, primaryHeight: primaryHeight))
+        }
+        NSCursor.arrow.set()
+        let selected = Task { try await selector.select(source: .automatic, windows: windows, desktop: desktop) }
+        var panels: [NSWindow] = []
+        for _ in 0..<100 {
+            panels = NSApp.windows.filter { ($0.contentView as? SelectionView)?.frozenImage === pixel && $0.isVisible }
+            if panels.count == desktop.displays.count { break }
+            await Task.yield()
+        }
+        precondition(!panels.isEmpty && panels.count == desktop.displays.count)
+        let active = panels.first { $0.frame.contains(NSEvent.mouseLocation) }!
+        let activeView = active.contentView as! SelectionView
+        let firstFrame = activeView.hoverPresentation()
+        precondition(firstFrame.rect == activeView.screenFrame && firstFrame.visibility == 1,
+                     "Initial window frame was still fading or moving after the panel appeared")
+        let firstPixels = renderSelectionMask(activeView)
+        let edge = firstPixels.colorAt(x: firstPixels.pixelsWide / 2, y: 1)!.usingColorSpace(.deviceRGB)!
+        precondition(max(edge.redComponent, edge.greenComponent, edge.blueComponent) > 0.1,
+                     "The first displayed snapshot was missing its selection border")
+        let point = activeView.convert(active.mouseLocationOutsideOfEventStream, from: nil)
+        precondition(NSCursor.current === activeView.selectionCursor(at: point), "Opening the selector waited for a mouse movement to set its cursor")
+        NSCursor.arrow.set(); active.resignKey(); active.makeKey()
+        precondition(NSCursor.current === activeView.selectionCursor(at: point), "Focus handoff did not restore the capture cursor")
+        let view = panels[0].contentView as! SelectionView
+        let draft = CaptureSelectionDraft(rect: view.screenFrame.insetBy(dx: 40, dy: 40))
+        view.onConfirm?(draft)
+        precondition(panels.allSatisfy { !$0.isVisible }, "Confirmed photo waited for the exit animation before opening")
+        view.onConfirm?(draft) // A repeated event must not resume the continuation twice.
+        let result = try await selected.value
+        precondition(result?.rect == draft.rect && result?.media == .image)
+        selector.cancel()
+        NSCursor.arrow.set(); activeView.refreshCursorAtMouseLocation()
+        precondition(NSCursor.current === NSCursor.arrow, "A deferred cursor refresh outlived the closed selector")
+        print("Photo confirmation closes all synthetic desktop panels immediately and completes exactly once.")
+    }
+
+    @MainActor private static func checkExactSizeEditing() {
+        let view = SelectionView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
+        view.screenFrame = CGRect(x: -800, y: 100, width: 800, height: 600); view.pixelScale = 2
+        view.isReviewing = true
+        view.reviewDraft = CaptureSelectionDraft(rect: CGRect(x: -699.75, y: 200.25, width: 200.5, height: 200.5), windowID: 42)
+        view.resizeSelection(to: CGSize(width: 501, height: 303))
+        let rect = view.reviewDraft!.rect
+        precondition(rect == CGRect(x: -700, y: 249.5, width: 250.5, height: 151.5) && view.reviewDraft?.windowID == nil)
+        let source = CaptureGeometry.sourceRect(selection: rect, screen: view.screenFrame, scale: 2)!
+        precondition(source.width * 2 == 501 && source.height * 2 == 303, "Entered pixels differ from the captured Retina crop")
+        view.resizeSelection(to: CGSize(width: 1e9, height: 1e9))
+        precondition(view.reviewDraft?.rect == CGRect(x: -700, y: 100, width: 700, height: 301))
+        let bounded = view.reviewDraft!
+        view.resizeSelection(to: CGSize(width: CGFloat.infinity, height: 100))
+        precondition(view.reviewDraft == bounded, "Invalid numeric size damaged the selection")
+        view.resizeSelection(to: .zero)
+        precondition(view.reviewDraft?.rect.size == CGSize(width: 2, height: 2))
+        view.reviewDraft = CaptureSelectionDraft(rect: CGRect(x: -700, y: 200, width: 300, height: 200), windowID: 42)
+        view.resizeSelection(to: CGSize(width: 600, height: 400))
+        precondition(view.reviewDraft?.windowID == 42, "Applying unchanged size discarded the video window source")
+        view.pixelScale = 1; view.resizeSelection(to: CGSize(width: 123, height: 77))
+        precondition(view.reviewDraft?.rect.size == CGSize(width: 123, height: 77))
+        print("Capture size/display controls passed: exact 1x/2x pixel dimensions, fractional/negative origin, bounds/minimum/invalid input, window identity and display-ID routing.")
     }
 
     @MainActor private static func checkHoverMotion() {

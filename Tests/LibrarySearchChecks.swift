@@ -32,7 +32,10 @@ actor RefreshSearchGate {
 
 enum LibrarySearchChecks {
     @MainActor static func run() async throws {
-        let root = FileManager.default.temporaryDirectory.appendingPathComponent("SearchChecks-" + UUID().uuidString)
+        // Real Vision calls may outlive reclamation of the sandbox's temporary
+        // files. Keep this disposable test library in its own test-container folder.
+        let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SnaprivoChecks/SearchChecks-" + UUID().uuidString)
         let suite = "SearchChecks-" + UUID().uuidString, defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite); try? FileManager.default.removeItem(at: root) }
         let entitlement = ProPurchaseModel(client: LibrarySearchProStore())
@@ -54,6 +57,9 @@ enum LibrarySearchChecks {
         precondition(!workspace.preferences.ocrIndexingEnabled)
         let offMatches = try await workspace.search.matches(query: "PRIVATE", documents: [document], includeOCR: false)
         precondition(offMatches.isEmpty)
+        let initialLoaded = try await workspace.store.load(document.id)
+        precondition(initialLoaded.document == document && initialLoaded.original == png)
+        print("Synthetic OCR preflight passed: bounded project/original read before recognition.")
         workspace.preferences.ocrIndexingEnabled = true
         await workspace.search.finish()
         if workspace.search.failures > 0 {

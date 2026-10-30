@@ -2,9 +2,12 @@ import Foundation
 import CoreGraphics
 
 public enum EditorStyleFamily: String, Codable, CaseIterable, Sendable {
-    case arrow, text, shape, callout, blur, redact, highlight, step
+    case arrow, text, shape, callout, blur, redact, highlight, step, magnifier, pen, spotlight
     public init(kind: EditorObject.Kind) {
         switch kind {
+        case .pen: self = .pen
+        case .spotlight: self = .spotlight
+        case .magnifier: self = .magnifier
         case .arrow: self = .arrow
         case .text: self = .text
         case .callout: self = .callout
@@ -24,8 +27,12 @@ public struct EditorSavedStyle: Equatable, Codable, Sendable {
     public let lineWidth: CGFloat
     public let fontSize: CGFloat
     public let blurRadius: CGFloat
+    public let blurStyle: EditorBlurStyle?
     public let fill: EditorFill
     public let cornerRadius: CGFloat?
+    public let penSmoothed: Bool?
+    public let spotlight: EditorSpotlightStyle?
+    public let magnification: CGFloat?
     public let drawingStyle: EditorDrawingStyle?
     public let stroke: EditorStroke
     public let textStyle: EditorTextStyle
@@ -38,7 +45,11 @@ public struct EditorSavedStyle: Equatable, Codable, Sendable {
         family = EditorStyleFamily(kind: object.kind)
         color = object.color; lineWidth = object.lineWidth; fontSize = object.fontSize
         blurRadius = object.blurRadius; fill = object.effectiveFill
+        blurStyle = object.kind == .blur ? object.blurStyle : nil
         cornerRadius = object.kind == .rectangle ? object.cornerRadius ?? 0 : nil
+        penSmoothed = object.penStroke?.isSmoothed
+        spotlight = object.kind == .spotlight ? object.effectiveSpotlightStyle : nil
+        magnification = object.kind == .magnifier ? object.effectiveMagnification : nil
         drawingStyle = object.drawingStyle
         stroke = object.effectiveStroke
         textStyle = object.effectiveTextStyle; highlightOpacity = object.effectiveHighlightStyle.opacity
@@ -51,8 +62,11 @@ public struct EditorSavedStyle: Equatable, Codable, Sendable {
         [color, fill.color, stepTextColor].allSatisfy { color in
             [color.red, color.green, color.blue].allSatisfy { $0.isFinite && (0...1).contains($0) }
         } && lineWidth.isFinite && (0.1...1000).contains(lineWidth)
+            && (magnification.map { $0.isFinite && (1.5...5).contains($0) } ?? true)
+            && (spotlight.map { $0.opacity.isFinite && (0...0.95).contains($0.opacity) } ?? true)
             && fontSize.isFinite && (1...1000).contains(fontSize)
             && blurRadius.isFinite && (0...1000).contains(blurRadius)
+            && (blurStyle == nil || family == .blur)
             && (cornerRadius.map { $0.isFinite && (0...1000).contains($0) } ?? true)
             && fill.opacity.isFinite && (0...1).contains(fill.opacity)
             && highlightOpacity.isFinite && (0...1).contains(highlightOpacity)
@@ -66,6 +80,11 @@ public struct EditorSavedStyle: Equatable, Codable, Sendable {
         if object.supportsHandDrawn { result.drawingStyle = drawingStyle }
         if family != .blur { result.color = color }
         switch family {
+        case .pen:
+            result.lineWidth = lineWidth; result.penStroke?.isSmoothed = penSmoothed ?? true
+        case .spotlight: result.spotlightStyle = spotlight ?? .init()
+        case .magnifier:
+            result.magnification = magnification ?? 2; result.lineWidth = lineWidth
         case .arrow: result.lineWidth = lineWidth
         case .shape:
             result.lineWidth = lineWidth
@@ -79,7 +98,7 @@ public struct EditorSavedStyle: Equatable, Codable, Sendable {
             result.lineWidth = lineWidth; result.fontSize = fontSize
             if object.effectiveFill != fill { result.fill = fill }
             if object.effectiveTextStyle != textStyle { result.textStyle = textStyle }
-        case .blur: result.blurRadius = blurRadius
+        case .blur: result.blurRadius = blurRadius; result.blurStyle = blurStyle
         case .redact: break
         case .highlight:
             result.lineWidth = lineWidth

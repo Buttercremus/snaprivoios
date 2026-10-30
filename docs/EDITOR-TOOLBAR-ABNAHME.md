@@ -1,0 +1,26 @@
+# Adaptive obere Werkzeugleiste
+
+Stand: 29. Oktober 2026.
+
+## Wechsel aus der Zuschnittvorschau
+
+Die Bearbeitungsaktionen Text erkennen, Pipette, Bild einfügen, Gestaltung, Drehen, QR lesen und Bildgröße sind auch während eines offenen Zuschnitts erreichbar, direkt in der Leiste und unter **Mehr**. Erst die Auswahl der Aktion verwirft den unbestätigten Entwurf und stellt den bisherigen Ausschnitt und Zoom wieder her. Bloßes Öffnen eines Menüs verändert nichts. Abgewiesener Pro-Zugriff erhält den Zuschnitt. Aktive Gesten, Bildwechsel und laufende Ausgabe sperren den Wechsel; Ausgabeaktionen bleiben während der Zuschnittvorschau deaktiviert.
+
+Die Workflow-Prüfung verwendet synthetische Bilder mit bereits bestätigtem Ausschnitt und abweichendem Entwurf. Sie prüft Moduswechsel, unveränderte Historie und Revision, Zoom, Rotations-Undo sowie Sperren während Gesten/Bildwechseln und bei fehlendem Pro-Zugriff. Die Prüfung des nativen Menüs wird getrennt dokumentiert.
+
+Nachweise vom 29. Oktober 2026: `./scripts/build.sh`, `./scripts/test.sh` (173 Swift-Testing- und zwei XCTest-Prüfungen) und `./scripts/test-workflow-polish.sh` bestanden. Die gesonderte synthetische Test-App wurde mit `./scripts/build-cleanshot-feature-ui.sh` neu gebaut. Auf diesem Mac mit macOS 27 wurde die ursprüngliche Sperre im bisherigen Build reproduziert; im neuen Build sind Text erkennen, Bildgröße, Pipette, Bild einfügen, Gestaltung, Drehbefehle und QR lesen bei offenem Zuschnitt freigegeben. Kopieren, Export, Teilen und Anheften bleiben dabei gesperrt. Der direkte Wechsel Zuschneiden → Pipette sowie Zuschneiden → Gestaltung wurde über das native Menü ausgeführt; der jeweilige Inspektor bleibt nach dem Wechsel geöffnet. Keine echte Aufnahme, Änderung von TCC-Rechten oder Bearbeitung der Nutzerbibliothek. Eine vollständige macOS-26-/VoiceOver-Abnahme ist damit nicht belegt.
+
+Die obere Werkzeuggruppe scrollt nicht mehr horizontal. Sie zeigt in der gespeicherten Reihenfolge nur vollständig passende Werkzeuge und Bearbeitungsaktionen. Weitere Einträge stehen im nativen Menü **Mehr ▾**. Beim Vergrößern erscheinen sie automatisch wieder direkt. Pipette und Bild einfügen gehören ebenfalls zu diesem Überlauf; die vorhandene rechte Bildaktionsgruppe bleibt separat erreichbar.
+
+Ist das aktive Werkzeug gerade im Menü verborgen, erscheint Mehr in der Akzentfarbe. Der Menüeintrag ist angehakt und über dieselbe Modellauswahl wie der direkte Button angebunden. Pro-Abfragen, Text-/Stilabschluss und Canvas-Fokus bleiben erhalten. Reihenfolge, ausgeblendete Werkzeuge und alle drei gespeicherten Leistengrößen werden berücksichtigt. Die Breitenmessung verwendet die aktuellen deutschen/englischen Beschriftungen und reserviert den Platz für Mehr vor der Aufteilung. Ein Auswahlwechsel verändert die Breite eines Werkzeugbuttons nicht.
+
+Erfolgreiche Prüfungen: App-Build, `./scripts/test-editor-toolbar.sh` auf Deutsch/Englisch, 148 Swift-Testing- und zwei XCTest-Domainprüfungen sowie Katalog-/Compiler- und native Sprachprüfung. Die native Layoutprüfung verwendet ein isoliertes synthetisches Fenster, reale SwiftUI-/AppKit-Steuerelemente, schmale/breite/wieder vergrößerte Ansichten, drei Leistengrößen und Deutsch/Englisch. Sie prüft fehlende Scrollansicht, erwartete sichtbare Einträge und Überlauf bei festen Breiten sowie die exakte Platzgrenze einer angepassten Werkzeugfolge. Die native Bedienkontrolle öffnet das echte Mehr-Menü und wählt daraus Abdecken; die zugängliche aktive Werkzeuganzeige wechselt entsprechend. Tatsächliches Verbreitern des Testfensters zeigt Abdecken, Zuschneiden, Pipette und Bild einfügen wieder direkt; Mehr verschwindet. Direkte Abfragen der SwiftUI-Accessibility-Hierarchie aus dem isolierten Prozess sind ohne externen Accessibility-Client auf diesem System leer und werden deshalb nicht als automatischer Nachweis verwendet. Vollständige VoiceOver-Abnahme bleibt manuell.
+
+
+## Ein gemeinsames Formenwerkzeug – 27. Oktober 2026
+
+Formen und der separate Ellipsen-Kurzeinstieg sind auf Nutzerwunsch zu einem Werkzeugleisteneintrag Formen zusammengeführt. Alle sechs Varianten bleiben rechts auswählbar. Das interne Ellipsenwerkzeug verwendet für Button-Markierung, angehakten Mehr-Eintrag, Zugang über Einstellungen und Reaktion auf Ausblenden denselben Formeneintrag. Erneutes Anklicken von Formen behält die aktive Ellipse. Dokumentgeometrie, Stilvorgaben, Projektformat und Shift-Verhalten sind unverändert.
+
+Bestehende Reihenfolgen führen beide Einträge an der ersten bisherigen Formen-/Ellipsenposition zusammen. Die einmalige Sichtbarkeitsmigration erhält den Zugang, sofern zuvor mindestens einer sichtbar war; bewusstes späteres Ausblenden bleibt nach Neustart erhalten. Die Einstellungstests prüfen alle vier alten Sichtbarkeitskombinationen, angepasste Reihenfolge, Dubletten und Neustart.
+
+Nachweise: `./scripts/build.sh -derivedDataPath build/ColorPickerBuild`, `./scripts/test-settings.sh`, `./scripts/test-editor-toolbar.sh` (Deutsch/Englisch), `./scripts/test.sh` (173 Swift-Testing- und zwei XCTest-Prüfungen) und Katalog-/Compilerprüfung bestanden. In der isolierten deutschen Test-App mit synthetischem Dashboard sichtbar geprüft: nur Formen in der Leiste, sechs Formvarianten rechts, Ellipse auswählbar, Formen bleibt markiert, erneutes Anklicken erhält Ellipse.

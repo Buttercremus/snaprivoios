@@ -234,7 +234,7 @@ enum VideoLifecycleChecks {
             let run = Task { await session.run() }
             try await waitUntil { NSApp.windows.contains { $0.isVisible && $0.title == String(localized: "Videoaufnahme") } }
             let panel = NSApp.windows.first { $0.isVisible && $0.title == String(localized: "Videoaufnahme") }!
-            let view = panel.contentView!
+            let view = (panel.contentView as! CaptureToolbarSurface).controls
             let buttons = view.subviews.compactMap { $0 as? NSButton }
             let primary = buttons.first { $0.accessibilityIdentifier() == "video.primary" }!
             let preview = buttons.first { $0.accessibilityIdentifier() == "video.preview" }!
