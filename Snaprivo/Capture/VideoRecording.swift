@@ -2,6 +2,7 @@ import AppKit
 import AVFoundation
 import QuartzCore
 import ScreenCaptureKit
+import SwiftUI
 import UniformTypeIdentifiers
 import SnagForgeDomain
 
@@ -452,6 +453,7 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
     private let selection: ScreenshotSelection
     private let outline: VideoRecordingOutline
     private let recordingToolbar = VideoRecordingToolbar()
+    private let countdownBadge = VideoCountdownBadge()
     private let includesCursor: Bool
     private let showsMouseClicks: Bool
     private let microphoneAccess: VideoMicrophoneAccess
@@ -511,6 +513,9 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
         recordingToolbar.onCancel = { [weak self] in Task { await self?.closeSafely() } }
         outline.onRegionChange = { [weak self] rect in
             guard let self, usesRecordingToolbar else { return }
+            if phase == .countingDown {
+                if let rect { countdownBadge.show(countdownRemaining, region: rect) } else { countdownBadge.hide() }
+            }
             recordingToolbar.show(region: rect ?? selection.rect, screen: selection.screenFrame)
         }
         for (seconds, title) in [(0, String(localized: "Keine")), (3, String(localized: "3 Sekunden")), (5, String(localized: "5 Sekunden"))] {
@@ -586,6 +591,8 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
         if [.ready, .countingDown, .starting, .recording, .stopping].contains(phase) {
             outline.show(recording: phase == .recording || phase == .stopping)
         } else { outline.hide() }
+        if phase == .countingDown, let region = outline.visibleRect { countdownBadge.show(countdownRemaining, region: region) }
+        else { countdownBadge.hide() }
         let text: String
         let audioDescription = (phase == .ready ? audioOptions : recordingAudio).summary
         switch phase {
@@ -812,6 +819,7 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
     private func finishPanel() {
         removeSystemObservers(); timer?.invalidate(); timer = nil
         outline.hide()
+        countdownBadge.hide()
         recordingToolbar.hide()
         panel.orderOut(nil); panel.close()
         continuation?.resume(); continuation = nil
@@ -1027,6 +1035,67 @@ final class VideoRecordingToolbar: NSObject {
         panel.orderOut(nil); panel.close()
     }
     @objc private func stopPressed() { if cancelsCountdown { onCancel?() } else { onStop?() } }
+}
+
+/// Large countdown in the middle of the source. It never takes input; SCK excludes
+/// it like every own window, and it hides before the stream starts.
+@MainActor
+final class VideoCountdownBadge {
+    static let maximumSide: CGFloat = 112
+    private let panel = NSPanel(contentRect: CGRect(x: 0, y: 0, width: maximumSide, height: maximumSide),
+        styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    private let host = NSHostingView(rootView: VideoCountdownNumber(seconds: 0, side: maximumSide, animates: false))
+
+    init() {
+        panel.identifier = NSUserInterfaceItemIdentifier("video.countdownBadge")
+        panel.isReleasedWhenClosed = false; panel.isOpaque = false; panel.backgroundColor = .clear
+        panel.hasShadow = false; panel.ignoresMouseEvents = true; panel.hidesOnDeactivate = false
+        panel.animationBehavior = .none
+        panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.appearance = NSAppearance(named: .darkAqua)
+        // The session already announces every second to VoiceOver.
+        panel.setAccessibilityElement(false)
+        host.sizingOptions = []
+        panel.contentView = host
+    }
+
+    /// Centered on the source, smaller for small sources, and kept on its display.
+    static func frame(centeredIn region: CGRect, within screen: CGRect) -> CGRect {
+        let side = min(maximumSide, max(64, min(region.width, region.height) / 2))
+        let x = min(max(region.midX - side / 2, screen.minX), screen.maxX - side)
+        let y = min(max(region.midY - side / 2, screen.minY), screen.maxY - side)
+        return CGRect(x: x, y: y, width: side, height: side)
+    }
+
+    func show(_ seconds: Int, region: CGRect) {
+        let screen = NSScreen.screens.map(\.frame).max { lhs, rhs in
+            let a = lhs.intersection(region), b = rhs.intersection(region)
+            return (a.isNull ? 0 : a.width * a.height) < (b.isNull ? 0 : b.width * b.height)
+        } ?? region
+        let frame = Self.frame(centeredIn: region, within: screen)
+        // The first second appears in place; only later seconds roll.
+        host.rootView = VideoCountdownNumber(seconds: seconds, side: frame.width, animates: panel.isVisible)
+        if panel.frame != frame { panel.setFrame(frame, display: true) }
+        if !panel.isVisible { panel.orderFrontRegardless() }
+    }
+    func hide() { panel.orderOut(nil) }
+}
+
+struct VideoCountdownNumber: View {
+    let seconds: Int
+    let side: CGFloat
+    let animates: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        Text(verbatim: "\(seconds)")
+            .font(.system(size: side / 2, weight: .semibold).monospacedDigit())
+            .foregroundStyle(.white)
+            .contentTransition(.numericText(countsDown: true))
+            .animation(animates && !reduceMotion ? .smooth(duration: 0.3) : nil, value: seconds)
+            .frame(width: side, height: side)
+            .glassEffect(.regular.tint(.black.opacity(0.25)), in: .circle)
+    }
 }
 
 @MainActor private final class VideoToolbarPanel: NSPanel {

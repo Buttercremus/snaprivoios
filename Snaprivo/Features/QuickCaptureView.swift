@@ -286,13 +286,17 @@ private struct QuickCaptureThumbnail: View {
                     .accessibilityIdentifier("quickCapture.thumbnail.scanCode")
                     .disabled(recognition.isBusy || !model.hasConfirmedImageForToolbar)
                 Spacer(minLength: 0)
-                if model.copyState == .copied { Image(systemName: "checkmark").foregroundStyle(.green).accessibilityLabel(String(localized: "Kopiert")) }
+                if model.copyState == .copied {
+                    Image(systemName: "checkmark").foregroundStyle(.green).accessibilityLabel(String(localized: "Kopiert"))
+                        .transition(.symbolEffect(.drawOn))
+                }
                 Button(String(localized: "Mehr"), systemImage: "ellipsis") { showsDetails = true }
                     .labelStyle(.iconOnly).help(String(localized: "Weitere Bildaktionen"))
                     .popover(isPresented: $showsDetails) {
                         QuickCaptureView(workspace: workspace, model: model) { showsDetails = false }
                     }
             }.font(.callout).buttonStyle(.borderless).padding(.horizontal, 12).frame(height: 34)
+                .animation(reduceMotion ? nil : .smooth(duration: 0.2), value: model.copyState == .copied)
                 .background(reduceTransparency ? AnyShapeStyle(Color(nsColor: .windowBackgroundColor)) : AnyShapeStyle(.regularMaterial))
             if let error = error ?? model.error { Text(error).font(.caption2).foregroundStyle(.red).padding(6) }
         }

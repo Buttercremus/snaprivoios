@@ -10,6 +10,8 @@ struct EditorToolPalette: View {
     var hasPro = true
     var toolsAreActive = true
     let onSelect: () -> Void
+    @Namespace private var selectionNamespace
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @ViewBuilder
     var body: some View {
@@ -24,7 +26,8 @@ struct EditorToolPalette: View {
         HStack(spacing: 0) {
             ForEach(order, id: \.rawValue) { tool in
                 if let item = EditorToolItem.all.first(where: { $0.tool == tool }) {
-                    EditorToolButton(item: item, size: size, isSelected: toolsAreActive && selection.toolbarTool == item.tool, isProLocked: !hasPro && ProFeature.required(for: tool) != nil) {
+                    EditorToolButton(item: item, size: size, isSelected: toolsAreActive && selection.toolbarTool == item.tool, isProLocked: !hasPro && ProFeature.required(for: tool) != nil,
+                                     selectionNamespace: selectionNamespace) {
                         if selection.toolbarTool != item.tool { selection = item.tool }
                         onSelect()
                     }
@@ -37,8 +40,27 @@ struct EditorToolPalette: View {
                 }
             }
         }
+        // Only the highlight glides, and only after a click; shortcuts switch immediately.
+        .animation(EditorMotion.selection(reduceMotion: reduceMotion), value: toolsAreActive ? selection.toolbarTool : nil)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(String(localized: "Editorwerkzeuge"))
+    }
+}
+
+/// Motion for editor chrome. Pointer actions animate; keyboard, VoiceOver and
+/// programmatic changes stay immediate. The canvas never takes part.
+@MainActor enum EditorMotion {
+    static func panel(reduceMotion: Bool) -> Animation? {
+        guard !reduceMotion, isPointerEvent else { return nil }
+        return .smooth(duration: 0.18, extraBounce: 0)
+    }
+    static func selection(reduceMotion: Bool) -> Animation? {
+        guard !reduceMotion, isPointerEvent else { return nil }
+        return .spring(response: 0.24, dampingFraction: 1)
+    }
+    private static var isPointerEvent: Bool {
+        guard let event = NSApp.currentEvent?.type else { return false }
+        return event == .leftMouseDown || event == .leftMouseUp
     }
 }
 
@@ -188,6 +210,7 @@ private struct EditorToolButton: View {
     let size: EditorToolbarSize
     let isSelected: Bool
     var isProLocked = false
+    var selectionNamespace: Namespace.ID? = nil
     let action: () -> Void
 
     var body: some View {
@@ -195,7 +218,7 @@ private struct EditorToolButton: View {
             EditorToolbarLabel(title: item.title, symbol: item.symbol, size: size,
                                extraWidth: item.tool == .crop ? 18 : 0, isSelected: isSelected)
         }
-        .buttonStyle(EditorToolbarButtonStyle(isSelected: isSelected))
+        .buttonStyle(EditorToolbarButtonStyle(isSelected: isSelected, selectionNamespace: selectionNamespace))
         .help(isProLocked ? String(localized: "Dieses Werkzeug gehört zu Snaprivo Pro.") : item.hint)
         .accessibilityLabel(item.title)
         .accessibilityHint(isProLocked ? String(localized: "Dieses Werkzeug gehört zu Snaprivo Pro.") : item.hint)
@@ -234,17 +257,25 @@ struct EditorToolbarLabel: View {
 
 struct EditorToolbarButtonStyle: ButtonStyle {
     var isSelected = false
+    /// Buttons sharing a namespace move one highlight instead of swapping two.
+    var selectionNamespace: Namespace.ID? = nil
     @State private var isHovered = false
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-            .background(isSelected ? Color.accentColor.opacity(configuration.isPressed ? 0.24 : 0.16)
-                        : Color.primary.opacity(configuration.isPressed ? 0.12 : isHovered && isEnabled ? 0.07 : 0),
+            .background(Color.primary.opacity(isSelected ? 0 : configuration.isPressed ? 0.12 : isHovered && isEnabled ? 0.07 : 0),
                         in: .rect(cornerRadius: 8))
+            .background { if isSelected { selectionHighlight(pressed: configuration.isPressed) } }
             .opacity(isEnabled ? 1 : 0.4)
             .onHover { isHovered = $0 }
+    }
+
+    @ViewBuilder private func selectionHighlight(pressed: Bool) -> some View {
+        let highlight = RoundedRectangle(cornerRadius: 8).fill(Color.accentColor.opacity(pressed ? 0.24 : 0.16))
+        if let selectionNamespace { highlight.matchedGeometryEffect(id: "selection", in: selectionNamespace) }
+        else { highlight }
     }
 }
 

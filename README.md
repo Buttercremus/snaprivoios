@@ -8,6 +8,10 @@ Native Screenshot- und Bildschirmvideo-App für macOS 26+, von Anfang an für de
 
 Die Verarbeitung verwendet ausschließlich Apples lokales Systemmodell und die lokale Texterkennung. Bei verfügbarem Bildmodell unter macOS 27 kommen Bilddaten hinzu; unter macOS 26 oder ohne Bildfähigkeit dient OCR als Grundlage. Das Modell muss auf dem Mac verfügbar und Apple Intelligence aktiviert sein. Die Anleitungsbearbeitung einschließlich Textassistent bleibt Pro; vorhandene Daten bleiben wie bisher zugänglich. Keine Cloud-Anbindung, API-Schlüssel oder zusätzlichen Aufnahmeberechtigungen. [Bedienung, Grenzen und Prüfnachweise](docs/APPLE-INTELLIGENCE-ABNAHME.md).
 
+## Bewegung und Bestätigungen – 1. November 2026
+
+Kopieren im Editor verwandelt das Symbol per SF-Symbol-Replace in ein Häkchen; in der Schnellvorschau zeichnet sich das Kopiert-Häkchen ein. Die Werkzeugmarkierung gleitet nach einem Mausklick zum neuen Werkzeug, Tastenkürzel wechseln weiterhin sofort. Beim Einrasten an Kanten und Mitten gibt ein Force-Touch-Trackpad einen kurzen Ausrichtungsimpuls. Der Video-Vorlauf zeigt mittig in der Quelle eine große, klickdurchlässige Liquid-Glass-Fläche mit herunterzählender Sekunde, die vor dem Streamstart verschwindet. Reduzierte Bewegung zeigt alle Zustände ohne Übergang. [Details und Prüfung](docs/BEWEGUNG-QUICKWINS-ABNAHME.md).
+
 ## Stabilisierung – 31. Oktober 2026
 
 Canvas-Tastenkürzel gelten nur bei Fokus auf der Bildfläche, ihrer Schnellleiste oder der Pipette. Ein inaktives Textobjekt fängt keine Befehle anderer Eingabefelder mehr ab; zusätzliche Modifikatoren lösen keine versehentliche Objektaktion aus. Beim Schließen der Schnellleiste kehrt der Fokus auch aus untergeordneten Bedienelementen zur Bildfläche zurück. Ein erneuter Klick auf das aktive Vorschaubild bestätigt offene Texteingaben und fokussiert den bestehenden Editor ohne Neuladen. Undo, Redo und Löschen verändern keine laufende Mausgeste; nach dem Loslassen bleibt die Änderung ein Undo-Schritt.

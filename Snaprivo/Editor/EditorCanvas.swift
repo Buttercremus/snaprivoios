@@ -352,7 +352,10 @@ final class CanvasView: NSView, NSTextViewDelegate {
     private var draggingCalloutTip = false
     private var resizeHandle: EditorResizeHandle?
     private var resizingGroupBounds: CGRect?
-    private(set) var snapGuides: [EditorArrangement.Guide] = []
+    private(set) var snapGuides: [EditorArrangement.Guide] = [] {
+        // A light trackpad tick when an edge or center engages; holding the snap stays silent.
+        didSet { if snapGuides.contains(where: { !oldValue.contains($0) }) { NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now) } }
+    }
     private var lastDragPoint: CGPoint?
     fileprivate var isSpaceHeld = false
     private var panGesture: (anchor: CGPoint, viewport: EditorViewport)?

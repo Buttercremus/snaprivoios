@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import QuartzCore
+import SwiftUI
 import SnagForgeDomain
 
 /// Exercises the production panel/start task with a clock advanced by the test.
@@ -8,6 +9,7 @@ import SnagForgeDomain
 @MainActor enum VideoCountdownChecks {
     static func sessions() async throws {
         try await outlines()
+        badgeFrames()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("Snaprivo-Countdown-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -50,9 +52,15 @@ import SnagForgeDomain
                 require(!controls.primary.isEnabled && !controls.delay.isEnabled && !controls.microphone.isEnabled && !controls.system.isEnabled)
                 require(controls.close.isEnabled && controls.close.keyEquivalent == "\u{1b}")
                 require(controls.status.stringValue.contains(String(localized: "Video startet in \(seconds - tick) …")))
+                let badge = NSApp.windows.first { $0.identifier?.rawValue == "video.countdownBadge" && $0.isVisible }
+                require(badge != nil && badge!.ignoresMouseEvents && !badge!.isKeyWindow, "Countdown lost its click-through badge")
+                require((badge?.contentView as? NSHostingView<VideoCountdownNumber>)?.rootView.seconds == seconds - tick, "Countdown badge showed another second")
+                require(abs(badge!.frame.midX - VideoLifecycleChecks.selection.rect.midX) < 0.5
+                    && abs(badge!.frame.midY - VideoLifecycleChecks.selection.rect.midY) < 0.5, "Countdown badge left the source center")
                 clock.tick()
             }
             try await VideoLifecycleChecks.waitUntil { session.phase == .recording }
+            require(!NSApp.windows.contains { $0.identifier?.rawValue == "video.countdownBadge" && $0.isVisible }, "Countdown badge remained during recording")
             require(prepared == 1 && source.startCalls == 1 && clock.waits == seconds)
             require(inherited.isVisible && inherited.identifier?.rawValue == "video.recordingRegion")
             require(session.hasLibraryChanges)
@@ -100,6 +108,7 @@ import SnagForgeDomain
             clock.tick()
             await run.value
             require(prepared == 0 && session.phase == .ready && !controls.panel.isVisible)
+            require(!NSApp.windows.contains { $0.identifier?.rawValue == "video.countdownBadge" && $0.isVisible }, "Cancelled countdown kept its badge")
             require(!session.hasLibraryChanges, "Cancelled countdown changed the library selection")
             require(!FileManager.default.fileExists(atPath: folder.path), "Cancelled countdown left files behind")
         }
@@ -128,8 +137,19 @@ import SnagForgeDomain
         try await VideoLifecycleChecks.waitUntil { clock.cancelled }
         clock.tick(); await closing.value; await run.value
         require(prepared == 0)
+        require(!NSApp.windows.contains { $0.identifier?.rawValue == "video.countdownBadge" && $0.isVisible }, "Closed session kept its countdown badge")
 
-        print("Native video countdown passed: 0/3/5 seconds after direct start with saved audio, no file/engine before expiry, single start, option locking, duration excludes countdown, popup override, permission before countdown, first/final-second cancellation and late clock resumption without capture.")
+        print("Native video countdown passed: 0/3/5 seconds after direct start with saved audio, no file/engine before expiry, single start, option locking, duration excludes countdown, centered click-through badge gone before recording, popup override, permission before countdown, first/final-second cancellation and late clock resumption without capture.")
+    }
+
+    private static func badgeFrames() {
+        let screen = CGRect(x: 0, y: 0, width: 1440, height: 900)
+        let large = VideoCountdownBadge.frame(centeredIn: CGRect(x: 100, y: 100, width: 800, height: 600), within: screen)
+        require(large == CGRect(x: 444, y: 344, width: 112, height: 112), "Large source did not center the full badge")
+        let small = VideoCountdownBadge.frame(centeredIn: CGRect(x: 300, y: 300, width: 90, height: 40), within: screen)
+        require(small.size == CGSize(width: 64, height: 64) && small.midX == 345 && small.midY == 320, "Small source lost its minimum centered badge")
+        let edge = VideoCountdownBadge.frame(centeredIn: CGRect(x: -200, y: 860, width: 300, height: 200), within: screen)
+        require(edge.minX == 0 && edge.maxY == 900 && edge.width == 100, "Badge left the display of a partly offscreen source")
     }
 
     private static func outlines() async throws {

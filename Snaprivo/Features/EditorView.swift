@@ -444,10 +444,14 @@ private struct ImageEditorView: View {
     private var copyButton: some View {
         Button { model.copyPNG(animateFeedback: true) } label: {
             // Keep the normal label during rendering; a fleeting loading label looks like a flicker.
-            // Both visible states participate in sizing so confirmation never shifts nearby controls.
+            // Both states reserve their width so confirmation never shifts nearby controls.
             ZStack {
-                EditorToolbarLabel(title: String(localized: "Kopieren"), symbol: "doc.on.doc", size: preferences.toolbarSize).opacity(model.copyState == .copied ? 0 : 1)
-                EditorToolbarLabel(title: String(localized: "Kopiert"), symbol: "checkmark", size: preferences.toolbarSize).opacity(model.copyState == .copied ? 1 : 0)
+                EditorToolbarLabel(title: String(localized: "Kopieren"), symbol: "doc.on.doc", size: preferences.toolbarSize).hidden()
+                EditorToolbarLabel(title: String(localized: "Kopiert"), symbol: "checkmark", size: preferences.toolbarSize).hidden()
+                let copied = model.copyState == .copied
+                EditorToolbarLabel(title: copied ? String(localized: "Kopiert") : String(localized: "Kopieren"),
+                                   symbol: copied ? "checkmark" : "doc.on.doc", size: preferences.toolbarSize)
+                    .contentTransition(.symbolEffect(.replace))
             }
             .accessibilityHidden(true)
             .animation(reduceMotion || !model.animateCopyFeedback ? nil : .timingCurve(0.23, 1, 0.32, 1, duration: 0.16), value: model.copyState == .copied)
@@ -807,13 +811,6 @@ private struct EditorObjectActions: View {
         .disabled(!model.canActOnSelection)
         .help(String(localized: "Duplizieren, gruppieren oder löschen"))
         .accessibilityIdentifier("editor.object.actions")
-    }
-}
-
-@MainActor private enum EditorMotion {
-    static func panel(reduceMotion: Bool) -> Animation? {
-        guard !reduceMotion, let event = NSApp.currentEvent?.type, event == .leftMouseDown || event == .leftMouseUp else { return nil }
-        return .smooth(duration: 0.18, extraBounce: 0)
     }
 }
 
