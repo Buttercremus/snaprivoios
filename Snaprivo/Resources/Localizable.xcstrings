@@ -1,646 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-      "Texte vorschlagen": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Texte vorschlagen"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Suggest text"
-            }
-          }
-        }
-      },
-      "Texte überarbeiten": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Texte überarbeiten"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Improve text"
-            }
-          }
-        }
-      },
-      "Texte kürzen": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Texte kürzen"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Shorten text"
-            }
-          }
-        }
-      },
-      "Apple Intelligence wird geprüft …": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Apple Intelligence wird geprüft …"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Checking Apple Intelligence …"
-            }
-          }
-        }
-      },
-      "Bildanalyse und Texterstellung erfolgen lokal auf deinem Mac.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Bildanalyse und Texterstellung erfolgen lokal auf deinem Mac."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Image analysis and text generation take place locally on your Mac."
-            }
-          }
-        }
-      },
-      "Texterkennung und Texterstellung erfolgen lokal auf deinem Mac. Kurze Hinweise helfen bei Bildern ohne lesbaren Text.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Texterkennung und Texterstellung erfolgen lokal auf deinem Mac. Kurze Hinweise helfen bei Bildern ohne lesbaren Text."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Text recognition and generation take place locally on your Mac. Brief notes help with images that have no readable text."
-            }
-          }
-        }
-      },
-      "Dieser Mac unterstützt Apple Intelligence nicht. Du kannst deine Anleitung weiterhin selbst bearbeiten.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Dieser Mac unterstützt Apple Intelligence nicht. Du kannst deine Anleitung weiterhin selbst bearbeiten."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "This Mac does not support Apple Intelligence. You can still edit your guide yourself."
-            }
-          }
-        }
-      },
-      "Aktiviere Apple Intelligence in den Systemeinstellungen, um Textvorschläge zu erstellen.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Aktiviere Apple Intelligence in den Systemeinstellungen, um Textvorschläge zu erstellen."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Enable Apple Intelligence in System Settings to create text suggestions."
-            }
-          }
-        }
-      },
-      "Das lokale Sprachmodell ist noch nicht bereit. Prüfe den Download in den Systemeinstellungen und versuche es später erneut.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Das lokale Sprachmodell ist noch nicht bereit. Prüfe den Download in den Systemeinstellungen und versuche es später erneut."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "The on-device language model is not ready. Check its download in System Settings and try again later."
-            }
-          }
-        }
-      },
-      "Das lokale Sprachmodell unterstützt die gewählte Sprache derzeit nicht.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Das lokale Sprachmodell unterstützt die gewählte Sprache derzeit nicht."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "The on-device language model does not currently support the selected language."
-            }
-          }
-        }
-      },
-      "Apple Intelligence ist derzeit nicht verfügbar. Versuche es später erneut.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Apple Intelligence ist derzeit nicht verfügbar. Versuche es später erneut."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Apple Intelligence is currently unavailable. Try again later."
-            }
-          }
-        }
-      },
-      "Ein anderer Textauftrag läuft noch. Versuche es gleich erneut.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Ein anderer Textauftrag läuft noch. Versuche es gleich erneut."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Another text request is still running. Try again shortly."
-            }
-          }
-        }
-      },
-      "Beschreibe kurz das Ziel deiner Anleitung.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Beschreibe kurz das Ziel deiner Anleitung."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Briefly describe the goal of your guide."
-            }
-          }
-        }
-      },
-      "Dieser Text ist zu lang für das lokale Modell. Kürze die Hinweise oder den betroffenen Ausgangstext und versuche es erneut.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Dieser Text ist zu lang für das lokale Modell. Kürze die Hinweise oder den betroffenen Ausgangstext und versuche es erneut."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "This text is too long for the on-device model. Shorten your notes or the affected source text and try again."
-            }
-          }
-        }
-      },
-      "Ein Bild enthält keinen erkennbaren Text. Ergänze kurze Hinweise zu Ziel und Handlung oder bearbeite diesen Schritt einzeln.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Ein Bild enthält keinen erkennbaren Text. Ergänze kurze Hinweise zu Ziel und Handlung oder bearbeite diesen Schritt einzeln."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "An image has no recognizable text. Add brief notes about the goal and action, or edit that step individually."
-            }
-          }
-        }
-      },
-      "Apple Intelligence konnte für diese Inhalte keinen Vorschlag erstellen. Passe deine Hinweise an und versuche es erneut.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Apple Intelligence konnte für diese Inhalte keinen Vorschlag erstellen. Passe deine Hinweise an und versuche es erneut."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Apple Intelligence could not suggest text for this content. Adjust your notes and try again."
-            }
-          }
-        }
-      },
-      "Der Vorschlag entspricht nicht den Textgrenzen der Anleitung. Bitte erstelle ihn erneut oder kürze die Texte.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Der Vorschlag entspricht nicht den Textgrenzen der Anleitung. Bitte erstelle ihn erneut oder kürze die Texte."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "The suggestion exceeds the guide’s text limits. Generate it again or shorten the text."
-            }
-          }
-        }
-      },
-      "Die Textvorschläge konnten nicht erstellt werden. Deine Anleitung wurde nicht geändert. Versuche es erneut.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Die Textvorschläge konnten nicht erstellt werden. Deine Anleitung wurde nicht geändert. Versuche es erneut."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Text suggestions could not be created. Your guide has not been changed. Try again."
-            }
-          }
-        }
-      },
-      "Die Anleitung kann gerade nicht bearbeitet werden. Prüfe, ob Pro aktiv ist, und versuche es erneut.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Die Anleitung kann gerade nicht bearbeitet werden. Prüfe, ob Pro aktiv ist, und versuche es erneut."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "The guide cannot be edited right now. Check that Pro is active and try again."
-            }
-          }
-        }
-      },
-      "Die Anleitung wurde inzwischen geändert. Schließe den Assistenten und erstelle einen neuen Vorschlag für den aktuellen Stand.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Die Anleitung wurde inzwischen geändert. Schließe den Assistenten und erstelle einen neuen Vorschlag für den aktuellen Stand."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "The guide has changed. Close the assistant and generate a new suggestion for the current version."
-            }
-          }
-        }
-      },
-      "Anleitungstexte mit Apple Intelligence": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Anleitungstexte mit Apple Intelligence"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Guide text with Apple Intelligence"
-            }
-          }
-        }
-      },
-      "Apple Intelligence …": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Apple Intelligence …"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Apple Intelligence …"
-            }
-          }
-        }
-      },
-      "Anleitungstexte vorschlagen, überarbeiten oder kürzen": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Anleitungstexte vorschlagen, überarbeiten oder kürzen"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Suggest, improve or shorten guide text"
-            }
-          }
-        }
-      },
-      "Text mit Apple Intelligence …": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Text mit Apple Intelligence …"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Text with Apple Intelligence …"
-            }
-          }
-        }
-      },
-      "Aufgabe": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Aufgabe"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Task"
-            }
-          }
-        }
-      },
-      "Ziel oder ergänzende Hinweise": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Ziel oder ergänzende Hinweise"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Goal or additional notes"
-            }
-          }
-        }
-      },
-      "Beschreibe kurz, was die Anleitung erklären soll. Bei Bedarf ergänze Hinweise wie „Schritt 2: Ton ausschalten“.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Beschreibe kurz, was die Anleitung erklären soll. Bei Bedarf ergänze Hinweise wie „Schritt 2: Ton ausschalten“."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Briefly describe what the guide should explain. Add notes as needed, such as “Step 2: turn off sound”."
-            }
-          }
-        }
-      },
-      "Hier entstehen Titel und Einleitung. Für Schrittbeschreibungen füge zuerst Screenshots zur Anleitung hinzu.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Hier entstehen Titel und Einleitung. Für Schrittbeschreibungen füge zuerst Screenshots zur Anleitung hinzu."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Create a title and introduction here. Add screenshots to the guide first to generate step descriptions."
-            }
-          }
-        }
-      },
-      "%lld von %lld Textvorschlägen erstellt": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "%lld von %lld Textvorschlägen erstellt"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "%lld of %lld text suggestions created"
-            }
-          }
-        }
-      },
-      "Textvorschläge werden erstellt …": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Textvorschläge werden erstellt …"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Creating text suggestions …"
-            }
-          }
-        }
-      },
-      "Die Vorschläge erscheinen hier zur Prüfung. Erst „Übernehmen“ ändert deine Anleitung; anschließend ist alles gemeinsam rückgängig zu machen.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Die Vorschläge erscheinen hier zur Prüfung. Erst „Übernehmen“ ändert deine Anleitung; anschließend ist alles gemeinsam rückgängig zu machen."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Suggestions appear here for review. Your guide changes only when you choose “Apply”; all changes can then be undone together."
-            }
-          }
-        }
-      },
-      "Generierung stoppen": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Generierung stoppen"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Stop generating"
-            }
-          }
-        }
-      },
-      "Vorschläge erstellen": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Vorschläge erstellen"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Create suggestions"
-            }
-          }
-        }
-      },
-      "Neu erstellen": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Neu erstellen"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Generate again"
-            }
-          }
-        }
-      },
-      "Vorschläge prüfen und anpassen": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Vorschläge prüfen und anpassen"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Review and adjust suggestions"
-            }
-          }
-        }
-      },
-      "Prüfe besonders Bedienelemente und Handlungen. Apple Intelligence kann sich irren.": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Prüfe besonders Bedienelemente und Handlungen. Apple Intelligence kann sich irren."
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Check controls and actions carefully. Apple Intelligence can make mistakes."
-            }
-          }
-        }
-      },
-      "Bisheriger Text": {
-        "localizations": {
-          "de": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Bisheriger Text"
-            }
-          },
-          "en": {
-            "stringUnit": {
-              "state": "translated",
-              "value": "Previous text"
-            }
-          }
-        }
-      },
-    "Wähle eine einzelne Anleitung zum Bearbeiten oder verschiebe die Auswahl in den Papierkorb." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wähle eine einzelne Anleitung zum Bearbeiten oder verschiebe die Auswahl in den Papierkorb."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select a single guide to edit, or move the selection to Trash."
-          }
-        }
-      }
-    },
-    "Ausgewählte Anleitungen in den Papierkorb verschieben" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ausgewählte Anleitungen in den Papierkorb verschieben"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move selected guides to Trash"
-          }
-        }
-      }
-    },
-    "⌘-Klick wählt mehrere Anleitungen, Umschalt-Klick einen Bereich. Entf oder Rücktaste verschiebt die Auswahl in den Papierkorb." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "⌘-Klick wählt mehrere Anleitungen, Umschalt-Klick einen Bereich. Entf oder Rücktaste verschiebt die Auswahl in den Papierkorb."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Command-click selects multiple guides; Shift-click selects a range. Delete or Backspace moves the selection to Trash."
-          }
-        }
-      }
-    },
     "\n%lld × %lld Pixel · %@\nMit Stop beenden und im Videoeditor öffnen." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -671,227 +31,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : " – Copy"
-          }
-        }
-      }
-    },
-    "Animation erneut abspielen": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Animation erneut abspielen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Replay animation"
-          }
-        }
-      }
-    },
-    "Aus Bibliothek hinzufügen …" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aus Bibliothek hinzufügen …"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add from Library…"
-          }
-        }
-      }
-    },
-    "Auswählen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auswählen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select"
-          }
-        }
-      }
-    },
-    "Bereich aufnehmen und als nächsten Schritt anhängen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bereich aufnehmen und als nächsten Schritt anhängen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capture an area and add it as the next step"
-          }
-        }
-      }
-    },
-    "Das Bild konnte nicht gerendert werden.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Das Bild konnte nicht gerendert werden."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The image could not be rendered."
-          }
-        }
-      }
-    },
-    "Die Aufnahme ist in der Bibliothek gesichert, aber die Anleitung ist nicht mehr geöffnet." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Aufnahme ist in der Bibliothek gesichert, aber die Anleitung ist nicht mehr geöffnet."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The capture was saved to your library, but the guide is no longer open."
-          }
-        }
-      }
-    },
-    "Die Bildverarbeitung würde zu viel Arbeitsspeicher benötigen. Warte auf laufende Bildverarbeitungen oder wähle eine kleinere Ausgabegröße.": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Bildverarbeitung würde zu viel Arbeitsspeicher benötigen. Warte auf laufende Bildverarbeitungen oder wähle eine kleinere Ausgabegröße."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This image operation would require too much memory. Wait for other image operations to finish or choose a smaller output size."
-          }
-        }
-      }
-    },
-    "Erneut zeigen": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erneut zeigen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Show Again"
-          }
-        }
-      }
-    },
-    "Jeder Schritt behält seine eigene Bildkopie. Spätere Änderungen im Editor übernimmst du mit „Bild aktualisieren“." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jeder Schritt behält seine eigene Bildkopie. Spätere Änderungen im Editor übernimmst du mit „Bild aktualisieren“."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Each step keeps its own copy of the image. Use “Update image” to apply later changes from the editor."
-          }
-        }
-      }
-    },
-    "Mehrere Bilder: ⌘- oder Strg-Klick": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mehrere Bilder: ⌘- oder Strg-Klick"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Multiple images: ⌘-click or Ctrl-click"
-          }
-        }
-      }
-    },
-    "Nimm jeden Schritt direkt auf oder übernimm vorhandene Screenshots aus deiner Bibliothek." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nimm jeden Schritt direkt auf oder übernimm vorhandene Screenshots aus deiner Bibliothek."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capture each step directly or add existing screenshots from your library."
-          }
-        }
-      }
-    },
-    "Schritt aufnehmen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schritt aufnehmen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capture Step"
-          }
-        }
-      }
-    },
-    "Speicher wird vorbereitet …": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speicher wird vorbereitet …"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Preparing storage…"
           }
         }
       }
@@ -1944,6 +1083,22 @@
         }
       }
     },
+    "%lld von %lld Textvorschlägen erstellt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld von %lld Textvorschlägen erstellt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld of %lld text suggestions created"
+          }
+        }
+      }
+    },
     "°" : {
       "comment" : "The unit of measurement for the angle of a presentation.",
       "extractionState" : "manual",
@@ -1993,6 +1148,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "⌘-click or Ctrl-click to select multiple images, then choose Copy Selection."
+          }
+        }
+      }
+    },
+    "⌘-Klick wählt mehrere Anleitungen, Umschalt-Klick einen Bereich. Entf oder Rücktaste verschiebt die Auswahl in den Papierkorb." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘-Klick wählt mehrere Anleitungen, Umschalt-Klick einen Bereich. Entf oder Rücktaste verschiebt die Auswahl in den Papierkorb."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Command-click selects multiple guides; Shift-click selects a range. Delete or Backspace moves the selection to Trash."
           }
         }
       }
@@ -2569,6 +1740,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Actions for Step %lld"
+          }
+        }
+      }
+    },
+    "Aktiviere Apple Intelligence in den Systemeinstellungen, um Textvorschläge zu erstellen." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aktiviere Apple Intelligence in den Systemeinstellungen, um Textvorschläge zu erstellen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Apple Intelligence in System Settings to create text suggestions."
           }
         }
       }
@@ -3183,6 +2370,23 @@
         }
       }
     },
+    "Animation erneut abspielen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Animation erneut abspielen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replay animation"
+          }
+        }
+      }
+    },
     "Animiertes GIF · 12 fps · maximal 720 px · maximal 15 Sekunden." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3333,6 +2537,22 @@
         }
       }
     },
+    "Anleitung mit Apple Intelligence schreiben" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anleitung mit Apple Intelligence schreiben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write your guide with Apple Intelligence"
+          }
+        }
+      }
+    },
     "Anleitung sichern" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3467,6 +2687,39 @@
         }
       }
     },
+    "Anleitungstexte mit Apple Intelligence" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anleitungstexte mit Apple Intelligence"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guide text with Apple Intelligence"
+          }
+        }
+      }
+    },
+    "Anleitungstexte vorschlagen, überarbeiten oder kürzen" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anleitungstexte vorschlagen, überarbeiten oder kürzen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggest, improve or shorten guide text"
+          }
+        }
+      }
+    },
     "Anleitungstitel" : {
       "localizations" : {
         "de" : {
@@ -3534,6 +2787,22 @@
         }
       }
     },
+    "Anzeigen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anzeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show"
+          }
+        }
+      }
+    },
     "App beenden" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3547,6 +2816,103 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quit App"
+          }
+        }
+      }
+    },
+    "Apple Intelligence" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence"
+          }
+        }
+      }
+    },
+    "Apple Intelligence …" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence …"
+          }
+        }
+      }
+    },
+    "Apple Intelligence ist derzeit nicht verfügbar. Versuche es später erneut." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence ist derzeit nicht verfügbar. Versuche es später erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence is currently unavailable. Try again later."
+          }
+        }
+      }
+    },
+    "Apple Intelligence konnte für diese Inhalte keinen Vorschlag erstellen. Passe deine Hinweise an und versuche es erneut." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence konnte für diese Inhalte keinen Vorschlag erstellen. Passe deine Hinweise an und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence could not suggest text for this content. Adjust your notes and try again."
+          }
+        }
+      }
+    },
+    "Apple Intelligence wird geprüft …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence wird geprüft …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Checking Apple Intelligence …"
+          }
+        }
+      }
+    },
+    "Apple Intelligence wird vorbereitet …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple Intelligence wird vorbereitet …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing Apple Intelligence …"
           }
         }
       }
@@ -3598,6 +2964,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Press a detail and drag the magnifier beside it. Move the source and lens independently."
+          }
+        }
+      }
+    },
+    "Aufgabe" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufgabe"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Task"
           }
         }
       }
@@ -3974,6 +3356,23 @@
         }
       }
     },
+    "Aus Bibliothek hinzufügen …" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus Bibliothek hinzufügen …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add from Library…"
+          }
+        }
+      }
+    },
     "Aus Favoriten entfernen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4071,6 +3470,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Selected"
+          }
+        }
+      }
+    },
+    "Ausgewählte Anleitungen in den Papierkorb verschieben" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgewählte Anleitungen in den Papierkorb verschieben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move selected guides to Trash"
           }
         }
       }
@@ -4496,6 +3911,23 @@
         }
       }
     },
+    "Auswählen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auswählen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select"
+          }
+        }
+      }
+    },
     "Auswahlgröße" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4917,6 +4349,38 @@
         }
       }
     },
+    "Beim Aufnehmen Text vorschlagen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim Aufnehmen Text vorschlagen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggest Text While Capturing"
+          }
+        }
+      }
+    },
+    "Beim ersten Mal nach einer Pause lädt macOS das lokale Sprachmodell. Das kann bis zu einer Minute dauern." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beim ersten Mal nach einer Pause lädt macOS das lokale Sprachmodell. Das kann bis zu einer Minute dauern."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After a break, macOS first loads the local language model. This can take up to a minute."
+          }
+        }
+      }
+    },
     "Beim Speichern wählen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4998,6 +4462,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Save Region Preset"
+          }
+        }
+      }
+    },
+    "Bereich aufnehmen und als nächsten Schritt anhängen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bereich aufnehmen und als nächsten Schritt anhängen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture an area and add it as the next step"
           }
         }
       }
@@ -5151,6 +4632,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Objects that already use this style will not change."
+          }
+        }
+      }
+    },
+    "Beschreibe kurz das Ziel deiner Anleitung." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beschreibe kurz das Ziel deiner Anleitung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Briefly describe the goal of your guide."
+          }
+        }
+      }
+    },
+    "Beschreibe kurz, was die Anleitung erklären soll. Bei Bedarf ergänze Hinweise wie „Schritt 2: Ton ausschalten“." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beschreibe kurz, was die Anleitung erklären soll. Bei Bedarf ergänze Hinweise wie „Schritt 2: Ton ausschalten“."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Briefly describe what the guide should explain. Add notes as needed, such as “Step 2: turn off sound”."
           }
         }
       }
@@ -5933,6 +5446,22 @@
         }
       }
     },
+    "Bildanalyse und Texterstellung erfolgen lokal auf deinem Mac." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildanalyse und Texterstellung erfolgen lokal auf deinem Mac."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image analysis and text generation take place locally on your Mac."
+          }
+        }
+      }
+    },
     "Bildauflösung ändern" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6661,6 +6190,22 @@
         }
       }
     },
+    "Bisheriger Text" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bisheriger Text"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous text"
+          }
+        }
+      }
+    },
     "Bitte 1 bis 1.024 Zeichen eingeben." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6947,6 +6492,23 @@
         }
       }
     },
+    "Das Bild konnte nicht gerendert werden." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Bild konnte nicht gerendert werden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The image could not be rendered."
+          }
+        }
+      }
+    },
     "Das Bild konnte nicht gerendert werden. Möglicherweise reicht der Arbeitsspeicher nicht aus." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7062,6 +6624,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The selected window is no longer available. Select it again."
+          }
+        }
+      }
+    },
+    "Das lokale Sprachmodell ist noch nicht bereit. Prüfe den Download in den Systemeinstellungen und versuche es später erneut." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das lokale Sprachmodell ist noch nicht bereit. Prüfe den Download in den Systemeinstellungen und versuche es später erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The on-device language model is not ready. Check its download in System Settings and try again later."
+          }
+        }
+      }
+    },
+    "Das lokale Sprachmodell unterstützt die gewählte Sprache derzeit nicht." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das lokale Sprachmodell unterstützt die gewählte Sprache derzeit nicht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The on-device language model does not currently support the selected language."
           }
         }
       }
@@ -7898,6 +7492,22 @@
         }
       }
     },
+    "Der Vorschlag entspricht nicht den Textgrenzen der Anleitung. Bitte erstelle ihn erneut oder kürze die Texte." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Vorschlag entspricht nicht den Textgrenzen der Anleitung. Bitte erstelle ihn erneut oder kürze die Texte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The suggestion exceeds the guide’s text limits. Generate it again or shorten the text."
+          }
+        }
+      }
+    },
     "Details" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7948,6 +7558,22 @@
         }
       }
     },
+    "Die Anleitung kann gerade nicht bearbeitet werden. Prüfe, ob Pro aktiv ist, und versuche es erneut." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anleitung kann gerade nicht bearbeitet werden. Prüfe, ob Pro aktiv ist, und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The guide cannot be edited right now. Check that Pro is active and try again."
+          }
+        }
+      }
+    },
     "Die Anleitung überschreitet die unterstützten Grenzen: 100 Schritte und 256 MB." : {
       "localizations" : {
         "de" : {
@@ -7977,6 +7603,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The guide and its saved image snapshots will be deleted. The image projects will remain."
+          }
+        }
+      }
+    },
+    "Die Anleitung wurde inzwischen geändert. Schließe den Assistenten und erstelle einen neuen Vorschlag für den aktuellen Stand." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anleitung wurde inzwischen geändert. Schließe den Assistenten und erstelle einen neuen Vorschlag für den aktuellen Stand."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The guide has changed. Close the assistant and generate a new suggestion for the current version."
           }
         }
       }
@@ -8028,6 +7670,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The recording did not respond in time. Please try again."
+          }
+        }
+      }
+    },
+    "Die Aufnahme ist in der Bibliothek gesichert, aber die Anleitung ist nicht mehr geöffnet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Aufnahme ist in der Bibliothek gesichert, aber die Anleitung ist nicht mehr geöffnet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The capture was saved to your library, but the guide is no longer open."
           }
         }
       }
@@ -8111,6 +7770,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "macOS asks for screen access when you start. Your projects stay local."
+          }
+        }
+      }
+    },
+    "Die Bildverarbeitung würde zu viel Arbeitsspeicher benötigen. Warte auf laufende Bildverarbeitungen oder wähle eine kleinere Ausgabegröße." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Bildverarbeitung würde zu viel Arbeitsspeicher benötigen. Warte auf laufende Bildverarbeitungen oder wähle eine kleinere Ausgabegröße."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This image operation would require too much memory. Wait for other image operations to finish or choose a smaller output size."
           }
         }
       }
@@ -8437,6 +8113,22 @@
         }
       }
     },
+    "Die Textvorschläge konnten nicht erstellt werden. Deine Anleitung wurde nicht geändert. Versuche es erneut." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Textvorschläge konnten nicht erstellt werden. Deine Anleitung wurde nicht geändert. Versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text suggestions could not be created. Your guide has not been changed. Try again."
+          }
+        }
+      }
+    },
     "Die Tonoptionen gelten für neue Videos. Mikrofonzugriff fragt macOS erst beim Aufnahmestart an." : {
       "localizations" : {
         "de" : {
@@ -8533,6 +8225,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The presets exceed the supported file size."
+          }
+        }
+      }
+    },
+    "Die Vorschläge erscheinen hier zur Prüfung. Erst „Übernehmen“ ändert deine Anleitung; anschließend ist alles gemeinsam rückgängig zu machen." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Vorschläge erscheinen hier zur Prüfung. Erst „Übernehmen“ ändert deine Anleitung; anschließend ist alles gemeinsam rückgängig zu machen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggestions appear here for review. Your guide changes only when you choose “Apply”; all changes can then be undone together."
           }
         }
       }
@@ -8684,6 +8392,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This file type is not supported."
+          }
+        }
+      }
+    },
+    "Dieser Mac unterstützt Apple Intelligence nicht. Du kannst deine Anleitung weiterhin selbst bearbeiten." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Mac unterstützt Apple Intelligence nicht. Du kannst deine Anleitung weiterhin selbst bearbeiten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac does not support Apple Intelligence. You can still edit your guide yourself."
+          }
+        }
+      }
+    },
+    "Dieser Text ist zu lang für das lokale Modell. Kürze die Hinweise oder den betroffenen Ausgangstext und versuche es erneut." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieser Text ist zu lang für das lokale Modell. Kürze die Hinweise oder den betroffenen Ausgangstext und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This text is too long for the on-device model. Shorten your notes or the affected source text and try again."
           }
         }
       }
@@ -9143,6 +8883,23 @@
         }
       }
     },
+    "Ein anderer Textauftrag läuft noch. Versuche es gleich erneut." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein anderer Textauftrag läuft noch. Versuche es gleich erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another text request is still running. Try again shortly."
+          }
+        }
+      }
+    },
     "Ein Bild als bearbeitbares Projekt importieren" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9156,6 +8913,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Import an image as an editable project"
+          }
+        }
+      }
+    },
+    "Ein Bild enthält keinen erkennbaren Text. Ergänze kurze Hinweise zu Ziel und Handlung oder bearbeite diesen Schritt einzeln." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Bild enthält keinen erkennbaren Text. Ergänze kurze Hinweise zu Ziel und Handlung oder bearbeite diesen Schritt einzeln."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An image has no recognizable text. Add brief notes about the goal and action, or edit that step individually."
           }
         }
       }
@@ -9920,6 +9693,23 @@
         }
       }
     },
+    "Erneut zeigen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut zeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Again"
+          }
+        }
+      }
+    },
     "Erscheinungsbild" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9933,6 +9723,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "Ersetzt Titel und Beschreibung dieses Schritts. Rückgängig mit ⌘Z." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ersetzt Titel und Beschreibung dieses Schritts. Rückgängig mit ⌘Z."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Replaces this step’s title and description. Undo with ⌘Z."
           }
         }
       }
@@ -10254,6 +10060,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Select a window or region…"
+          }
+        }
+      }
+    },
+    "Fenster schließen und weiterarbeiten. Der Fortschritt steht oben in der Anleitung." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fenster schließen und weiterarbeiten. Der Fortschritt steht oben in der Anleitung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close the window and keep working. Progress appears at the top of the guide."
           }
         }
       }
@@ -10986,6 +10808,22 @@
         }
       }
     },
+    "Generierung stoppen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Generierung stoppen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop generating"
+          }
+        }
+      }
+    },
     "Gesamten Text kopieren" : {
       "localizations" : {
         "de" : {
@@ -11509,6 +11347,22 @@
         }
       }
     },
+    "Hier entstehen Titel und Einleitung. Für Schrittbeschreibungen füge zuerst Screenshots zur Anleitung hinzu." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hier entstehen Titel und Einleitung. Für Schrittbeschreibungen füge zuerst Screenshots zur Anleitung hinzu."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create a title and introduction here. Add screenshots to the guide first to generate step descriptions."
+          }
+        }
+      }
+    },
     "Hier setzen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11814,6 +11668,22 @@
         }
       }
     },
+    "Im Hintergrund weiter" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Hintergrund weiter"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue in Background"
+          }
+        }
+      }
+    },
     "Immer passend verkleinern" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12031,6 +11901,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Each click advances the sequence. Deleting or reordering steps does not renumber the remaining steps. Letters continue with AA after Z."
+          }
+        }
+      }
+    },
+    "Jeder Schritt behält seine eigene Bildkopie. Spätere Änderungen im Editor übernimmst du mit „Bild aktualisieren“." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeder Schritt behält seine eigene Bildkopie. Spätere Änderungen im Editor übernimmst du mit „Bild aktualisieren“."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each step keeps its own copy of the image. Use “Update image” to apply later changes from the editor."
           }
         }
       }
@@ -12305,6 +12192,22 @@
         }
       }
     },
+    "Keine Vorschläge erstellt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Vorschläge erstellt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No Suggestions Created"
+          }
+        }
+      }
+    },
     "Keiner" : {
       "localizations" : {
         "de" : {
@@ -12470,6 +12373,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pass Clicks Through"
+          }
+        }
+      }
+    },
+    "Klicks durchlassen. Wieder aktivieren mit „Alle Anheftungen entsperren“ im Menüleistensymbol." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Klicks durchlassen. Wieder aktivieren mit „Alle Anheftungen entsperren“ im Menüleistensymbol."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let clicks pass through. Turn them back on with “Unlock All Pinned Images” in the menu bar icon."
           }
         }
       }
@@ -13538,6 +13457,23 @@
         }
       }
     },
+    "Mehrere Bilder: ⌘- oder Strg-Klick" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehrere Bilder: ⌘- oder Strg-Klick"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Multiple images: ⌘-click or Ctrl-click"
+          }
+        }
+      }
+    },
     "Mehrere Objekte ausgewählt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13691,6 +13627,22 @@
         }
       }
     },
+    "Mit Apple Intelligence schreiben" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Apple Intelligence schreiben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write with Apple Intelligence"
+          }
+        }
+      }
+    },
     "Mit Beispiel üben" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13721,6 +13673,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Use the eye to show or hide items. Drag rows or use the arrows to reorder; top corresponds to left in the toolbar. Changes are saved."
+          }
+        }
+      }
+    },
+    "Mit Leertaste oder Eingabetaste die Bildaktionen öffnen." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Leertaste oder Eingabetaste die Bildaktionen öffnen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press Space or Return to open the image actions."
           }
         }
       }
@@ -14181,6 +14149,22 @@
         }
       }
     },
+    "Neu erstellen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neu erstellen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Generate again"
+          }
+        }
+      }
+    },
     "Neue Anleitung" : {
       "localizations" : {
         "de" : {
@@ -14265,6 +14249,22 @@
         }
       }
     },
+    "Neue Schritte erhalten direkt einen Textvorschlag von Apple Intelligence, den du übernimmst oder verwirfst." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Schritte erhalten direkt einen Textvorschlag von Apple Intelligence, den du übernimmst oder verwirfst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "New steps immediately get a text suggestion from Apple Intelligence that you can apply or discard."
+          }
+        }
+      }
+    },
     "Neueste zuerst" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14316,6 +14316,22 @@
         }
       }
     },
+    "Nicht jetzt" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht jetzt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not Now"
+          }
+        }
+      }
+    },
     "Nicht verfügbar. Möglicherweise von macOS oder einer anderen App belegt; wähle ein anderes Kürzel." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14346,6 +14362,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Unavailable. The shortcut may be used by macOS or another app."
+          }
+        }
+      }
+    },
+    "Nimm jeden Schritt direkt auf oder übernimm vorhandene Screenshots aus deiner Bibliothek." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nimm jeden Schritt direkt auf oder übernimm vorhandene Screenshots aus deiner Bibliothek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture each step directly or add existing screenshots from your library."
           }
         }
       }
@@ -16331,6 +16364,22 @@
         }
       }
     },
+    "Prüfe besonders Bedienelemente und Handlungen. Apple Intelligence kann sich irren." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfe besonders Bedienelemente und Handlungen. Apple Intelligence kann sich irren."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check controls and actions carefully. Apple Intelligence can make mistakes."
+          }
+        }
+      }
+    },
     "Prüfe die Anzahl und Länge der Einträge. Steuerzeichen sind nicht erlaubt." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -16361,6 +16410,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Review and correct the text before copying. OCR can miss characters and entire lines."
+          }
+        }
+      }
+    },
+    "Prüfen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prüfen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review"
           }
         }
       }
@@ -17140,6 +17205,22 @@
         }
       }
     },
+    "Schritt %lld wird geschrieben …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schritt %lld wird geschrieben …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Writing step %lld …"
+          }
+        }
+      }
+    },
     "Schritt %lld: %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17153,6 +17234,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Step %lld: %@"
+          }
+        }
+      }
+    },
+    "Schritt %lld: Bild wird gelesen …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schritt %lld: Bild wird gelesen …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Step %lld: reading the image …"
+          }
+        }
+      }
+    },
+    "Schritt aufnehmen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schritt aufnehmen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture Step"
           }
         }
       }
@@ -18212,6 +18326,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sort"
+          }
+        }
+      }
+    },
+    "Speicher wird vorbereitet …" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speicher wird vorbereitet …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing storage…"
           }
         }
       }
@@ -19705,6 +19836,54 @@
         }
       }
     },
+    "Text mit Apple Intelligence …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text mit Apple Intelligence …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text with Apple Intelligence …"
+          }
+        }
+      }
+    },
+    "Text überarbeiten" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text überarbeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revise Text"
+          }
+        }
+      }
+    },
+    "Text vorschlagen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text vorschlagen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggest Text"
+          }
+        }
+      }
+    },
     "Text wird erkannt …" : {
       "localizations" : {
         "de" : {
@@ -19766,6 +19945,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Text Capture — Copy Text Only"
+          }
+        }
+      }
+    },
+    "Texte erstellen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texte erstellen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write Texts"
+          }
+        }
+      }
+    },
+    "Texte kürzen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texte kürzen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shorten text"
+          }
+        }
+      }
+    },
+    "Texte überarbeiten" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texte überarbeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Improve text"
+          }
+        }
+      }
+    },
+    "Texte vorschlagen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texte vorschlagen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggest text"
           }
         }
       }
@@ -19855,6 +20098,22 @@
         }
       }
     },
+    "Texterkennung und Texterstellung erfolgen lokal auf deinem Mac. Kurze Hinweise helfen bei Bildern ohne lesbaren Text." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texterkennung und Texterstellung erfolgen lokal auf deinem Mac. Kurze Hinweise helfen bei Bildern ohne lesbaren Text."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text recognition and generation take place locally on your Mac. Brief notes help with images that have no readable text."
+          }
+        }
+      }
+    },
     "Texterkennung wird beendet …" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19889,6 +20148,55 @@
         }
       }
     },
+    "Textvorschläge werden erstellt …" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Textvorschläge werden erstellt …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creating text suggestions …"
+          }
+        }
+      }
+    },
+    "Titel und Beschreibung dieses Schritts mit Apple Intelligence schreiben" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titel und Beschreibung dieses Schritts mit Apple Intelligence schreiben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write the title and description of this step with Apple Intelligence"
+          }
+        }
+      }
+    },
+    "Titel und Einleitung werden geschrieben …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titel und Einleitung werden geschrieben …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Writing the title and introduction …"
+          }
+        }
+      }
+    },
     "Titel von Schritt %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19919,6 +20227,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Search titles, introductions, and step text"
+          }
+        }
+      }
+    },
+    "Titel, Einleitung und Schritttexte vorschlagen, überarbeiten oder kürzen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titel, Einleitung und Schritttexte vorschlagen, überarbeiten oder kürzen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggest, revise or shorten the title, introduction and step texts"
+          }
+        }
+      }
+    },
+    "Titel, Einleitung und Texte für %lld von %lld Schritten entstehen lokal auf deinem Mac. Du prüfst alles vor dem Übernehmen." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Titel, Einleitung und Texte für %lld von %lld Schritten entstehen lokal auf deinem Mac. Du prüfst alles vor dem Übernehmen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The title, introduction and texts for %lld of %lld steps are written locally on your Mac. You review everything before applying it."
           }
         }
       }
@@ -21766,6 +22106,22 @@
         }
       }
     },
+    "Vorschlag von Apple Intelligence" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschlag von Apple Intelligence"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggestion from Apple Intelligence"
+          }
+        }
+      }
+    },
     "Vorschläge" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21796,6 +22152,70 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Suggestions canceled."
+          }
+        }
+      }
+    },
+    "Vorschläge bereit" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschläge bereit"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suggestions Ready"
+          }
+        }
+      }
+    },
+    "Vorschläge entstehen …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschläge entstehen …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Writing suggestions …"
+          }
+        }
+      }
+    },
+    "Vorschläge erstellen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschläge erstellen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create suggestions"
+          }
+        }
+      }
+    },
+    "Vorschläge prüfen und anpassen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschläge prüfen und anpassen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Review and adjust suggestions"
           }
         }
       }
@@ -21881,6 +22301,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Choose a destination outside the video library. The original stays unchanged."
+          }
+        }
+      }
+    },
+    "Wähle eine einzelne Anleitung zum Bearbeiten oder verschiebe die Auswahl in den Papierkorb." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine einzelne Anleitung zum Bearbeiten oder verschiebe die Auswahl in den Papierkorb."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a single guide to edit, or move the selection to Trash."
           }
         }
       }
@@ -22033,6 +22469,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Waiting for a new section to stop moving …"
+          }
+        }
+      }
+    },
+    "Wartet auf andere Vorschläge …" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wartet auf andere Vorschläge …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for other suggestions …"
           }
         }
       }
@@ -22588,6 +23040,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Drag: Freehand highlight · Change color, width and opacity on the right"
+          }
+        }
+      }
+    },
+    "Ziel oder ergänzende Hinweise" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziel oder ergänzende Hinweise"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Goal or additional notes"
           }
         }
       }

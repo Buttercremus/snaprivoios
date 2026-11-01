@@ -315,7 +315,7 @@ final class WorkspaceModel {
                 guides.notice = String(localized: "Die Aufnahme ist in der Bibliothek gesichert, aber die Anleitung ist nicht mehr geöffnet.")
                 return
             }
-            addGuideProjects([created.id])
+            addGuideProjects([created.id], captured: true)
         }
     }
     nonisolated private static func createProject(title: String, image: CGImage, in store: ProjectStore) async throws -> (ProjectDocument, Data?) {
@@ -743,10 +743,10 @@ final class WorkspaceModel {
         if quickCaptureFailurePresented, importError == quickCaptureFailure { quickCaptureFailureAcknowledged = true }
         importError = nil
     }
-    func addGuideProjects(_ ids: [UUID], replacing: UUID? = nil, at position: GuideInsertion = .end) {
+    func addGuideProjects(_ ids: [UUID], replacing: UUID? = nil, at position: GuideInsertion = .end, captured: Bool = false) {
         guard requirePro(.guides) else { return }
         guard !isLoading, storage.libraryError == nil else { return }
-        guides.addProjects(ids, from: store, replacing: replacing, at: position) { [weak self] in
+        guides.addProjects(ids, from: store, replacing: replacing, at: position, captured: captured) { [weak self] in
             guard let self else { return false }
             return await self.editor?.finishPendingWork() != false
         }

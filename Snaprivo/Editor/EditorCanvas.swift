@@ -364,6 +364,8 @@ final class CanvasView: NSView, NSTextViewDelegate {
     private var quickDismissMonitor: Any?
     private(set) var quickOptionsObjectID: UUID?
     private var clickedObjectID: UUID?
+    /// Text tools edit existing text on click and move it on drag.
+    private var pendingTextEdit: (id: UUID, event: NSEvent)?
     private enum CropAction { case draw, move, resize(EditorResizeHandle) }
     private var cropGesture: (anchor: CGPoint, rect: CGRect, action: CropAction)?
     private enum ArrowEndpoint { case start, end }
@@ -735,8 +737,9 @@ final class CanvasView: NSView, NSTextViewDelegate {
     }
     private var quickOptionsContainer: NSView { superview is EditorCanvasContainer ? superview! : self }
     func showQuickOptions(for id: UUID) {
+        // Text being edited keeps its toolbar for color, size and weight.
         guard !isPickingColor, !model.isSwitchingImage, !model.isCanvasGestureActive, model.cropDraft == nil,
-              model.editingTextObject == nil, let object = model.selectedObject, object.id == id,
+              model.editingTextObject.map({ $0.id == id }) ?? true, let object = model.selectedObject, object.id == id,
               window?.isVisible == true else { return }
         let anchor = quickOptionsAnchor(for: object)
         guard !anchor.isNull, anchor.width > 0, anchor.height > 0 else { return }
@@ -755,7 +758,8 @@ final class CanvasView: NSView, NSTextViewDelegate {
         // keys through the canvas before continuing to their shared container.
         host.nextResponder = self
         synchronizeQuickOptions()
-        window?.makeFirstResponder(host)
+        // Typing stays in the text being edited; otherwise the toolbar takes keyboard focus.
+        if model.editingTextObject == nil { window?.makeFirstResponder(host) }
         quickDismissMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             MainActor.assumeIsolated {
                 if let self, event.window === self.window, let toolbar = self.quickToolbar,
@@ -773,7 +777,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
     }
     func synchronizeQuickOptions() {
         guard let quickToolbar else { return }
-        guard !model.isSwitchingImage, model.cropDraft == nil, model.editingTextObject == nil,
+        guard !model.isSwitchingImage, model.cropDraft == nil, model.editingTextObject.map({ $0.id == quickOptionsObjectID }) ?? true,
               let object = model.selectedObject, object.id == quickOptionsObjectID else {
             closeQuickOptions(); return
         }
@@ -1117,7 +1121,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
     }
     override func mouseDown(with event: NSEvent) {
         guard !model.isSwitchingImage else { return }
-        clickedObjectID = nil; sourceImageClick = nil
+        clickedObjectID = nil; sourceImageClick = nil; pendingTextEdit = nil
         synchronizeViewport()
         defer {
             // An object press is only a pending drag. Toggling the shared busy
@@ -1166,7 +1170,8 @@ final class CanvasView: NSView, NSTextViewDelegate {
         // Native text clicks win over nearby handle hit areas, especially when zoomed out.
         if let object, object.kind == .text || object.kind == .callout, textBoxRect(object).contains(point),
            model.tool == .text || model.tool == .callout || event.clickCount >= 2 {
-            beginTextSelection(object, with: event)
+            if event.clickCount >= 2 { beginTextSelection(object, with: event) }
+            else { beginTextPress(object, with: event, at: point) }
             return
         }
         if editsObjects, let object = model.selectedObject, object.kind == .callout,
@@ -1214,7 +1219,8 @@ final class CanvasView: NSView, NSTextViewDelegate {
         }
         if model.tool == .text || model.tool == .callout {
             if let object, object.kind == .text || object.kind == .callout {
-                beginTextSelection(object, with: event)
+                if event.clickCount >= 2 { beginTextSelection(object, with: event) }
+                else { beginTextPress(object, with: event, at: point) }
                 return
             }
             if object == nil {
@@ -1283,7 +1289,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
         }
         guard start != nil else { return }
         let point = pixelPoint(event)
-        if let start, distance(point, start) >= 3 { clickedObjectID = nil }
+        if let start, distance(point, start) >= 3 { clickedObjectID = nil; pendingTextEdit = nil }
         lastDragPoint = point
         updateDrag(at: point, modifiers: event.modifierFlags)
     }
@@ -1490,6 +1496,15 @@ final class CanvasView: NSView, NSTextViewDelegate {
         if textSelectionAnchor != nil { textSelectionAnchor = nil; return }
         guard let start else { return }
         mouseDragged(with: event)
+        if let pending = pendingTextEdit {
+            // A press without a drag edits the text at the pressed position, without moving it.
+            pendingTextEdit = nil; model.preview = nil
+            self.start = nil; draggedID = nil; snapGuides = []; lastDragPoint = nil; model.isCanvasGestureActive = false
+            if let object = model.history.objects.first(where: { $0.id == pending.id }) {
+                beginTextSelection(object, with: pending.event); textSelectionAnchor = nil
+            }
+            return
+        }
         if creatingText {
             self.start = nil; creatingText = false; creationRect = nil
             synchronizeTextEditor()
@@ -1511,6 +1526,15 @@ final class CanvasView: NSView, NSTextViewDelegate {
         window?.invalidateCursorRects(for: self)
         model.isCanvasGestureActive = false
         if let quickObjectID { showQuickOptions(for: quickObjectID) }
+    }
+
+    /// Starts a possible move; `mouseUp` turns a press without a drag into text editing.
+    private func beginTextPress(_ object: EditorObject, with event: NSEvent, at point: CGPoint) {
+        closeQuickOptions()
+        if model.selectedIDs != [object.id] { model.select(object.id) }
+        draggedID = object.id; start = point; original = model.history.objects
+        pendingTextEdit = (object.id, event)
+        needsDisplay = true
     }
 
     private func beginTextSelection(_ object: EditorObject, with event: NSEvent) {
@@ -1559,6 +1583,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
             editor.setAccessibilityIdentifier("editor.inlineText")
             editor.onFinish = { [weak self] cancel in
                 guard let self else { return }
+                closeQuickOptions()
                 model.finishTextEditing(cancel: cancel)
                 synchronizeTextEditor(); needsDisplay = true
                 window?.makeFirstResponder(self)
@@ -1568,6 +1593,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
             let clip = FlippedClipView(frame: .zero)
             clip.wantsLayer = true; clip.layer?.masksToBounds = true
             addSubview(clip); clip.addSubview(editor); textClipView = clip
+            showQuickOptions(for: object.id)
             editor.setSelectedRange(NSRange(location: (object.text as NSString).length, length: 0))
         }
         guard let editor = textView else { return }
@@ -1601,6 +1627,8 @@ final class CanvasView: NSView, NSTextViewDelegate {
         guard let textView else { return }
         model.updateText(textView.string)
         synchronizeTextEditor()
+        // New text has no area for a toolbar until its first character.
+        if quickToolbar == nil, let id = model.editingTextObject?.id { showQuickOptions(for: id) }
         needsDisplay = true; displayIfNeeded()
     }
     override func keyDown(with event: NSEvent) {
@@ -1631,7 +1659,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
             if model.cropDraft != nil { model.cancelCrop() }
             model.finishTextEditing(cancel: true)
             model.preview = nil; start = nil; draggedID = nil; gestureObject = nil; model.selection = nil
-            creatingText = false; creationRect = nil; textSelectionAnchor = nil; textResizeFromLeft = nil; arrowEndpoint = nil; draggingArrowBend = false; resizeHandle = nil; resizingGroupBounds = nil; snapGuides = []; draggingCalloutTip = false; draggingMagnifierSource = false; lastDragPoint = nil
+            creatingText = false; creationRect = nil; textSelectionAnchor = nil; textResizeFromLeft = nil; arrowEndpoint = nil; draggingArrowBend = false; resizeHandle = nil; resizingGroupBounds = nil; snapGuides = []; draggingCalloutTip = false; draggingMagnifierSource = false; lastDragPoint = nil; pendingTextEdit = nil
             refreshComposition(); needsDisplay = true; window?.invalidateCursorRects(for: self)
         } else if event.keyCode == 51 || event.keyCode == 117 {
             guard model.canActOnSelection else { return }

@@ -122,10 +122,28 @@ private actor QuickCaptureResultBox {
         precondition(black.redComponent < 0.01 && black.greenComponent < 0.01 && black.blueComponent < 0.01, "Drag file exposed redacted content")
         let provider = NSItemProvider(contentsOf: exported)!
         precondition(provider.hasItemConformingToTypeIdentifier("public.file-url"), "Finder drag lacks a file representation")
-        let pins = PinnedImageController.shared
+        let pinMenus = PinMenuCheck()
+        let pins = PinnedImageController(presentMenu: { menu, _, _ in pinMenus.menu = menu; pinMenus.opened += 1 })
         pins.show(flattened, title:"Synthetic")
+        let pin = NSApp.windows.first { $0.title == "Synthetic" && $0.isVisible }!
+        precondition(pin.titleVisibility == .hidden && pin.titlebarAppearsTransparent && pin.styleMask.contains(.fullSizeContentView)
+            && pin.styleMask.contains(.resizable) && pin.standardWindowButton(.closeButton)?.isHidden == true,
+            "Pin kept a visible title bar or lost edge resizing")
+        let pinContent = pin.contentView!
+        let pinControls = pinContent.subviews.first { String(describing: type(of: $0)).hasPrefix("NSHostingView") }!
+        precondition(pinContent.subviews.last === pinControls && pinControls.isHidden && pinContent.bounds.contains(pinControls.frame) && pinControls.frame.minY == 10,
+            "Pin controls were visible without hover or left the image")
+        precondition(pinContent.accessibilityCustomActions()?.count == 6,
+            "Hidden pin controls had no independent VoiceOver actions")
+        pinContent.mouseEntered(with: NSEvent.enterExitEvent(with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: pin.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil)!)
+        precondition(!pinControls.isHidden, "Hovering a pin did not reveal its controls")
         precondition(pins.panelCount == 1); pins.toggleClickThrough(); precondition(pins.allPinsIgnoreMouseEvents)
-        pins.unlockAll(); precondition(!pins.allPinsIgnoreMouseEvents); pins.closeAll(); precondition(pins.panelCount == 0)
+        try await Task.sleep(for: .milliseconds(400))
+        precondition(pinControls.isHidden, "Click-through pin kept intercepting controls")
+        pins.unlockAll(); precondition(!pins.allPinsIgnoreMouseEvents)
+        try await checkPinKeyboardAndAccessibility(pin, pins: pins, tracking: pinMenus)
+        pins.closeAll(); precondition(pins.panelCount == 0)
         let storedBeforeClosing = try await workspace.store.list().items.count
         for preview in workspace.quickCaptures { workspace.dismissQuickCapture(preview) }
         precondition(workspace.quickCaptures.isEmpty && workspace.selectedQuickCaptureID == nil)
@@ -287,4 +305,51 @@ private actor QuickCaptureResultBox {
         precondition(transferred.document.pixelSize == exporting.document.pixelSize)
         print("Quick capture integration checks passed: window routing, stack/transfer/OCR; dismissed export ownership, successive quit gates, failure/explicit acknowledgment and gated library replacement")
     }
+}
+
+@MainActor private final class PinMenuCheck {
+    var opened = 0
+    var menu: NSMenu?
+}
+
+@MainActor private func checkPinKeyboardAndAccessibility(_ panel: NSWindow, pins: PinnedImageController, tracking: PinMenuCheck) async throws {
+    let content = panel.contentView!, controls = panel.contentView!.subviews.last!
+    for percent in [40, 60, 80, 100] {
+        let action = content.accessibilityCustomActions()!.first { $0.name.hasSuffix("\(percent)%") }!
+        precondition(action.handler?() == true && abs(panel.alphaValue - CGFloat(percent) / 100) < 0.001,
+                     "VoiceOver opacity action did not change the actual pin")
+    }
+    let passthrough = content.accessibilityCustomActions()!.first { $0.name == String(localized: "Klicks durchlassen") }!
+    precondition(passthrough.handler?() == true && panel.ignoresMouseEvents)
+    let restore = content.accessibilityCustomActions()!.first { $0.name == String(localized: "Klicks wieder aktivieren") }!
+    precondition(restore.handler?() == true && !panel.ignoresMouseEvents,
+                 "VoiceOver could not restore click-through interaction")
+
+    panel.makeKeyAndOrderFront(nil); panel.recalculateKeyViewLoop(); _ = panel.makeFirstResponder(nil)
+    for _ in 0..<8 {
+        panel.selectNextKeyView(nil)
+        if panel.firstResponder === content { break }
+    }
+    precondition(panel.firstResponder === content && !controls.isHidden,
+                 "Tab did not focus the pin and reveal its actions: responder=\(String(describing: panel.firstResponder)), canBecomeKeyView=\(content.canBecomeKeyView), hidden=\(controls.isHidden)")
+    content.mouseExited(with: NSEvent.enterExitEvent(with: .mouseExited, location: .zero, modifierFlags: [], timestamp: 0,
+        windowNumber: panel.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil)!)
+    try await Task.sleep(for: .milliseconds(200))
+    precondition(!controls.isHidden, "Mouse exit hid the keyboard-focused pin's controls")
+
+    for (code, characters) in [(UInt16(49), " "), (UInt16(36), "\r")] {
+        let before = tracking.opened
+        content.keyDown(with: NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: panel.windowNumber, context: nil, characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code)!)
+        precondition(tracking.opened == before + 1, "Space/Return did not open the native pin actions menu")
+        let menu = tracking.menu!, opacity = menu.items.first { $0.title == String(localized: "Deckkraft") }!.submenu!
+        opacity.performActionForItem(at: 1)
+        precondition(abs(panel.alphaValue - 0.6) < 0.001, "Keyboard menu action did not update the actual pin")
+    }
+    let beforeAccessibleMenu = tracking.opened
+    precondition(content.accessibilityPerformShowMenu() && tracking.opened == beforeAccessibleMenu + 1,
+                 "VoiceOver's Show Menu action did not use the native actions menu")
+    precondition(content.accessibilityCustomActions()!.first { $0.name == String(localized: "Schließen") }!.handler?() == true
+                 && !panel.isVisible && pins.panelCount == 0, "VoiceOver close did not close and release the pin")
+    print("Pin actions passed: Tab/focus visibility, Space/Return native menu, all four opacity levels, click-through/restore and close through accessibility actions")
 }

@@ -9,7 +9,15 @@ import SnagForgeDomain
     @ObservationIgnored var requestFeature: @MainActor (ProFeature) -> Bool = { _ in true }
     let store: GuideStore
     private(set) var documents: [GuideSummary] = []
-    private(set) var document: GuideDocument?
+    private(set) var document: GuideDocument? {
+        didSet {
+            if oldValue?.id != document?.id || oldValue?.steps.map(\.id) != document?.steps.map(\.id) {
+                onStepMembershipChange?(document?.id, Set(document?.steps.map(\.id) ?? []))
+            }
+        }
+    }
+    /// Transient step work must end even when the guide view is not on screen.
+    @ObservationIgnored var onStepMembershipChange: (@MainActor (UUID?, Set<UUID>) -> Void)?
     private(set) var imagePreviews = GuideImagePreviews()
     private(set) var trash: [GuideSummary] = []
     private(set) var selectedDocumentIDs: Set<UUID> = []
@@ -83,6 +91,10 @@ import SnagForgeDomain
     var stepToReveal: UUID?
     /// Set by `create()`; the view focuses the title field once and resets it.
     var focusesTitle = false
+    /// Incremented by the window toolbar; the guide editor opens the writing assistant.
+    var assistantOpenRequest = 0
+    /// The step a guide capture just appended, so the editor can suggest its text.
+    var lastCapturedStep: UUID?
     private(set) var isBusy = false
     // Workspace holds this for the entire quit sequence, including other editors' saves.
     var isSuspended = false
@@ -355,7 +367,7 @@ import SnagForgeDomain
         ProjectArchive.hash(Data(store.root.standardizedFileURL.resolvingSymlinksInPath().path.utf8))
     }
     func addProjects(_ ids: [UUID], from projects: ProjectStore, replacing: UUID? = nil, at position: GuideInsertion = .end,
-                     prepare: @escaping @MainActor () async -> Bool) {
+                     captured: Bool = false, prepare: @escaping @MainActor () async -> Bool) {
         guard requestFeature(.guides) else { return }
         guard let documentID = document?.id, !ids.isEmpty else { return }
         run { [self] in
@@ -381,6 +393,7 @@ import SnagForgeDomain
             _ = try value.validated()
             remember(); document = value
             selectedStep = replacing ?? steps.first?.id; stepToReveal = selectedStep
+            if captured, replacing == nil { lastCapturedStep = steps.last?.id }
             changed()
             _ = await flush()
         }

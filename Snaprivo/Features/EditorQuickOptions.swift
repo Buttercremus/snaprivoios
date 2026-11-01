@@ -128,6 +128,8 @@ struct EditorQuickOptions: View {
         .accessibilityLabel(String(localized: "Schnellbearbeitung"))
         .accessibilityIdentifier("editor.quickOptions")
         .task {
+            // While text is being edited, typing keeps the keyboard focus.
+            guard model.editingTextObject == nil else { return }
             if let object = model.selectedObject { focusedSection = Self.sections(for: object).first }
         }
         .onExitCommand {

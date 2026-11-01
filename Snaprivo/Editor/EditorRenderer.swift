@@ -955,7 +955,7 @@ enum EditorRenderer {
         if blur > 0 {
             let ci = CIImage(cgImage: image), extent = CGRect(x: 0, y: 0, width: image.width, height: image.height)
             let blurred = ci.clampedToExtent().applyingFilter("CIGaussianBlur", parameters: [kCIInputRadiusKey: min(40, blur)]).cropped(to: extent)
-            guard let output = CIContext().createCGImage(blurred, from: extent) else { throw ExportError.render }
+            guard let output = blurContext.createCGImage(blurred, from: extent) else { throw ExportError.render }
             return output
         }
         return image

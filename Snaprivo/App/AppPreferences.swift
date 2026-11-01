@@ -138,6 +138,8 @@ final class AppPreferences {
     var includesCursor: Bool { didSet { defaults.set(includesCursor, forKey: "capture.includesCursor") } }
     var quickPreviewAfterCapture: Bool { didSet { defaults.set(quickPreviewAfterCapture, forKey: "capture.quickPreview") } }
     var copyAfterCapture: Bool { didSet { defaults.set(copyAfterCapture, forKey: "capture.copyAfterCapture") } }
+    /// Guide steps captured from the guide editor receive an inline text suggestion.
+    var suggestsGuideTextOnCapture: Bool { didSet { defaults.set(suggestsGuideTextOnCapture, forKey: "guides.suggestTextOnCapture") } }
     private(set) var capturePresets: [CaptureRegionPreset]
 
     init(defaults: UserDefaults = .standard, languageDomain: String? = Bundle.main.bundleIdentifier) {
@@ -184,6 +186,7 @@ final class AppPreferences {
         includesCursor = defaults.bool(forKey: "capture.includesCursor")
         quickPreviewAfterCapture = defaults.bool(forKey: "capture.quickPreview")
         copyAfterCapture = defaults.bool(forKey: "capture.copyAfterCapture")
+        suggestsGuideTextOnCapture = defaults.object(forKey: "guides.suggestTextOnCapture") as? Bool ?? true
         if let data = defaults.data(forKey: "capture.regionPresets.v1"),
            let values = try? JSONDecoder().decode([CaptureRegionPreset].self, from: data) {
             var seen = Set<UUID>()

@@ -237,16 +237,19 @@ private struct QuickCaptureThumbnail: View {
                         provider.suggestedName = model.pngShareItemForToolbar?.fileName
                         return provider
                     }
-                HStack(spacing: 6) {
-                    Button(String(localized: "Kopieren"), systemImage: "doc.on.doc") { model.copyPNG() }
-                        .accessibilityIdentifier("quickCapture.hover.copy")
-                    Button(String(localized: "Text"), systemImage: "text.viewfinder") { recognize(codesOnly: false) }
-                        .accessibilityIdentifier("quickCapture.hover.text")
-                    Button(String(localized: "QR"), systemImage: "qrcode.viewfinder") { recognize(codesOnly: true) }
-                        .accessibilityIdentifier("quickCapture.hover.code")
+                // Controls over the screenshot are glass; the system makes them opaque with Reduce Transparency.
+                GlassEffectContainer(spacing: 6) {
+                    HStack(spacing: 6) {
+                        Button(String(localized: "Kopieren"), systemImage: "doc.on.doc") { model.copyPNG() }
+                            .accessibilityIdentifier("quickCapture.hover.copy")
+                        Button(String(localized: "Text"), systemImage: "text.viewfinder") { recognize(codesOnly: false) }
+                            .accessibilityIdentifier("quickCapture.hover.text")
+                        Button(String(localized: "QR"), systemImage: "qrcode.viewfinder") { recognize(codesOnly: true) }
+                            .accessibilityIdentifier("quickCapture.hover.code")
+                    }
                 }
-                .font(.callout).labelStyle(.titleOnly).controlSize(.small).buttonStyle(.bordered)
-                .padding(7).background(reduceTransparency ? AnyShapeStyle(Color(nsColor: .windowBackgroundColor)) : AnyShapeStyle(.regularMaterial), in: .capsule).padding(.bottom, 8)
+                .font(.callout).labelStyle(.titleOnly).controlSize(.small).buttonStyle(.glass)
+                .padding(.bottom, 8)
                 .opacity(showsHoverActions ? 1 : 0).allowsHitTesting(showsHoverActions)
                 .accessibilityHidden(!showsHoverActions)
                 .disabled(recognition.isBusy || !model.hasConfirmedImageForToolbar)

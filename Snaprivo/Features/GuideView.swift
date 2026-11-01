@@ -9,7 +9,10 @@ struct GuideView: View {
     @State private var removing: UUID?
     @State private var deleting: UUID?
     @State private var navigationRequest = 0
-    @State private var assistantRequest: GuideAssistantRequest?
+    @State private var showsAssistant = false
+    @State private var assistantIsAvailable = false
+    @State private var dismissedAssistantSuggestions: Set<UUID> = []
+    private let inlineSuggestions = GuideInlineSuggestions.shared
     @FocusState private var focusedStep: UUID?
     @FocusState private var focusedTitle: Bool
     @AccessibilityFocusState private var accessibleStep: UUID?
@@ -44,8 +47,22 @@ struct GuideView: View {
                 if let notice = model.notice { Text(notice).font(.callout).textSelection(.enabled) }
             }.padding(model.error != nil || model.notice != nil || !model.issues.isEmpty ? 12 : 0)
         }
-        .task { await model.refresh() }
-        .sheet(item: $assistantRequest) { request in GuideAssistantView(request: request, guide: model) }
+        .task { inlineSuggestions.observe(model); await model.refresh() }
+        .task(id: model.document?.id) {
+            assistantIsAvailable = await AppleGuideTextService.shared.availability(for: .current).isAvailable
+            // A guide with untitled steps is a strong hint that writing help is next.
+            if let document = model.document, showsAssistantSuggestion(document) { prewarmAssistant() }
+        }
+        .onChange(of: model.assistantOpenRequest) { _, _ in openAssistant(.document, startsImmediately: true) }
+        .onChange(of: model.lastCapturedStep) { _, id in
+            guard let id, workspace.preferences.suggestsGuideTextOnCapture, assistantIsAvailable, workspace.purchases.hasPro else { return }
+            suggestInline(id)
+        }
+        .sheet(isPresented: $showsAssistant) {
+            if let assistant = inlineSuggestions.assistant {
+                GuideAssistantView(model: assistant) { if inlineSuggestions.assistant === assistant { inlineSuggestions.assistant = nil } }
+            }
+        }
         .sheet(item: $model.imageRequest) { request in
             GuideProjectPicker(items: workspace.items, maximum: request.replacing != nil ? 1 : max(0, 100 - (model.document?.steps.count ?? 0))) { ids in
                 guard model.document?.id == request.documentID else { return }
@@ -108,9 +125,14 @@ struct GuideView: View {
                 Button(String(localized: "Wiederholen"), systemImage: "arrow.uturn.forward") { model.redo() }
                     .disabled(!model.canRedoForControls || !workspace.purchases.hasPro).labelStyle(.iconOnly)
                     .accessibilityIdentifier("guide.redo")
-                Button(String(localized: "Apple Intelligence …"), systemImage: "sparkles") { openAssistant(.document) }
-                    .buttonStyle(.borderless).help(String(localized: "Anleitungstexte vorschlagen, überarbeiten oder kürzen"))
+                Button(String(localized: "Mit Apple Intelligence schreiben"), systemImage: "apple.intelligence") { openAssistant(.document, startsImmediately: true) }
+                    .buttonStyle(.glass).help(String(localized: "Titel, Einleitung und Schritttexte vorschlagen, überarbeiten oder kürzen"))
+                    .onHover { if $0 { prewarmAssistant() } }
                     .accessibilityIdentifier("guide.assistant.open")
+                if !showsAssistant, let running = inlineSuggestions.assistant, running.request.source.id == document.id,
+                   running.isGenerating || running.draft != nil || running.error != nil {
+                    assistantStatus(running)
+                }
                 Spacer()
                 Text(model.isSaving ? String(localized: "Wird gesichert …") : model.isDirty ? String(localized: "Ungesicherte Änderungen") : String(localized: "Automatisch gesichert"))
                     .font(.caption).foregroundStyle(.secondary)
@@ -149,9 +171,11 @@ struct GuideView: View {
                             } actions: {
                                 captureStepButton(document).buttonStyle(.glassProminent)
                                 libraryStepButton(document)
+                                captureSuggestionToggle
                             }.frame(maxWidth: .infinity, alignment: .center)
                                 .accessibilityIdentifier("guide.steps.empty")
                         } else {
+                            if showsAssistantSuggestion(document) { assistantSuggestion(document) }
                             Text(String(localized: "Jeder Schritt behält seine eigene Bildkopie. Spätere Änderungen im Editor übernimmst du mit „Bild aktualisieren“."))
                                 .font(.caption).foregroundStyle(.secondary)
                         }
@@ -162,7 +186,8 @@ struct GuideView: View {
                             ViewThatFits(in: .horizontal) {
                                 HStack(spacing: 12) { captureStepButton(document); libraryStepButton(document) }
                                 VStack(spacing: 8) { captureStepButton(document); libraryStepButton(document) }
-                            }.frame(maxWidth: .infinity).padding(.vertical, 8).accessibilityIdentifier("guide.steps.add")
+                            }.frame(maxWidth: .infinity).padding(.top, 8).accessibilityIdentifier("guide.steps.add")
+                            captureSuggestionToggle.frame(maxWidth: .infinity).padding(.bottom, 8)
                         }
                     }.padding(20).frame(maxWidth: 820).frame(maxWidth: .infinity)
                 }
@@ -350,7 +375,7 @@ struct GuideView: View {
             .accessibilityIdentifier("guide.addFromLibrary")
     }
     @ViewBuilder private func stepEditingActions(_ id: UUID, count: Int) -> some View {
-        Button(String(localized: "Text mit Apple Intelligence …"), systemImage: "sparkles") { openAssistant(.step(id)) }
+        Button(String(localized: "Text mit Apple Intelligence …"), systemImage: "apple.intelligence") { openAssistant(.step(id)) }
             .disabled(!workspace.purchases.hasPro)
         Button(String(localized: "Schritt duplizieren"), systemImage: "doc.on.doc") { model.duplicateStep(id) }
             .disabled(count >= 100 || !workspace.purchases.hasPro)
@@ -390,6 +415,16 @@ struct GuideView: View {
             HStack {
                 Text(String(localized: "Schritt \(index + 1)")).font(.headline)
                 Spacer()
+                if assistantIsAvailable {
+                    // Empty steps get a suggestion, written steps a revision; both appear right in the step.
+                    Button(step.caption.isEmpty ? String(localized: "Text vorschlagen") : String(localized: "Text überarbeiten"), systemImage: "apple.intelligence") {
+                        suggestInline(step.id)
+                    }
+                    .disabled(!workspace.purchases.hasPro)
+                    .onHover { if $0 { prewarmAssistant() } }
+                    .help(String(localized: "Titel und Beschreibung dieses Schritts mit Apple Intelligence schreiben"))
+                    .accessibilityIdentifier("guide.step.assistant.\(step.id)")
+                }
                 Button(String(localized: "Schritt nach oben"), systemImage: "arrow.up") { moveStep(step.id, by: -1) }
                     .disabled(index == 0 || !workspace.purchases.hasPro).labelStyle(.iconOnly)
                 Button(String(localized: "Schritt nach unten"), systemImage: "arrow.down") { moveStep(step.id, by: 1) }
@@ -426,6 +461,11 @@ struct GuideView: View {
                 .lineLimit(2...12).textFieldStyle(.roundedBorder).disabled(!workspace.purchases.hasPro)
                 .accessibilityIdentifier("guide.step.caption.\(step.id)")
                 .accessibilityLabel(String(localized: "Beschreibung von Schritt \(index + 1)"))
+            if let suggestion = inlineSuggestions.models[step.id] {
+                GuideInlineSuggestionView(model: suggestion, apply: { inlineSuggestions.apply(step.id) },
+                    regenerate: { suggestInline(step.id) }, discard: { inlineSuggestions.discard(step.id) })
+                    .accessibilityIdentifier("guide.step.suggestion.\(step.id)")
+            }
         }.padding(16).background(.background, in: .rect(cornerRadius: 12))
             .overlay { RoundedRectangle(cornerRadius: 12).stroke(model.selectedStep == step.id ? Color.accentColor : Color(nsColor: .separatorColor), lineWidth: contrast == .increased ? 2 : 1) }
     }
@@ -443,10 +483,90 @@ struct GuideView: View {
         NSApp.keyWindow?.makeFirstResponder(nil)
         model.selectedStep = id; navigationRequest += 1
     }
-    private func openAssistant(_ scope: GuideTextScope) {
+    private func openAssistant(_ scope: GuideTextScope, mode: GuideAssistantMode = .suggest, startsImmediately: Bool = false) {
         guard !model.isBusy, !model.isSuspended, !model.showsTrash, model.selectedDocumentIDs.count <= 1,
               let document = model.document, model.requestFeature(.guides) else { return }
-        assistantRequest = GuideAssistantRequest(source: document, scope: scope)
+        // A request still writing or waiting for review in the background is shown again, not replaced.
+        if let running = inlineSuggestions.assistant, running.request.source.id == document.id, running.isGenerating || running.draft != nil {
+            showsAssistant = true; return
+        }
+        inlineSuggestions.assistant?.cancel()
+        inlineSuggestions.assistant = GuideAssistantModel(request: GuideAssistantRequest(source: document, scope: scope, mode: mode,
+            startsImmediately: startsImmediately, markups: markups(for: document)), guide: model)
+        showsAssistant = true
+    }
+    /// Progress of a request continued in the background, and the way back to its review.
+    private func assistantStatus(_ running: GuideAssistantModel) -> some View {
+        HStack(spacing: 8) {
+            if running.isGenerating {
+                GuideAssistantActivityView(model: running, compact: true)
+                Button(String(localized: "Anzeigen")) { showsAssistant = true }
+            } else if running.draft != nil {
+                Label(String(localized: "Vorschläge bereit"), systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+                Button(String(localized: "Prüfen")) { showsAssistant = true }.buttonStyle(.glassProminent)
+            } else {
+                Label(String(localized: "Keine Vorschläge erstellt"), systemImage: "exclamationmark.triangle").foregroundStyle(.secondary)
+                Button(String(localized: "Anzeigen")) { showsAssistant = true }
+            }
+        }
+        .font(.subheadline).controlSize(.small)
+        .padding(.leading, 10).padding(.trailing, 4).padding(.vertical, 3)
+        .glassEffect(.regular, in: .capsule)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("guide.assistant.status")
+    }
+    private func suggestInline(_ stepID: UUID) {
+        guard !model.isSuspended, !model.showsTrash, let document = model.document, model.requestFeature(.guides) else { return }
+        inlineSuggestions.suggest(for: stepID, in: document, guide: model, markups: markups(for: document))
+    }
+    /// Only an unchanged source project still describes where a snapshot's marks are.
+    private func markups(for document: GuideDocument) -> [UUID: ProjectDocument] {
+        var result: [UUID: ProjectDocument] = [:]
+        for step in document.steps {
+            if let source = workspace.guideSource(for: step), step.sourceRevision == source.document.revision { result[step.id] = source.document }
+        }
+        return result
+    }
+    @ViewBuilder private var captureSuggestionToggle: some View {
+        if assistantIsAvailable, workspace.purchases.hasPro {
+            Toggle(isOn: Binding(get: { workspace.preferences.suggestsGuideTextOnCapture },
+                                 set: { workspace.preferences.suggestsGuideTextOnCapture = $0 })) {
+                Label(String(localized: "Beim Aufnehmen Text vorschlagen"), systemImage: "apple.intelligence")
+            }
+            .toggleStyle(.checkbox)
+            .help(String(localized: "Neue Schritte erhalten direkt einen Textvorschlag von Apple Intelligence, den du übernimmst oder verwirfst."))
+            .accessibilityIdentifier("guide.captureSuggestions")
+        }
+    }
+    private func prewarmAssistant() {
+        guard assistantIsAvailable, workspace.purchases.hasPro else { return }
+        Task { await AppleGuideTextService.shared.prewarm(for: .current) }
+    }
+    private func showsAssistantSuggestion(_ document: GuideDocument) -> Bool {
+        assistantIsAvailable && workspace.purchases.hasPro && !dismissedAssistantSuggestions.contains(document.id)
+            && document.steps.contains { $0.caption.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+    private func assistantSuggestion(_ document: GuideDocument) -> some View {
+        let missing = document.steps.filter { $0.caption.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count
+        return HStack(alignment: .center, spacing: 14) {
+            Image(systemName: "apple.intelligence").font(.system(size: 26)).symbolRenderingMode(.multicolor)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(String(localized: "Anleitung mit Apple Intelligence schreiben")).font(.headline)
+                Text(String(localized: "Titel, Einleitung und Texte für \(missing) von \(document.steps.count) Schritten entstehen lokal auf deinem Mac. Du prüfst alles vor dem Übernehmen."))
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Button(String(localized: "Texte erstellen")) { openAssistant(.document, startsImmediately: true) }
+                .buttonStyle(.glassProminent).controlSize(.large)
+                .onHover { if $0 { prewarmAssistant() } }
+                .accessibilityIdentifier("guide.assistant.suggestion")
+            Button(String(localized: "Nicht jetzt"), systemImage: "xmark") { dismissedAssistantSuggestions.insert(document.id) }
+                .labelStyle(.iconOnly).buttonStyle(.borderless).foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .glassEffect(.regular.tint(.accentColor.opacity(0.08)), in: .rect(cornerRadius: 16))
+        .accessibilityElement(children: .contain)
     }
     private func moveStep(_ id: UUID, by offset: Int) {
         model.edit { $0.moveStep(id, by: offset) }; revealStep(id)

@@ -329,6 +329,8 @@ final class ScrollCaptureSession: NSObject, NSWindowDelegate, NSMenuDelegate {
         await withCheckedContinuation { continuation in
             self.continuation = continuation
             panel.title = String(localized: "Scroll-Aufnahme")
+            // Let the desktop show through outside the rounded toolbar surface.
+            panel.isOpaque = false; panel.backgroundColor = .clear
             panel.level = CaptureSelectionOverlay.controlsLevel; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false; panel.delegate = self
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.setAccessibilityIdentifier("scroll.controls")
@@ -377,6 +379,7 @@ final class ScrollCaptureSession: NSObject, NSWindowDelegate, NSMenuDelegate {
     }
     private func configurePreview() {
         previewPanel.title = String(localized: "Vorschau")
+        previewPanel.isOpaque = false; previewPanel.backgroundColor = .clear
         previewPanel.level = CaptureSelectionOverlay.controlsLevel; previewPanel.hidesOnDeactivate = false; previewPanel.isReleasedWhenClosed = false
         previewPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         previewPanel.setAccessibilityIdentifier("scroll.preview")

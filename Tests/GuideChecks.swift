@@ -178,7 +178,7 @@ import SnagForgeDomain
         model.create(); try await wait(model)
         require(model.document!.id == untouched && model.documents.count == 1 && model.focusesTitle)
         model.addProjects(steps.compactMap(\.sourceProjectID), from: projects, prepare: { true }); try await wait(model)
-        require(model.document!.steps.count == 2 && !model.isDirty)
+        require(model.document!.steps.count == 2 && !model.isDirty && model.lastCapturedStep == nil, "Library steps were marked as captured")
         let guideID = model.document!.id, first = model.document!.steps[0].id
         model.edit { $0.title = "Edited guide"; $0.moveStep(first, by: 1); $0.style = .compact }
         model.editStep(first) { $0.caption = "Saved caption" }
@@ -286,9 +286,10 @@ import SnagForgeDomain
         actionModel.addProjects([steps[1].sourceProjectID!], from: projects, at: .before(steps[0].id), prepare: { true })
         try await wait(actionModel)
         require(actionModel.document!.steps[1] == steps[0])
-        actionModel.addProjects([steps[0].sourceProjectID!], from: projects, at: .after(copiedStep.id), prepare: { true })
+        actionModel.addProjects([steps[0].sourceProjectID!], from: projects, at: .after(copiedStep.id), captured: true, prepare: { true })
         try await wait(actionModel)
         require(actionModel.document!.steps[3].id == actionModel.selectedStep)
+        require(actionModel.lastCapturedStep == actionModel.selectedStep, "A captured step was not offered for a text suggestion")
         let beforeInvalid = actionModel.document!
         actionModel.addProjects([steps[0].sourceProjectID!], from: projects, at: .after(UUID()), prepare: { true })
         try await wait(actionModel)

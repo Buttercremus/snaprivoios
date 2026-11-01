@@ -1,20 +1,20 @@
 # Code-Audit — Snaprivo
 
-Stand: **29.10.2026**, aktueller Arbeitsbaum einschließlich der bisherigen Export-/UI-Korrekturen, Mehrfachkopieren, animiertem Onboarding und der abschließenden Audit-Korrekturen. Befundnummern bleiben stabil. Die vorherige Fassung ist unter `build/AuditFinalFixes/CODE_AUDIT-before.md` gesichert.
+Stand: **01.11.2026**, Commit `58e5c2c` einschließlich des aktuellen, nicht eingecheckten Arbeitsbaums und der transparenten Scroll-Fenster. Geprüft wurden Capture-/Task-Lebenszyklen, Editor/Renderer, Anleitungen und Textassistent, Videoausgabe, Datei-/Persistenzpfade und native UI. Methode: frischer vollständiger Debug-Build, drei getrennte statische Prüfdurchgänge und gezielte synthetische Reproduktionen. Befundnummern bleiben stabil. Die vorherige Berichtsfassung liegt unter `build/Audit20261101/CODE_AUDIT-before.md`.
 
-**Ergebnis: Alle bestätigten Codebefunde dieses Berichts sind behoben; keine offenen Critical-, High- oder Medium-Codebefunde.** Die fünf zuletzt offenen Medium-Befunde (§3.2, §3.3, §7.3–§7.5) sind korrigiert und gezielt geprüft. Die früheren sieben Korrekturen bleiben erhalten. Die Abschlussprüfung deckt Debug/Release, Domain, Canvas, Workflow, Speicherorte, Bibliothek, Datenschutztransfer, Papierkorb, Scroll-Aufnahmen, Schnellvorschau, Bild-/Anleitungs-Ausgabe und Lokalisierung ab (§12.12).
+**Ergebnis nach der Korrekturrunde: Alle fünf bestätigten Fehler und die zusätzliche Low-Optimierung sind behoben.** Die Befundnummern bleiben erhalten. Der ursprüngliche Audit-Nachweis steht in §12.13, die anschließende Umsetzung und Abschlussprüfung in §12.14. Frühere geschlossene Befunde bleiben geschlossen; die Aussage bezieht sich auf diese bestätigten Fälle, nicht auf sämtliche möglichen Fehler.
 
-Der Bericht ist die aktualisierte Nachprüfung der dokumentierten Befunde, keine Garantie für sämtliche möglichen Geräte-, Speicher- oder Systemzustände. Tatsächliches Store-Archiv, verfügbare Buildnummer und reale macOS-26-/Capture-/Audio-/VoiceOver-Abnahme bleiben von den Codebefunden getrennt (§11). Es wurden ausschließlich synthetische Fixtures verwendet; keine Benutzerbibliothek verändert und nichts veröffentlicht.
+Kein neuer Critical- oder High-Befund wurde bestätigt. Die Aussage gilt für die geprüften Pfade und ist keine vollständige Fehlerfreiheitserklärung. Tatsächliches Store-Archiv und reale macOS-26-/Capture-/Audio-/VoiceOver-Abnahme bleiben gesondert (§11). Es wurden ausschließlich synthetische Fixtures verwendet; keine Benutzerbibliothek verändert und nichts veröffentlicht.
 
 ## 1. Executive summary
 
-1. **[Behoben] Bibliothekssperre mit Deadline und Abbruch** — §3.2 — nicht blockierender Sperrerwerb, maximal drei Sekunden, lokalisierter Konfliktfehler; keine halbe Projekttransaktion.
-2. **[Behoben] Ordnerfreigaben außerhalb des MainActors** — §3.3 — Hintergrund-Wiederherstellung, explizite Readiness, Security Scope vor Dateizugriff, abgesicherte späte Ergebnisse und beschädigte Einstellungen.
-3. **[Behoben] Gemeinsames Raster-Arbeitsbudget** — §7.3 — konservative Abschätzung der Zwischenraster/Encoderkosten, atomare Zulassung paralleler Jobs, begrenzte Lupenvorschau und unveränderte finale Ausgabeauflösung.
-4. **[Behoben] Abbruchweitergabe an Bild-Worker** — §7.4 — Assetprüfung, Lupen-Coalescing und Vorschau-Decoding beachten Abbruch und Anforderungsgeneration; temporäre abgebrochene PNGs werden entfernt.
-5. **[Behoben] Wiederholtes langes Textlayout** — §7.5 — begrenzter, threadsicherer Geometriecache mit vollständigem Inhalt-/Stilschlüssel; keine gemeinsam mutierten TextKit-Objekte.
+1. **[Behoben] Kurze GIF-Schnitte verlieren Bewegung am Ende** — §5.4 — `Snaprivo/Capture/VideoRecordingFiles.swift:280`.
+2. **[Behoben] Verworfener Textvorschlag kann trotzdem eine Generierung starten** — §3.4 — `Snaprivo/App/GuideAssistantModel.swift:98`.
+3. **[Behoben] Gelöschte Anleitungsschritte behalten Vorschläge und Bildstände im Speicher** — §7.6 — `Snaprivo/App/GuideAssistantModel.swift:26`.
+4. **[Behoben] Geschweifte Klammern schneiden gültigen Anleitungstext ab** — §5.5 — `Snaprivo/App/GuideAssistantService.swift:410`.
+5. **[Behoben] Pin-Aktionen sind per Tastatur und VoiceOver nicht erreichbar** — §8.7 — `Snaprivo/Features/PinnedImage.swift:70`.
 
-Die bereits geschlossenen Export-/Beenden-, Formen-, Video-Menü-, Guide-Asset-, Datenschutzlink- und Skriptbefunde bleiben geschlossen. Die entsprechenden Regressionen sind im Bericht nachvollziehbar.
+Auch die Kontextwiederverwendung für wiederholte Hintergrund-Unschärfe (§7.7) ist umgesetzt. Die bereits geschlossenen Export-/Beenden-, Formen-, Video-Menü-, Guide-Asset-, Datenschutzlink- und Skriptbefunde bleiben geschlossen.
 
 ### 1.1 Historische Beta-Befunde und Korrekturen
 
@@ -22,7 +22,7 @@ Die stabilen Nummern bleiben erhalten. Die vor den Korrekturen erneut reproduzie
 
 ## 2. Quick wins
 
-Die dokumentierten Codekorrekturen sind abgeschlossen. Vor dem Upload den tatsächlich einzureichenden Store-Kandidaten einschließlich Versions-/Buildnummer prüfen und die gesonderten realen Aufnahme-/Tonfälle auf macOS 26 abnehmen. Diese manuellen Abnahmen sind keine noch offenen Codebefunde.
+Die sechs Korrekturen sind umgesetzt. Die Regressionen prüfen insbesondere angehaltene Verfügbarkeitsantworten, Verwerfen/Ersetzen, Entfernen und Undo, echte GIF-Frames eines kurzen Schnitts sowie native Pin-Fokus- und Accessibility-Aktionen (§12.14).
 
 ### 2.1 Copyright vor dem ersten Upload ergänzen
 
@@ -50,6 +50,13 @@ _REMOVED: Behoben am 29.10.2026._ Der produktive Bookmark-Weg löst Freigaben, V
 - **Ort:** `Snaprivo/App/StorageLocations.swift:82`, `Snaprivo/App/StorageLocations.swift:213`; Integration in `WorkspaceModel.refreshLibrary` und Ordnerauswahl.
 - **Nachweis:** Einstellungen, echte Bookmark-Restoration, kanonischer `/var`-/`/private/var`-Ordnervergleich, beschädigte/fehltypisierte Werte, parallele verzögerte Restoration bei verfügbarem MainActor und Abbruch vor Veröffentlichung; bestehende Tests für Scope-Balance, Bibliothekskopie/Undo/Neustart und Transfer bestehen. `settings.log`, `library.log`, `transfer-privacy.log` unter `build/AuditFinalFixes/`. Ununterbrechbare Betriebssystemaufrufe können im Hintergrund bis zur Rückkehr laufen; sie blockieren die UI nicht.
 
+### 3.4 Verwerfen beendet die Vorbereitung eines Inline-Vorschlags nicht
+
+_REMOVED: Behoben am 01.11.2026._ Das Modell besitzt die vorbereitende Task und beendet sie in `cancel()`. Zusätzlich prüft `prepare()` nach dem Await die Anfragegeneration, sodass auch eine verspätete, nicht kooperative Verfügbarkeitsantwort keine verworfene Anfrage mehr startet. Der Bereitschafts-Wartepfad ist kooperativ abbrechbar. Ein bewusster neuer Versuch bleibt möglich; geänderte Hinweise während der Prüfung lassen die Verfügbarkeit nicht im Prüfzustand hängen.
+
+- **Ort:** [GuideAssistantModel.swift:98](/Users/simon/Woerk/Swift/Snaprivo/Snaprivo/App/GuideAssistantModel.swift:98), `prepare()`, `cancel()`.
+- **Nachweis:** Angehaltene Verfügbarkeit mit Abbruch, Verwerfen und Ersetzen; keine unsichtbaren Serviceaufrufe, Freigabe alter Modelle und erfolgreicher expliziter Neustart. [GuideAssistantChecks.swift:319](/Users/simon/Woerk/Swift/Snaprivo/Tests/GuideAssistantChecks.swift:319); §12.14.
+
 ## 4. API modernity
 
 _Keine neuen belastbaren Befunde._ Im frischen Debug-Build gab es keine Swift-Deprecation-Warnungen. Die einzelne Meldung des AppIntents-Metadatenwerkzeugs („Metadata extraction skipped“) betrifft die fehlende AppIntents-Abhängigkeit und ist für sich kein Funktionsfehler.
@@ -69,6 +76,20 @@ _REMOVED: Neue Aufnahmen besitzen inzwischen einen persistierten Wiederherstellu
 ### 5.3 Anleitung-Speichern akzeptiert gleich große beschädigte Assets
 
 _REMOVED: Behoben am 29.10.2026._ GuideStore prüft bestehende reguläre PNG-Assets per SHA-256 und repariert abweichende Inhalte atomar aus dem gültigen Arbeitsspeicherstand. Gesunde Dateien werden nicht neu geschrieben; Symlink-/Dateitypgrenzen bleiben erhalten. Der neue Domain-Test prüft gleich große Korruption, Reparatur und vorherige Generation. 174 Swift-Testing- und zwei XCTest-Prüfungen sowie die vollständige Anleitungs-Sandboxprüfung bestehen; auch zehn Textsicherungen einer großen Anleitung erhalten die unveränderten Bilddateien. Nachweise unter `build/ReleaseFixes/Guides/`, `domain.log` und `guides-sandbox.log`.
+
+### 5.4 Kurze GIF-Schnitte werden fast nur am Anfang abgetastet
+
+_REMOVED: Behoben am 01.11.2026._ Jeder GIF-Frame wird bei `trim.start + index / fps` abgetastet. Die bereits aufgerundete Framezahl hält die Zeitpunkte innerhalb der Auswahl; die falsche Begrenzung um ein ganzes GIF-Intervall entfällt. Die Zeitauflösung beträgt 60.000 Ticks pro Sekunde.
+
+- **Ort:** [VideoRecordingFiles.swift:278](/Users/simon/Woerk/Swift/Snaprivo/Snaprivo/Capture/VideoRecordingFiles.swift:278).
+- **Nachweis:** Echter synthetischer 30-fps-MP4-Input, 0,13-Sekunden-Schnitt bei 8 fps: zwei unterschiedliche GIF-Frames, letzter Frame mit dem korrekt abgetasteten Quellbild verglichen. Die Referenz wird für den Vergleich ebenfalls in GIF-Palette/Farbraum gewandelt. Zusätzlich GIF-Ausgabe der minimalen Schnittdauer mit genau einem Frame. [VideoEditingChecks.swift:134](/Users/simon/Woerk/Swift/Snaprivo/Tests/VideoEditingChecks.swift:134); §12.14.
+
+### 5.5 Gültige Klammern werden als fehlerhafter Modellausgang abgeschnitten
+
+_REMOVED: Behoben am 01.11.2026._ Streaming-Abbruch und Bereinigung verwenden dieselbe konservative Erkennung eines Serialisierungsendes: vollständiger Satz, überzähliges Schlusszitat und ein ausschließlich aus Serialisierungszeichen bestehender Rest. Klammern oder Code-Fences allein lösen keinen Abbruch aus. Gültige Platzhalter, JSON, zitierte einzelne Klammern und Codeblöcke bleiben erhalten; die bekannten entgleisten Endstücke werden weiterhin entfernt.
+
+- **Ort:** [GuideAssistantService.swift:410](/Users/simon/Woerk/Swift/Snaprivo/Snaprivo/App/GuideAssistantService.swift:410).
+- **Nachweis:** Die ursprünglichen Bereinigungsfälle und sechs zusätzliche gültige Texte einschließlich „Gib {Vorname} ein und bestätige mit OK.“ bestehen. [GuideAssistantChecks.swift:99](/Users/simon/Woerk/Swift/Snaprivo/Tests/GuideAssistantChecks.swift:99); §12.14.
 
 ## 6. Security
 
@@ -115,6 +136,20 @@ _REMOVED: Behoben am 29.10.2026._ Textgeometrie wird anhand des vollständigen T
 
 Die erste Messung geänderten Inhalts bleibt synchron. Der Nachweis betrifft wiederholte Geometriemessungen, keinen vollständigen Interaktions-/p95-Benchmark.
 
+### 7.6 Vorschläge gelöschter Schritte halten deren Bildstände weiter fest
+
+_REMOVED: Behoben am 01.11.2026._ GuideModel meldet Dokument-/Schrittzugehörigkeitsänderungen unabhängig von der sichtbaren View. Die Vorschlagssammlung entfernt Modelle anhand von Dokument-ID und tatsächlich vorhandenen Schritt-IDs, beendet deren Arbeit und verwirft auch einen Dialog für einen entfernten Einzelschritt. Undo stellt den Schritt wieder her, ohne einen verworfenen Vorschlag oder Job wiederzubeleben. Der Callback hält die Sammlung nur schwach; GuideModel benötigt keine Abhängigkeit vom Assistenten.
+
+- **Ort:** [GuideModel.swift:12](/Users/simon/Woerk/Swift/Snaprivo/Snaprivo/App/GuideModel.swift:12), [GuideAssistantModel.swift:26](/Users/simon/Woerk/Swift/Snaprivo/Snaprivo/App/GuideAssistantModel.swift:26).
+- **Nachweis:** Entfernen fertiger und noch laufender Vorschläge ohne View-Hilfe; schwache Referenzen auf die alten Modelle werden nil, verspätete Antworten werden nicht veröffentlicht, Undo erhält die Bildschritte ohne verwaiste Vorschläge. [GuideAssistantChecks.swift:319](/Users/simon/Woerk/Swift/Snaprivo/Tests/GuideAssistantChecks.swift:319); §12.14.
+
+### 7.7 Hintergrund-Unschärfe erzeugt weiterhin jeweils einen neuen CIContext
+
+_REMOVED: Behoben am 01.11.2026._ Der Präsentationshintergrund verwendet denselben threadsicheren `blurContext` wie die übrigen Blur-Operationen. Die lokale Kontextneuerzeugung entfällt.
+
+- **Ort:** [EditorRenderer.swift:958](/Users/simon/Woerk/Swift/Snaprivo/Snaprivo/Editor/EditorRenderer.swift:958).
+- **Nachweis:** Bestehende Hintergrund-Prüfungen zu tatsächlicher Pixelglättung, deckenden Kanten, Bildimport und Komposition bestehen. Keine neue Performance-Zahl oder Instruments-Messung behauptet; §12.14.
+
 ## 8. SwiftUI / UI
 
 ### 8.1 Finder-Öffnen exportierter Projekte/Sicherungen ist nicht angeschlossen
@@ -141,6 +176,14 @@ _REMOVED: Behoben am 29.10.2026._ Die globalen Undo-/Redo-Menüeinträge verwend
 
 _REMOVED: Behoben am 29.10.2026._ Einstellungen → Datenschutz enthält nun einen nativen Link mit Accessibility-Identifier `settings.privacy.policy`. Ziel und Label sind Deutsch/Englisch lokalisiert; die URL folgt `Bundle.main.preferredLocalizations` und damit der aktuell verwendeten App-Sprache, nicht bloß der Region. Regionale Präferenzen und englischer Fallback sind im Workflow geprüft, das Label zusätzlich in der nativen Lokalisierungssuite. `build/ReleaseFixes/workflow.log`, `localization-runtime.log`, `localization-catalog.log`.
 
+### 8.7 Angeheftete Bilder bieten ihre Aktionen nicht für Tastatur und VoiceOver an
+
+_REMOVED: Behoben am 01.11.2026._ Das Pin-Bild ist ein expliziter Tab-Fokuspunkt. Der Panel-Einstieg übergibt den Fokus an das Bild; beim Tastaturfokus erscheinen die Controls, ein bloßes Maus-Verlassen versteckt sie dann nicht. Leertaste und Enter rufen das native Aktionsmenü auf. Unabhängig von der Hover-Leiste bietet das Bild sechs Accessibility-Aktionen: vier Deckkraftstufen, Klickdurchlass/Entsperren und Schließen. Auch die öffentliche Show-Menu-Aktion ist angeschlossen. Der Tastaturhinweis ist Deutsch/Englisch lokalisiert.
+
+- **Ort:** [PinnedImage.swift:70](/Users/simon/Woerk/Swift/Snaprivo/Snaprivo/Features/PinnedImage.swift:70), [PinnedImage.swift:160](/Users/simon/Woerk/Swift/Snaprivo/Snaprivo/Features/PinnedImage.swift:160).
+- **Nachweis:** Nativer Fenster-/Tab-Test, Fokus-Sichtbarkeit nach Maus-Verlassen, Ausführung aller Deckkraft-/Klickdurchlass-/Schließaktionen sowie tatsächliche NSMenu-Zielaktionen. Die Menüpräsentation ist im automatisierten Test injiziert, damit kein modaler Pop-up-Loop auf Benutzereingabe wartet; das Produkt verwendet `NSMenu.popUp`. [QuickCaptureIntegrationChecks.swift:315](/Users/simon/Woerk/Swift/Snaprivo/Tests/QuickCaptureIntegrationChecks.swift:315); §12.14. Eine vollständige physische VoiceOver-Bedienungsabnahme bleibt offen.
+- **Öffentliche API:** [Apple: NSAccessibilityCustomAction](https://developer.apple.com/documentation/appkit/nsaccessibilitycustomaction), [Show Menu](https://developer.apple.com/documentation/appkit/nsaccessibilityprotocol/accessibilityperformshowmenu()).
+
 ## 9. Dead code / duplication / refactor
 
 ### 9.1 Xcode-Scheme führt die vorhandenen Tests nicht aus
@@ -155,11 +198,11 @@ _REMOVED: Behoben am 29.10.2026._ WorkspaceModel kennt den Fenstercontroller nic
 
 ### 10.1 Reihenfolge der Korrekturen
 
-Auch die zuletzt offenen fünf Medium-Befunde sind geschlossen. Den tatsächlichen Store-Kandidaten und echte Aufnahme-/Tonabläufe getrennt vom lokalen Build bestätigen; keine neue Plattform- oder Kaufabnahme aus den Codeprüfungen ableiten.
+Alle sechs Befunde sind korrigiert und mit den zugehörigen Regressionen abgesichert (§12.14). Neue Produktfehler wurden dabei nicht pauschal ausgeschlossen. Reale Capture-, Audio-, VoiceOver- und Store-Kandidatenabnahmen bleiben gesonderte Prüfungen.
 
 ### 10.2 Archiv und App Store Connect
 
-Der heutige Release-Build enthält x86_64 und arm64, Bundle-ID `com.snaprivo.app`, Version `1.0`, Build `2`, Mindestversion `26.0`. Die reguläre `codesign --verify --deep --strict`-Prüfung besteht; die isolierte Shell konnte der Zertifikatskette zunächst nicht vertrauen. Das lokale entwicklersignierte Release-Bundle ist kein exportiertes Store-Archiv. Ob Build 2 in App Store Connect bereits verbraucht ist, wurde nicht abgefragt. Die vom Nutzer bestätigte Kauf-/Restore- und Store-Vorbereitung bleibt anerkannt; keine pauschale Wiedereröffnung dieser Abnahmen. Den tatsächlich einzureichenden Kandidaten einschließlich Installation/Update und echter Aufnahme auf macOS 26 separat prüfen.
+Historischer Stand vom 29.10.2026: Der damals geprüfte Release-Build enthielt x86_64 und arm64, Bundle-ID `com.snaprivo.app`, Version `1.0`, Build `2`, Mindestversion `26.0`; die reguläre Signaturprüfung bestand. In diesem Audit wurde ein frischer Debug-Build geprüft, kein neues Release-Archiv oder Store-Upload. Die vom Nutzer bestätigte Kauf-/Restore- und Store-Vorbereitung bleibt anerkannt.
 
 ### 10.3 Sicherheits- und Lifecycle-Invarianten
 
@@ -178,9 +221,13 @@ Die Korrekturen sichern laufende Dateioperationen unabhängig vom sichtbaren Vie
 - Keine physische Störung eines externen Laufwerks und kein absichtlich blockierter Netzwerk-Mount. Der neue Lock-Konflikttest verwendet separate OS-Dateideskriptoren, keine zwei vollständigen App-Instanzen.
 - Kein echter App-Abbruch während eines Benutzerexports; §3.1 wurde über einen kontrollierten Writer und die echte Beenden-Prüfung belegt.
 - Keine vollständige Tiefenprüfung aller Tests, fremder Framework-Interna, sämtlicher Dateiformatvarianten oder aller möglichen Interleavings. Geprüft wurden konkrete Pfade, Grenzen und Hotspots.
+- Im aktuellen Durchlauf keine neue Generierung mit dem echten Apple-Intelligence-Modell. Die neuen Abbruch-/Lebenszyklusfälle verwenden einen kontrollierten Service bei unveränderten produktiven Modellen. Die Textkürzung wird direkt am produktiven Helper geprüft.
+- Die native Pin-Probe ist eine Prüfung des Accessibility-Baums und des Fokuswegs, keine vollständige Bedienungsabnahme mit laufendem VoiceOver.
 - Kein Release-Archiv, keine neuen StoreKit-Käufe, keine Store-Signierungs-/App-Store-Connect-Abnahme und kein Test auf macOS-26-Hardware. Die lokale Release-Signatur wurde am 29.10. separat verifiziert. Ausgeführt auf lokalem arm64-Mac mit macOS 27 und Xcode 27; Deployment Target bleibt 26.
 
 ## 12. Verification
+
+**Aktuelle Korrekturrunde: §12.14; vorausgehender Audit: §12.13.** Die folgenden Einträge §12.1–§12.12 bleiben als historische Nachweise mit ihren ursprünglichen Daten erhalten und sind keine heute erneut ausgeführten Prüfungen.
 
 ### 12.1 Historische Verifikation vor den Korrekturen
 
@@ -300,3 +347,38 @@ Drei endliche, wiederholbare Demonstrationen mit stetiger Zeigerbahn; gefüllte 
 | Lokalisierung | 1.291 App-, 7 InfoPlist- und 19 Domain-Texte; vollständige Compiler-Abdeckung und native de/en/Fallback-Läufe | `localization-catalog.log`, `localization-runtime.log` |
 
 Die nativen CLI-Prüfungen können mit dem macOS-27-SDK bekannte AVFoundation-Deprecation-Hinweise ausgeben; die weiterhin für macOS 26 unterstützten Reader-APIs wurden dafür nicht ungefragt ersetzt. Der lokale Release-Build ist entwicklersigniert und bleibt Version 1.0 (2). Kein Store-Archiv exportiert, keine Buildnummer in App Store Connect abgefragt, kein Upload und kein Commit. Die in §11 benannten physischen und manuellen Store-Kandidatenprüfungen bleiben separat.
+
+### 12.13 Neuer Audit des Arbeitsbaums – 1. November 2026
+
+Historischer Befundnachweis unmittelbar vor den anschließend in §12.14 dokumentierten Korrekturen.
+
+Alle neuen Befunde wurden an den zitierten Produktzeilen nachgelesen; §3.4, §5.4, §5.5, §7.6 und §8.7 besitzen zusätzlich synthetische Reproduktionen. Kein neuer Critical-/High-Befund blieb nach Prüfung bestätigt. Insbesondere ist die Freigabe der Apple-Intelligence-Warteschlange bei abgebrochenen Wartenden korrekt: ein geworfener Continuation-Fehler verlässt `acquire()` vor dem nachfolgenden Permit-Check. Ein zunächst vermutetes GIF-Grenzleck durch die `actualTime`-Toleranz wurde nicht reproduziert und wird nicht als weiterer Fehler geführt.
+
+| Prüfung | Ergebnis | Nachweis |
+|---|---|---|
+| Frischer vollständiger Debug-Build mit eigenem DerivedData | Erfolgreich; keine Swift-Concurrency-/Deprecation-Warnungen. Nur der AppIntents-Metadatenhinweis. | [build.log](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/build.log) |
+| Bestehende GuideAssistant-Suite | Exit 0; Vorschlagsübernahme, Undo/Redo, Persistenz, veraltete Quellen, Berechtigungslogik, Abbruch und Markierungen bestanden. Die neuen Randfälle sind dort nicht abgedeckt. | [guide-assistant-tests.log](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/guide-assistant-tests.log) |
+| Neue Reproduktion §3.4 | Nach Verwerfen während einer angehaltenen Verfügbarkeitsprüfung trotzdem ein Generierungsaufruf. | [guide-probe.log](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/guide-probe.log), [temporärer Harness](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/GuideAuditProbe.swift:39) |
+| Neue Reproduktion §7.6 | Null Dokument-Schritte, ein nicht aufgeräumtes Vorschlagsmodell mit einem Ausgangsschritt. | Derselbe Guide-Harness, Zeilen 56–65 |
+| Neue Reproduktion §5.5 | Gültige Beschreibung mit `{Vorname}` wird zu „Gib“ gekürzt. | Derselbe Guide-Harness, Zeilen 67–70 |
+| Neue Reproduktion §5.4 | 0,13-Sekunden-Schnitt liefert zwei identische GIF-Frames; Assertion meldet den reproduzierten Fehler, Exit 133 des Diagnoseprogramms. | [gif-probe.log](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/gif-probe.log), [temporärer Harness](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/GIFProbe.swift:24) |
+| Neue Reproduktion §8.7 | Nativer Accessibility-/Tab-Test mit synthetischem Pin. | [probe.log](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/PinnedAccessibility/probe.log) |
+| Domain und Scroll aus der unmittelbar vorherigen Korrektur im selben unveränderten Produktstand | 183 Swift-Testing- und zwei XCTest-Prüfungen sowie native synthetische Scroll-Suite bestanden. Hier nicht als neuer Durchlauf ausgegeben. | [domain.log](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/domain.log), [scroll-tests.log](/Users/simon/Woerk/Swift/Snaprivo/build/Audit20261101/scroll-tests.log) |
+
+Die Diagnosequellen und Buildprodukte liegen ausschließlich im ignorierten Build-Verzeichnis. Einziges getracktes Ergebnis dieses Audits ist dieser Bericht. Die bereits vorhandenen Änderungen anderer Arbeiten bleiben unangetastet; keine neuen Abhängigkeiten, kein Commit und keine Veröffentlichung.
+
+### 12.14 Korrektur aller sechs neuen Befunde – 1. November 2026
+
+§3.4, §5.4, §5.5, §7.6, §7.7 und §8.7 sind am aktuellen Arbeitsbaum umgesetzt. Alle folgenden Prüfungen liefen nach den jeweiligen finalen Codeänderungen mit Exit 0; der App-Build enthält auch die abschließende Pin-Fokuskorrektur. Vorhandene Änderungen anderer Arbeiten bleiben erhalten. Keine neue Abhängigkeit, Formatänderung, Veröffentlichung oder Änderung an einer Benutzerbibliothek.
+
+| Prüfung | Ergebnis | Nachweis |
+|---|---|---|
+| App-Build | Erfolgreich; keine Swift-/Concurrency-/Deprecation-Warnung. Nur der bekannte AppIntents-Metadatenhinweis. | [build.log](/Users/simon/Woerk/Swift/Snaprivo/build/AuditFixes20261101/build.log) |
+| Textassistent §3.4, §5.5, §7.6 | Gehaltene Verfügbarkeit, Abbruch/Verwerfen/Ersetzen, Freigabe alter Modelle, expliziter Neustart, geänderte Hinweise während der Prüfung, Entfernen fertiger und laufender Vorschläge, spätes Ergebnis, Undo sowie gültige Klammern/JSON/Code-Fences bestanden. Bestehende Übernahme-/Undo-/Autosave-/Markup-Fälle bestehen weiterhin. | [assistant.log](/Users/simon/Woerk/Swift/Snaprivo/build/AuditFixes20261101/assistant.log) |
+| GIF/Video §5.4 | Zwei unterschiedliche Bilder bei 0,13 Sekunden/8 fps; Endbild gegen die korrekt abgetastete und nach GIF konvertierte Referenz geprüft. Minimale Schnittdauer ergibt ein GIF-Bild. Vollständige Schnitt-, AAC-, Persistenz-, Backup-, Abbruch- und Originalschutzprüfungen sowie eigener Prozessneustart bestanden. | [video.log](/Users/simon/Woerk/Swift/Snaprivo/build/AuditFixes20261101/video.log) |
+| Pin-/Schnellvorschau §8.7 | Tab-Fokuseinstieg, sichtbare Controls trotz Maus-Verlassen, Leertaste/Enter/Show Menu, echte NSMenu-Aktionsausführung, vier Deckkraftstufen, Klickdurchlass/Entsperren und Schließen bestanden. Bestehende Fenster-/OCR-/Export-/Beenden-/Bibliothekswechselprüfungen ebenfalls bestanden. | [pins.log](/Users/simon/Woerk/Swift/Snaprivo/build/AuditFixes20261101/pins.log) |
+| Präsentationshintergründe §7.7 | Tatsächliche Pixelglättung, deckende Blur-Kanten, Orientierung, eigene Bildkopien, transparente Komposition, Seitenverhältnisse und Fehlerfälle bestanden. | [backgrounds.log](/Users/simon/Woerk/Swift/Snaprivo/build/AuditFixes20261101/backgrounds.log) |
+| Domain | 183 Swift-Testing- und zwei XCTest-Prüfungen bestanden. | [domain.log](/Users/simon/Woerk/Swift/Snaprivo/build/AuditFixes20261101/domain.log) |
+| Lokalisierung | 1.364 App-, 7 InfoPlist- und 19 Domain-Texte in Deutsch/Englisch; vollständige Compilerabdeckung und passende Formatargumente. | [localization.log](/Users/simon/Woerk/Swift/Snaprivo/build/AuditFixes20261101/localization.log) |
+
+Die Pin-Tests verwenden echte NSWindows, Accessibility-Handler und NSMenu-Zielaktionen. Nur die Präsentation des modalen Pop-up-Menüs wird über den Controller injiziert; der Produktpfad ruft unverändert die öffentliche AppKit-Präsentation auf. Keine neue vollständige VoiceOver-/TCC-/Capture-Abnahme auf einem physischen Mac und kein neuer Live-Lauf des Apple-Intelligence-Modells. Das Wiederverwenden des Core-Image-Kontexts ist geprüft, aber ohne neu behaupteten Performance-Messwert. Die Grenzen aus §11 bleiben bestehen.

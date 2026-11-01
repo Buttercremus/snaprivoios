@@ -157,6 +157,13 @@ struct WorkspaceView: View {
                         .accessibilityIdentifier("guide.addImages")
                     }
                     ToolbarItem(placement: .primaryAction) {
+                        Button(String(localized: "Apple Intelligence"), systemImage: "apple.intelligence") { workspace.guides.assistantOpenRequest += 1 }
+                            .labelStyle(.titleAndIcon)
+                            .help(String(localized: "Titel, Einleitung und Schritttexte vorschlagen, überarbeiten oder kürzen"))
+                            .disabled(workspace.guides.document == nil || workspace.guides.isBusyForControls || workspace.guides.isSuspended || workspace.guides.showsTrash || workspace.guides.selectedDocumentIDs.count > 1)
+                            .accessibilityIdentifier("guide.toolbar.assistant")
+                    }
+                    ToolbarItem(placement: .primaryAction) {
                         Button(String(localized: "PDF-Vorschau"), systemImage: "doc.richtext") { workspace.guides.showPreview() }
                             .disabled(workspace.guides.document?.steps.isEmpty != false || workspace.guides.isBusyForControls || workspace.guides.isSuspended || workspace.guides.showsTrash || workspace.guides.selectedDocumentIDs.count > 1)
                     }

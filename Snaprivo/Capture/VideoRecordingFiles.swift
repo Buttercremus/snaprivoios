@@ -275,8 +275,10 @@ actor VideoRecordingFiles {
         CGImageDestinationSetProperties(destination, loopProperties as CFDictionary)
         for index in 0..<frameCount {
             try Task.checkCancellation()
-            let seconds = trim.start + min(Double(index) / Double(options.framesPerSecond), max(0, exportDuration - 1.0 / Double(options.framesPerSecond)))
-            let result = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 600))
+            // ceil(duration * fps) already keeps every sample before the end.
+            // Clamping by a whole GIF interval duplicates the start of short trims.
+            let seconds = trim.start + Double(index) / Double(options.framesPerSecond)
+            let result = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 60_000))
             let frameInterval = 1.0 / Double(options.framesPerSecond)
             // Encoded keyframes can be reported a single frame around the
             // requested timestamp; never allow a sample from a different trim

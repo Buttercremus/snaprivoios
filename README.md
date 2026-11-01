@@ -2,15 +2,36 @@
 
 Native Screenshot- und Bildschirmvideo-App für macOS 26+, von Anfang an für den Mac App Store und Liquid Glass konzipiert.
 
+Die Steuerleiste und Vorschau der Scroll-Aufnahme haben transparente Fensterhintergründe, damit außerhalb ihrer abgerundeten Ecken keine weißen Rechteckflächen stehen bleiben.
+
+## Audit-Korrekturen – 1. November 2026
+
+- **Textvorschläge:** Verwerfen und Ersetzen brechen auch die Vorbereitung ab. Beim Entfernen eines Schritts werden seine Vorschläge und Bildstände freigegeben; Undo stellt den Schritt ohne alte Vorschlagsjobs wieder her. Gültige Platzhalter wie `{Vorname}`, JSON und Codeblöcke bleiben vollständig erhalten.
+- **GIF:** Kurze Schnitte enthalten auch den letzten vorgesehenen Abtastzeitpunkt; das bisherige Duplizieren von Anfangsframes entfällt.
+- **Angeheftete Bilder:** Tab fokussiert das Bild und zeigt die Aktionen. Leertaste oder Enter öffnen das native Menü. VoiceOver erhält direkte Aktionen für die vier Deckkraftstufen, Klicks durchlassen/aktivieren und Schließen.
+- **Bildhintergründe:** Wiederholte Unschärfe verwendet den gemeinsamen Core-Image-Kontext.
+
+[Korrekturen, Regressionen und verbleibende manuelle Abnahmen](CODE_AUDIT.md).
+
 ## Anleitungstexte mit Apple Intelligence – 1. November 2026
 
-Über **Apple Intelligence …** im Anleitungseditor lassen sich Titel, Einleitung und vorhandene Schritttexte vorschlagen, überarbeiten oder kürzen. Im Schrittmenü steht **Text mit Apple Intelligence …** für einen einzelnen Schritt. Ziel/Hinweise und Deutsch/Englisch sind wählbar. Die Vorschau zeigt die zugehörigen Screenshots; Texte können vor dem Übernehmen angepasst werden. Erst **Übernehmen** ändert die Anleitung als einen gemeinsamen Undo-Schritt mit normalem Autosave. Bilder, Reihenfolge und Verknüpfungen bleiben erhalten. Eine leere Anleitung erhält nur Titel und Einleitung; Bildschritte werden nicht erfunden.
+Titel, Einleitung und Schritttexte lassen sich mit einem Klick vorschlagen, überarbeiten oder kürzen: über **Apple Intelligence** in der Fensterleiste, **Mit Apple Intelligence schreiben** im Anleitungseditor, die Karte **Texte erstellen** bei Schritten ohne Beschreibung oder **Text vorschlagen**/**Text überarbeiten** direkt am Schritt. Diese Einstiege starten sofort; die Texte erscheinen schon während des Schreibens in der Vorschau. Das Modell wird beim Öffnen einer Anleitung mit unbeschriebenen Schritten und beim Darüberfahren vorgeladen, damit der Kaltstart (gemessen bis zu einer Minute) nicht erst beim Klick beginnt. Ziel/Hinweise und Deutsch/Englisch sind wählbar. Die Vorschau zeigt die zugehörigen Screenshots; Texte können vor dem Übernehmen angepasst werden. Erst **Übernehmen** ändert die Anleitung als einen gemeinsamen Undo-Schritt mit normalem Autosave. Bilder, Reihenfolge und Verknüpfungen bleiben erhalten. Eine leere Anleitung erhält nur Titel und Einleitung; Bildschritte werden nicht erfunden.
 
 Die Verarbeitung verwendet ausschließlich Apples lokales Systemmodell und die lokale Texterkennung. Bei verfügbarem Bildmodell unter macOS 27 kommen Bilddaten hinzu; unter macOS 26 oder ohne Bildfähigkeit dient OCR als Grundlage. Das Modell muss auf dem Mac verfügbar und Apple Intelligence aktiviert sein. Die Anleitungsbearbeitung einschließlich Textassistent bleibt Pro; vorhandene Daten bleiben wie bisher zugänglich. Keine Cloud-Anbindung, API-Schlüssel oder zusätzlichen Aufnahmeberechtigungen. [Bedienung, Grenzen und Prüfnachweise](docs/APPLE-INTELLIGENCE-ABNAHME.md).
 
+## Anleitungen mit Markierungen, Vorschlag im Schritt und Textwerkzeug – 1. November 2026
+
+**Text vorschlagen** im Schrittkopf schreibt den Vorschlag jetzt direkt unter die Beschreibung des Schritts; **Übernehmen** ersetzt Titel und Beschreibung als ein Undo-Schritt, **Verwerfen** und **Neu erstellen** stehen daneben. Mit **Beim Aufnehmen Text vorschlagen** (standardmäßig an, unter „Schritt aufnehmen“) erhält jeder neu aufgenommene Schritt sofort einen solchen Vorschlag. Mehrere Vorschläge warten aufeinander statt mit „läuft noch“ abzubrechen.
+
+Pfeile, Rahmen, Markierungen, Spotlight, Lupen, nummerierte Marken und Callouts im Bildprojekt eines Schritts werden ausgewertet: Die App bestimmt ihre genaue Lage im Anleitungsbild und liest den markierten Text per OCR. Das Modell erhält die markierten Bedienelemente in Reihenfolge und schreibt daraus Anweisungen wie „„Safari“ auswählen, „Mitteilungen erlauben“ aktivieren …“; eigene Textnotizen im Bild gelten als Hinweis, nicht als Bedienelement. Gilt nur, solange das Bildprojekt seit der Übernahme in die Anleitung unverändert ist. [Details und Messung](docs/APPLE-INTELLIGENCE-ABNAHME.md).
+
+Mit dem Text- oder Callout-Werkzeug lässt sich vorhandener Text jetzt direkt verschieben: Ziehen bewegt ihn (ein Undo-Schritt, Werkzeug bleibt aktiv), ein Klick setzt die Einfügemarke an die geklickte Stelle, ein Doppelklick wählt ein Wort. Während Text oder ein Callout bearbeitet wird, steht die Schnellleiste (Farbe, Schriftgröße, Fett/Kursiv) am Objekt; die Tastatureingabe bleibt im Text.
+
+Apple Intelligence zeigt jederzeit, was gerade passiert: Drehsymbol, aktuelle Phase („Schritt 2: Bild wird gelesen …“, „Schritt 2 wird geschrieben …“), laufende Zeit und vor dem ersten Text einen Hinweis auf das Laden des lokalen Modells. **Im Hintergrund weiter** schließt den Dialog, ohne die Erstellung abzubrechen; oben in der Anleitung stehen dann Fortschritt und **Anzeigen**, danach **Vorschläge bereit · Prüfen**.
+
 ## Bewegung und Bestätigungen – 1. November 2026
 
-Kopieren im Editor verwandelt das Symbol per SF-Symbol-Replace in ein Häkchen; in der Schnellvorschau zeichnet sich das Kopiert-Häkchen ein. Die Werkzeugmarkierung gleitet nach einem Mausklick zum neuen Werkzeug, Tastenkürzel wechseln weiterhin sofort. Beim Einrasten an Kanten und Mitten gibt ein Force-Touch-Trackpad einen kurzen Ausrichtungsimpuls. Der Video-Vorlauf zeigt mittig in der Quelle eine große, klickdurchlässige Liquid-Glass-Fläche mit herunterzählender Sekunde, die vor dem Streamstart verschwindet. Reduzierte Bewegung zeigt alle Zustände ohne Übergang. [Details und Prüfung](docs/BEWEGUNG-QUICKWINS-ABNAHME.md).
+Kopieren im Editor verwandelt das Symbol per SF-Symbol-Replace in ein Häkchen; in der Schnellvorschau zeichnet sich das Kopiert-Häkchen ein. Die Werkzeugmarkierung gleitet nach einem Mausklick zum neuen Werkzeug, Tastenkürzel wechseln weiterhin sofort. Beim Einrasten an Kanten und Mitten gibt ein Force-Touch-Trackpad einen kurzen Ausrichtungsimpuls. Der Video-Vorlauf zeigt mittig in der Quelle eine große, klickdurchlässige Liquid-Glass-Fläche mit herunterzählender Sekunde, die vor dem Streamstart verschwindet. Die Aktionen beim Darüberfahren über eine Schnellvorschau sind Liquid-Glass-Buttons. Angeheftete Bilder erscheinen ohne sichtbare Titelleiste mit Systemecken, Schatten und Randgrößenänderung; beim Darüberfahren blendet eine kleine Glass-Leiste Deckkraft, Klicks durchlassen und Schließen ein. Reduzierte Bewegung zeigt alle Zustände ohne Übergang. [Details und Prüfung](docs/BEWEGUNG-QUICKWINS-ABNAHME.md).
 
 ## Stabilisierung – 31. Oktober 2026
 

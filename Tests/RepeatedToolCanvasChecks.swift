@@ -82,6 +82,34 @@ import SnagForgeDomain
                 let editor = canvas.subviews.first!.subviews.first as! NSTextView
                 finishText(editor, commandReturn: false)
                 precondition(model.tool == .selection && model.history.objects == created)
+
+                // In its own tool, existing text moves on drag and edits on a plain click.
+                // The object toolbar appears only in visible windows; keep this one offscreen.
+                window.setFrameOrigin(CGPoint(x: -30_000, y: -30_000)); window.orderFront(nil)
+                defer { window.orderOut(nil) }
+                model.tool = item.tool
+                let target = CGPoint(x: point.x + 40, y: point.y + 30)
+                canvas.mouseDown(with: mouse(.leftMouseDown, point))
+                canvas.mouseDragged(with: mouse(.leftMouseDragged, target))
+                canvas.mouseUp(with: mouse(.leftMouseUp, target))
+                precondition(model.editingTextObject == nil && model.tool == item.tool && model.selection == created[0].id
+                             && model.history.objects == [created[0].translated(by: CGSize(width: 40, height: 30)), created[1]],
+                             "The text tool could not move existing text")
+                model.undo(); precondition(model.history.objects == created, "Moving text was not one undo step")
+                canvas.mouseDown(with: mouse(.leftMouseDown, point))
+                canvas.mouseUp(with: mouse(.leftMouseUp, point))
+                precondition(model.editingTextObject?.id == created[0].id && model.history.objects == created,
+                             "A click with the text tool did not edit the text in place")
+                let editing = canvas.subviews.first!.subviews.first as! NSTextView
+                precondition(canvas.quickOptionsObjectID == created[0].id && window.firstResponder === editing,
+                             "Edited text lacked its quick toolbar or lost typing focus")
+                model.updateStyle(font: 48)
+                editing.insertText("!", replacementRange: NSRange(location: NSNotFound, length: 0))
+                precondition(model.editingTextObject?.fontSize == 48 && model.editingTextObject?.text == "!" + created[0].text
+                             && window.firstResponder === editing, "A toolbar style change ended text editing")
+                finishText(editing, commandReturn: false)
+                precondition(canvas.quickOptionsObjectID == nil && canvas.subviews.isEmpty, "Finished text kept its toolbar")
+                model.undo(); precondition(model.history.objects == created && model.tool == item.tool)
             }
             let expected = model.history.objects
             let saved = await model.flush(); precondition(saved)

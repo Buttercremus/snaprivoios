@@ -131,10 +131,33 @@ import SnagForgeDomain
         catch VideoEditError.originalTarget { }
         do { try await files.exportGIF(silent.id, to: root.appendingPathComponent("Stale.gif"), expectedRevision: 0); preconditionFailure("GIF export accepted stale revision") }
         catch ProjectError.staleRevision { }
-        _ = try await files.setTrim(silent.id, trim: .init(start: 0.2, end: 0.2 + 1.0 / 30), expectedRevision: 1)
+        _ = try await files.setTrim(silent.id, trim: .init(start: 0.4, end: 0.53), expectedRevision: 1)
+        let shortGIF = root.appendingPathComponent("Short.gif")
+        try await files.exportGIF(silent.id, to: shortGIF, options: .init(framesPerSecond: 8, maximumDimension: 320))
+        try checkGIF(shortGIF, expectedMaximumFrames: 2, maximumDimension: 320)
+        let shortFrames = CGImageSourceCreateWithURL(shortGIF as CFURL, nil)!
+        require(CGImageSourceGetCount(shortFrames) == 2, "Short GIF lost its final partial interval")
+        let lastGIF = NSBitmapImageRep(cgImage: CGImageSourceCreateImageAtIndex(shortFrames, 1, nil)!).colorAt(x: 10, y: 10)!.usingColorSpace(.sRGB)!
+        let exactGenerator = AVAssetImageGenerator(asset: AVURLAsset(url: silentOriginal))
+        exactGenerator.maximumSize = CGSize(width: 320, height: 320); exactGenerator.appliesPreferredTrackTransform = true
+        exactGenerator.requestedTimeToleranceBefore = .zero; exactGenerator.requestedTimeToleranceAfter = .zero
+        let expectedFrame = try await exactGenerator.image(at: CMTime(seconds: 0.525, preferredTimescale: 60_000)).image
+        // Compare in GIF's palette/color space, rather than the video's ICC space.
+        let referenceData = NSMutableData()
+        let referenceDestination = CGImageDestinationCreateWithData(referenceData, "com.compuserve.gif" as CFString, 1, nil)!
+        CGImageDestinationAddImage(referenceDestination, expectedFrame, nil)
+        require(CGImageDestinationFinalize(referenceDestination))
+        let reference = CGImageSourceCreateWithData(referenceData, nil)!
+        let expectedColor = NSBitmapImageRep(cgImage: CGImageSourceCreateImageAtIndex(reference, 0, nil)!).colorAt(x: 10, y: 10)!.usingColorSpace(.sRGB)!
+        require(abs(lastGIF.redComponent - expectedColor.redComponent) < 0.025, "Short GIF did not sample the end of the selected range")
+        _ = try await files.setTrim(silent.id, trim: .init(start: 0.2, end: 0.2 + 1.0 / 30), expectedRevision: 2)
         let oneFrame = root.appendingPathComponent("OneFrame.mp4")
         try await files.exportEdited(silent.id, to: oneFrame)
         require(try await frames(oneFrame).count == 1, "Minimum legal cut did not produce one video frame")
+        let oneFrameGIF = root.appendingPathComponent("OneFrame.gif")
+        try await files.exportGIF(silent.id, to: oneFrameGIF, options: .init(framesPerSecond: 8))
+        require(CGImageSourceGetCount(CGImageSourceCreateWithURL(oneFrameGIF as CFURL, nil)!) == 1,
+                "Minimum legal cut did not produce one GIF frame")
         let after = try FileManager.default.attributesOfItem(atPath: original.path)
         require(try Data(contentsOf: original) == bytes && (attributes[.systemFileNumber] as? NSNumber) == (after[.systemFileNumber] as? NSNumber)
             && (attributes[.modificationDate] as? Date) == (after[.modificationDate] as? Date), "Editing/export rewrote the original movie")
