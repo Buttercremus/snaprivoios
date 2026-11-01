@@ -20,6 +20,20 @@ Dieser Plan ist die zentrale Liste zum Abarbeiten. [ENTWICKLUNGSPLAN.md](ENTWICK
 
 ## So wird der Plan verwendet
 
+### Beauftragter Ausbau aus beiden App-Vergleichen – 1. November 2026
+
+Ausgangsstand: Commit `24a1bb2`. Quellen und Abgrenzung: [Screen Studio](SCREEN-STUDIO-VERGLEICH.md), [CleanShot X](CLEANSHOT-X-VERGLEICH.md). Kleine, einzeln prüfbare Änderungen und lokale Commits; keine Veröffentlichung. Diese Liste ist die operative Reihenfolge dieses Ausbaus. Hardware-/Store-Abnahmen werden separat von technischer Umsetzung ausgewiesen.
+
+- [x] **A01 Icon-Wechsel (1.11.2026):** Nur die Werkzeugmarkierung bewegt sich; stabile Symbol-/Schriftgewichte, nativer Play/Pause-Wechsel. Tastatur und reduzierte Bewegung sofort. Build, Toolbar in drei Größen/Sprachen und Video-Regressionen bestanden; native Testdarstellung gesichtet. Physisches Bewegungsgefühl bleibt Nutzerabnahme. [Nachweise](BESTOF-ABNAHME.md).
+- [ ] **A02 Video-Gestaltung:** Eigene Farben/Verläufe, Randabstand, Ecken, Schatten und Original/Quer/Hoch/Quadrat; gemeinsame Vorschau-/MP4-/GIF-Komposition, versionierte Speicherung und Undo. Abnahme: synthetische Geometrie-/Exportpixel, Ton, Schnitt, Abbruch und alte Projekte.
+- [ ] **A03 Audio-Pegel:** Getrennte Signalanzeige für aktivierte Quellen ohne neue Aufnahme oder Berechtigung. Stille bleibt von Geräte-/Aufnahmefehlern getrennt. Abnahme: synthetische Signale, Stop/Abbruch und reale Quellen separat.
+- [ ] **A04 Video-Schnellvorschau:** Kompakter Abschluss mit Abspielen/Export/Bearbeiten, sichere Dateiübergabe und einstellbarer direkter Editor. Abnahme: Fokus, Lebenszyklus und synthetische Clip-Übergabe.
+- [ ] **A05 Timeline und Fokus:** Zeitansicht vergrößern, Teilstücke entfernen, Tempo/Lautstärke und manuelle Zoomabschnitte; eindeutige Quell-/Ausgabezeit und konsistenter Export. Abnahme: Grenzen, Ton-/Bildsynchronität, Undo, Persistenz und tatsächliche Ausgabe.
+- [ ] **A06 Quick Look:** Finder-Vorschau und Miniaturen eigener Bildprojekte. Abnahme: sichere begrenzte Projektleser, Extension-Build und Finder-Prüfung mit signiertem Build.
+- [ ] **A07 Teilen-Erweiterung:** Bilder aus anderen Apps bearbeiten/anheften; eigene Kopien und sandboxverträgliche Übergabe. Abnahme: Extension-Build, beschädigte/zu große Daten und echte Fremd-App-Übergabe.
+- [ ] **A08 Weitere Aufnahme-/Gestaltungshilfen:** Horizontales Scrollen und ausdrücklich ausgelöstes optisches Ausbalancieren jeweils separat implementieren und prüfen.
+- [ ] **A09 Cursor-/Auto-Zoom-Grundlage:** Öffentliche Ereigniserfassung unter Sandbox nachweisen, bevor Aufnahme-/Renderdaten und Automatik zugesagt werden. Vorhandene eingebrannte Cursor werden dadurch nicht separat bearbeitbar.
+
 - Die Phasen grundsätzlich in der angegebenen Reihenfolge bearbeiten. Die ausdrücklich genannten frühen technischen Versuche und manuellen Abnahmen dürfen unabhängig laufen; dafür sind keine zusätzlichen Chats oder Agenten vorausgesetzt.
 - Pro Schritt eine kleine, startbare Änderung. Erledigt erst markieren, wenn das genannte Abnahmekriterium erfüllt ist. Teilweise erledigte Aufgaben bleiben offen; Restarbeit und Nachweis direkt darunter notieren.
 - Zu erledigten Aufgaben Datum und Nachweis ergänzen: Testlauf, Abnahmeprotokoll oder dokumentierte Nutzerprüfung. Ein erfolgreicher Build ersetzt keine echte Aufnahme-, Berechtigungs- oder UX-Abnahme.

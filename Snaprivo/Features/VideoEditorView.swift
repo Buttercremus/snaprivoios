@@ -4,6 +4,7 @@ import AVKit
 struct VideoEditorView: View {
     @Bindable var model: VideoEditorModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var confirmsDiscard = false
 
     var body: some View {
@@ -86,8 +87,15 @@ struct VideoEditorView: View {
     }
     private var transport: some View {
         HStack(spacing: 12) {
-            Button(model.isPlaying ? String(localized: "Pause") : String(localized: "Abspielen"),
-                   systemImage: model.isPlaying ? "pause.fill" : "play.fill") { model.togglePlayback() }
+            Button {
+                withAnimation(EditorMotion.panel(reduceMotion: reduceMotion)) { model.togglePlayback() }
+            } label: {
+                Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(width: 20, height: 20)
+            }
+                .accessibilityLabel(model.isPlaying ? String(localized: "Pause") : String(localized: "Abspielen"))
+                .help(model.isPlaying ? String(localized: "Pause") : String(localized: "Abspielen"))
                 .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
                 .keyboardShortcut(.space, modifiers: [])
                 .disabled(!model.isValid || model.isBusy).accessibilityIdentifier("video.editor.play")

@@ -2,6 +2,8 @@
 
 Native Screenshot- und Bildschirmvideo-App für macOS 26+, von Anfang an für den Mac App Store und Liquid Glass konzipiert.
 
+**Icon-Wechsel (1. November 2026):** In der Editorleiste gleitet nach einem Mausklick nur die Auswahlmarkierung. Symbol- und Schriftgewichte bleiben dabei konstant; Tastatur und reduzierte Bewegung wechseln unmittelbar. Play/Pause im Videoeditor verwendet bei Mausklick einen nativen Symbolübergang. Die bestehende rechte Eigenschaftenleiste behält ihre Gestaltung. [Prüfnachweise](docs/BESTOF-ABNAHME.md).
+
 Die Steuerleiste und Vorschau der Scroll-Aufnahme haben transparente Fensterhintergründe, damit außerhalb ihrer abgerundeten Ecken keine weißen Rechteckflächen stehen bleiben.
 
 ## Audit-Korrekturen – 1. November 2026

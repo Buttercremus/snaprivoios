@@ -10,6 +10,8 @@ Nachtrag 1. November 2026: Der Nutzer autorisiert die zuvor vorgeschlagene lokal
 
 Die operative Reihenfolge, Checkboxen, Abhängigkeiten und Abnahmekriterien stehen im zentralen [ARBEITSPLAN.md](ARBEITSPLAN.md). Die kommerzielle Bewertung steht in [PRODUCT-BRIEF.md](PRODUCT-BRIEF.md); Die seit 18.10.2026 bestätigten Preise und Free-/Pro-Grenzen stehen verbindlich in [FREE-PRO-ABNAHME.md](FREE-PRO-ABNAHME.md).
 
+Nachtrag 1. November 2026: Der Nutzer beauftragt nach den Vergleichen mit Screen Studio und CleanShot X die schrittweise Umsetzung der Ergänzungen mit erkennbarem Mehrwert. Der aktuelle Stand ist vor dem Ausbau lokal gesichert. Reihenfolge und Prüfkriterien stehen im Arbeitsplan: gezielte Icon-Wechsel, Video-Gestaltung einschließlich echter Ausgabe, Tonanzeige, Video-Schnellvorschau, erweiterte Timeline/manuelle Zooms und native Mac-Integrationen. Horizontales Scrollen und optische Balance folgen getrennt; Auto-Zoom und Cursorbearbeitung benötigen zuvor eine belegte öffentliche, sandboxverträgliche Aufnahmegrundlage. Bestehende Free-/Pro-Grenzen bleiben bestehen. Keine Übernahme fremder Ressourcen, keine Wiederholung des verworfenen Glass-Seitenleistenversuchs und keine Veröffentlichung.
+
 ## 1 Verbindliche Entscheidungen
 
 | Thema | Entscheidung |

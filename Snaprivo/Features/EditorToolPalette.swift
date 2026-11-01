@@ -11,7 +11,6 @@ struct EditorToolPalette: View {
     var toolsAreActive = true
     let onSelect: () -> Void
     @Namespace private var selectionNamespace
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @ViewBuilder
     var body: some View {
@@ -40,8 +39,6 @@ struct EditorToolPalette: View {
                 }
             }
         }
-        // Only the highlight glides, and only after a click; shortcuts switch immediately.
-        .animation(EditorMotion.selection(reduceMotion: reduceMotion), value: toolsAreActive ? selection.toolbarTool : nil)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(String(localized: "Editorwerkzeuge"))
     }
@@ -216,7 +213,7 @@ private struct EditorToolButton: View {
     var body: some View {
         Button(action: action) {
             EditorToolbarLabel(title: item.title, symbol: item.symbol, size: size,
-                               extraWidth: item.tool == .crop ? 18 : 0, isSelected: isSelected)
+                               extraWidth: item.tool == .crop ? 18 : 0)
         }
         .buttonStyle(EditorToolbarButtonStyle(isSelected: isSelected, selectionNamespace: selectionNamespace))
         .help(isProLocked ? String(localized: "Dieses Werkzeug gehört zu Snaprivo Pro.") : item.hint)
@@ -233,7 +230,6 @@ struct EditorToolbarLabel: View {
     let symbol: String
     let size: EditorToolbarSize
     var extraWidth: CGFloat = 0
-    var isSelected = false
 
     static func requiredWidth(title: String, size: EditorToolbarSize, extraWidth: CGFloat = 0) -> CGFloat {
         let textWidth = [NSFont.Weight.regular, .medium].map { weight in
@@ -244,9 +240,9 @@ struct EditorToolbarLabel: View {
     var body: some View {
         VStack(spacing: 3) {
             Image(systemName: symbol)
-                .font(.system(size: size.iconSize, weight: isSelected ? .semibold : .regular))
+                .font(.system(size: size.iconSize, weight: .regular))
                 .frame(height: size.iconSize + 3)
-            Text(title).font(.system(size: size.labelSize, weight: isSelected ? .medium : .regular))
+            Text(title).font(.system(size: size.labelSize, weight: .regular))
                 .lineLimit(1).fixedSize(horizontal: true, vertical: false)
         }
         .frame(width: Self.requiredWidth(title: title, size: size, extraWidth: extraWidth))
@@ -261,13 +257,20 @@ struct EditorToolbarButtonStyle: ButtonStyle {
     var selectionNamespace: Namespace.ID? = nil
     @State private var isHovered = false
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
             .background(Color.primary.opacity(isSelected ? 0 : configuration.isPressed ? 0.12 : isHovered && isEnabled ? 0.07 : 0),
                         in: .rect(cornerRadius: 8))
-            .background { if isSelected { selectionHighlight(pressed: configuration.isPressed) } }
+            .background {
+                ZStack {
+                    if isSelected { selectionHighlight(pressed: configuration.isPressed) }
+                }
+                // Keep labels, hover and the surrounding toolbar out of the movement.
+                .animation(EditorMotion.selection(reduceMotion: reduceMotion), value: isSelected)
+            }
             .opacity(isEnabled ? 1 : 0.4)
             .onHover { isHovered = $0 }
     }
