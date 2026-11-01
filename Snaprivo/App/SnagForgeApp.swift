@@ -72,7 +72,7 @@ struct SnagForgeApp: App {
                     else { workspace.editor?.exportPNG() }
                 }
                 .keyboardShortcut("e", modifiers: [.command, .shift])
-                .disabled(workspace.section == .guides ? workspace.guides.document?.steps.isEmpty != false || workspace.guides.isBusy || workspace.guides.showsTrash
+                .disabled(workspace.section == .guides ? workspace.guides.document?.steps.isEmpty != false || workspace.guides.isBusy || workspace.guides.showsTrash || workspace.guides.selectedDocumentIDs.count > 1
                           : workspace.section != .editor || workspace.editor?.hasExportableImage != true || workspace.editor?.isExportingPNG == true)
             }
             CommandGroup(replacing: .undoRedo) {

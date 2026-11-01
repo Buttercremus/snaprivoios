@@ -198,10 +198,21 @@ public actor GuideStore {
         }
     }
     public func moveToTrash(_ id: UUID, expectedRevision: Int) throws {
+        try moveToTrash([id], expectedRevisions: [id: expectedRevision])
+    }
+    /// Preflight the complete selection under one lock without hydrating PNG assets.
+    /// Each marker remains individually atomic and recoverable after a write failure.
+    public func moveToTrash(_ ids: Set<UUID>, expectedRevisions: [UUID: Int] = [:]) throws {
         try locked {
-            let value = try loadGeneration(id, hydrateImages: false).0.document
-            guard value.revision == expectedRevision, try trashDate(id) == nil else { throw ProjectError.staleRevision }
-            try PropertyListEncoder().encode(TrashMarker(id: id, date: .now)).write(to: marker(id), options: .atomic)
+            let ordered = ids.sorted { $0.uuidString < $1.uuidString }
+            for id in ordered {
+                let value = try loadGeneration(id, hydrateImages: false).0.document
+                guard expectedRevisions[id].map({ $0 == value.revision }) != false,
+                      try trashDate(id) == nil else { throw ProjectError.staleRevision }
+            }
+            for id in ordered {
+                try PropertyListEncoder().encode(TrashMarker(id: id, date: .now)).write(to: marker(id), options: .atomic)
+            }
         }
     }
     public func restore(_ id: UUID) throws {

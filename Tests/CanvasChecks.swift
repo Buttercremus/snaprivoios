@@ -329,6 +329,7 @@ struct CanvasChecks {
                                       charactersIgnoringModifiers: "\u{1B}", isARepeat: false, keyCode: 53)!
         text.keyDown(with: escape)
         precondition(canvas.subviews.isEmpty, "Text field remains after editing")
+        precondition(!model.isCanvasGestureActive, "Finishing inline text left a pending gesture that blocks editing")
         precondition(model.history.objects.last?.text == "Hallo\nText", "Escape discarded typing")
         model.undo(); precondition(model.history.objects.isEmpty, "Typing is not one document undo step")
         model.redo()

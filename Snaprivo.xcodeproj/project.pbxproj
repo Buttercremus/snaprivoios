@@ -75,6 +75,9 @@
 		FC2C002882183AF4A13E0E2D /* Snaprivo/Editor/EditorCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39B14FE663E999352FC4866 /* Snaprivo/Editor/EditorCanvas.swift */; };
 		A10400000000000000000002 /* Snaprivo/Editor/PresentationBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10400000000000000000001 /* Snaprivo/Editor/PresentationBackground.swift */; };
 		A10400000000000000000004 /* Snaprivo/Editor/PresentationPresets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10400000000000000000003 /* Snaprivo/Editor/PresentationPresets.swift */; };
+		6A2D8418AF551FA424B28092 /* Snaprivo/App/GuideAssistantService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52F136F4F421DFAB3A22599A /* Snaprivo/App/GuideAssistantService.swift */; };
+		410796D52D6957DE65E66C57 /* Snaprivo/App/GuideAssistantModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9653A36067BDC18DF1E5BCC0 /* Snaprivo/App/GuideAssistantModel.swift */; };
+		B446DDCF2C705E05C3868CE3 /* Snaprivo/Features/GuideAssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42ED4E7ECE31975338C5AC9E /* Snaprivo/Features/GuideAssistantView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -158,6 +161,9 @@
 		F23CD1067E611FB64D0CFF78 /* Snaprivo/Features/EditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorView.swift; sourceTree = SOURCE_ROOT; };
 		A10400000000000000000001 /* Snaprivo/Editor/PresentationBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/PresentationBackground.swift; sourceTree = SOURCE_ROOT; };
 		A10400000000000000000003 /* Snaprivo/Editor/PresentationPresets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/PresentationPresets.swift; sourceTree = SOURCE_ROOT; };
+		52F136F4F421DFAB3A22599A /* Snaprivo/App/GuideAssistantService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/GuideAssistantService.swift; sourceTree = SOURCE_ROOT; };
+		9653A36067BDC18DF1E5BCC0 /* Snaprivo/App/GuideAssistantModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/GuideAssistantModel.swift; sourceTree = SOURCE_ROOT; };
+		42ED4E7ECE31975338C5AC9E /* Snaprivo/Features/GuideAssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/GuideAssistantView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -281,6 +287,7 @@
 				5BDAC80283E441EF909785E4 /* Snaprivo/Editor/EditorArrangementModel.swift */,
 				A02500000000000000000001 /* Snaprivo/Features/EditorSavedStyles.swift */,
 				A02800000000000000000005 /* Snaprivo/Features/GuideView.swift */,
+				42ED4E7ECE31975338C5AC9E /* Snaprivo/Features/GuideAssistantView.swift */,
 				A02700000000000000000003 /* Snaprivo/Features/LibraryOrganizationView.swift */,
 				A02600000000000000000003 /* Snaprivo/Features/TextRecognitionView.swift */,
 				A02600000000000000000001 /* Snaprivo/Editor/TextRecognitionService.swift */,
@@ -303,6 +310,8 @@
 				D5107370CFA5DC8C6589BD33 /* Snaprivo/App/CaptureShortcuts.swift */,
 				BB8FC4C0CCB4F50E2B966AF1 /* Snaprivo/App/AppPreferences.swift */,
 				A02800000000000000000001 /* Snaprivo/App/GuideModel.swift */,
+				52F136F4F421DFAB3A22599A /* Snaprivo/App/GuideAssistantService.swift */,
+				9653A36067BDC18DF1E5BCC0 /* Snaprivo/App/GuideAssistantModel.swift */,
 				A02700000000000000000001 /* Snaprivo/App/LibrarySearchModel.swift */,
 				EF89746B79F853D2D4BAFD84 /* Snaprivo/App/SnagForgeApp.swift */,
 				72DAB7F309B0536D24A03688 /* Snaprivo/App/WorkspaceModel.swift */,
@@ -469,6 +478,9 @@
 				A02800000000000000000006 /* Snaprivo/Features/GuideView.swift in Sources */,
 				A02800000000000000000004 /* Snaprivo/Editor/GuideExporter.swift in Sources */,
 				A02800000000000000000002 /* Snaprivo/App/GuideModel.swift in Sources */,
+				6A2D8418AF551FA424B28092 /* Snaprivo/App/GuideAssistantService.swift in Sources */,
+				410796D52D6957DE65E66C57 /* Snaprivo/App/GuideAssistantModel.swift in Sources */,
+				B446DDCF2C705E05C3868CE3 /* Snaprivo/Features/GuideAssistantView.swift in Sources */,
 				A01400000000000000000022 /* Snaprivo/App/SupportFeedback.swift in Sources */,
 				A01400000000000000000012 /* Snaprivo/App/StorageLocations.swift in Sources */,
 				A01400000000000000000002 /* Snaprivo/Features/SelectionGrips.swift in Sources */,

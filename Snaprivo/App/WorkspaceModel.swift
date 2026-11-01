@@ -570,7 +570,12 @@ final class WorkspaceModel {
     func openProject(_ id: UUID) {
         guard storage.libraryError == nil else { importError = storage.libraryError; return }
         guard !isLoading, !isUpdatingMetadata else { return }
-        if editor?.document.id == id { section = .editor; return }
+        if let editor, editor.document.id == id {
+            editor.endStyleEditing(); editor.finishTextEditing()
+            editor.focusRequest += 1
+            section = .editor
+            return
+        }
         let previous = suspendEditorForImageSwitch()
         isLoading = true; openingProjectID = id
         openingTask = Task {

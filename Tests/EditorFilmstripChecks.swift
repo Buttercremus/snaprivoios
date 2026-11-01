@@ -67,11 +67,19 @@ private actor FilmstripCopyFinishBox {
         precondition(workspace.adjacentEditorImage(-1) == nil && workspace.adjacentEditorImage(1) == older.id)
         // Pending inline text must be committed and saved even before its debounce expires.
         workspace.editor!.editText(at: CGPoint(x: 4, y: 4)); workspace.editor!.updateText("Pending filmstrip text")
+        let reselected = workspace.editor!, focusBeforeReselect = reselected.focusRequest
+        workspace.switchEditorImage(to: newer.id)
+        precondition(workspace.editor === reselected && !workspace.isLoading && reselected.focusRequest > focusBeforeReselect,
+                     "Clicking the active thumbnail did not return focus to the editor")
+        precondition(reselected.editingTextObject == nil && reselected.history.objects.last?.text == "Pending filmstrip text",
+                     "Reselecting the current image left its inline text session open")
+        reselected.editText(at: CGPoint(x: 4, y: 4), object: reselected.history.objects.last)
+        reselected.updateText("Pending text after reselect")
         workspace.switchEditorImage(by: 1); try await waitForOpen()
         precondition(workspace.editor!.document.id == older.id)
         precondition(workspace.editor!.tool == .arrow && workspace.editor!.defaultArrowLineWidth == 23 && workspace.editor!.defaultColor == EditorColor(red: 0.2, green: 0.4, blue: 0.8))
         let saved = try await workspace.store.load(newer.id)
-        precondition(saved.document.objects.last?.text == "Pending filmstrip text")
+        precondition(saved.document.objects.last?.text == "Pending text after reselect")
         precondition(workspace.adjacentEditorImage(-1) == newer.id && workspace.adjacentEditorImage(1) == nil)
         precondition(workspace.adjacentEditorImage(Int.max) == nil)
         // Live gestures, unconfirmed crop and modal editor tools must retain their draft.
@@ -130,6 +138,22 @@ private actor FilmstripCopyFinishBox {
         let enabledNavigation = navigationPixels()
         precondition(enabledPixels.allSatisfy { $0[2] > 0.7 && $0[0] < 0.4 }, "Expected decoded synthetic blue thumbnails")
         workspace.section = .library
+        workspace.preferences.completedOnboarding = true
+        let workspaceHost = NSHostingView(rootView: WorkspaceView(workspace: workspace))
+        let workspaceWindow = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1180, height: 780),
+            styleMask: [.borderless], backing: .buffered, defer: false)
+        workspaceWindow.isReleasedWhenClosed = false; workspaceWindow.contentView = workspaceHost
+        defer { workspaceWindow.close() }
+        func sidebarPixels() -> Data {
+            workspaceHost.layoutSubtreeIfNeeded()
+            let bitmap = workspaceHost.bitmapImageRepForCachingDisplay(in: workspaceHost.bounds)!
+            workspaceHost.cacheDisplay(in: workspaceHost.bounds, to: bitmap)
+            let scale = CGFloat(bitmap.pixelsWide) / workspaceHost.bounds.width
+            let sidebar = bitmap.cgImage!.cropping(to: CGRect(x: 0, y: 0, width: Int(180 * scale), height: Int(600 * scale)))!
+            return NSBitmapImageRep(cgImage: sidebar).representation(using: .png, properties: [:])!
+        }
+        try await Task.sleep(for: .milliseconds(200))
+        let enabledSidebar = sidebarPixels()
         workspace.switchEditorImage(to: newer.id)
         try await Task.sleep(for: .milliseconds(50))
         precondition(workspace.isLoading && workspace.editor === exporting)
@@ -137,6 +161,7 @@ private actor FilmstripCopyFinishBox {
                      "Library was replaced before the target and outgoing export were ready")
         precondition(thumbnailPixels() == enabledPixels, "Disabling navigation changed every thumbnail's brightness")
         precondition(navigationPixels() == enabledNavigation, "Loading dimmed the previous/next buttons")
+        precondition(sidebarPixels() == enabledSidebar, "Switching images flashed the sidebar quick-action labels")
         precondition(workspace.canSwitchEditorImageForToolbar && !workspace.canSwitchEditorImage)
         precondition(exporting.isSwitchingImage && exporting.hasConfirmedImageForToolbar && !exporting.hasExportableImage)
         let waitingRevision = exporting.document.revision

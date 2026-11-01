@@ -1,6 +1,646 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+      "Texte vorschlagen": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Texte vorschlagen"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Suggest text"
+            }
+          }
+        }
+      },
+      "Texte überarbeiten": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Texte überarbeiten"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Improve text"
+            }
+          }
+        }
+      },
+      "Texte kürzen": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Texte kürzen"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Shorten text"
+            }
+          }
+        }
+      },
+      "Apple Intelligence wird geprüft …": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Apple Intelligence wird geprüft …"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Checking Apple Intelligence …"
+            }
+          }
+        }
+      },
+      "Bildanalyse und Texterstellung erfolgen lokal auf deinem Mac.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Bildanalyse und Texterstellung erfolgen lokal auf deinem Mac."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Image analysis and text generation take place locally on your Mac."
+            }
+          }
+        }
+      },
+      "Texterkennung und Texterstellung erfolgen lokal auf deinem Mac. Kurze Hinweise helfen bei Bildern ohne lesbaren Text.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Texterkennung und Texterstellung erfolgen lokal auf deinem Mac. Kurze Hinweise helfen bei Bildern ohne lesbaren Text."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Text recognition and generation take place locally on your Mac. Brief notes help with images that have no readable text."
+            }
+          }
+        }
+      },
+      "Dieser Mac unterstützt Apple Intelligence nicht. Du kannst deine Anleitung weiterhin selbst bearbeiten.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Dieser Mac unterstützt Apple Intelligence nicht. Du kannst deine Anleitung weiterhin selbst bearbeiten."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "This Mac does not support Apple Intelligence. You can still edit your guide yourself."
+            }
+          }
+        }
+      },
+      "Aktiviere Apple Intelligence in den Systemeinstellungen, um Textvorschläge zu erstellen.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Aktiviere Apple Intelligence in den Systemeinstellungen, um Textvorschläge zu erstellen."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Enable Apple Intelligence in System Settings to create text suggestions."
+            }
+          }
+        }
+      },
+      "Das lokale Sprachmodell ist noch nicht bereit. Prüfe den Download in den Systemeinstellungen und versuche es später erneut.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Das lokale Sprachmodell ist noch nicht bereit. Prüfe den Download in den Systemeinstellungen und versuche es später erneut."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "The on-device language model is not ready. Check its download in System Settings and try again later."
+            }
+          }
+        }
+      },
+      "Das lokale Sprachmodell unterstützt die gewählte Sprache derzeit nicht.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Das lokale Sprachmodell unterstützt die gewählte Sprache derzeit nicht."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "The on-device language model does not currently support the selected language."
+            }
+          }
+        }
+      },
+      "Apple Intelligence ist derzeit nicht verfügbar. Versuche es später erneut.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Apple Intelligence ist derzeit nicht verfügbar. Versuche es später erneut."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Apple Intelligence is currently unavailable. Try again later."
+            }
+          }
+        }
+      },
+      "Ein anderer Textauftrag läuft noch. Versuche es gleich erneut.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Ein anderer Textauftrag läuft noch. Versuche es gleich erneut."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Another text request is still running. Try again shortly."
+            }
+          }
+        }
+      },
+      "Beschreibe kurz das Ziel deiner Anleitung.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Beschreibe kurz das Ziel deiner Anleitung."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Briefly describe the goal of your guide."
+            }
+          }
+        }
+      },
+      "Dieser Text ist zu lang für das lokale Modell. Kürze die Hinweise oder den betroffenen Ausgangstext und versuche es erneut.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Dieser Text ist zu lang für das lokale Modell. Kürze die Hinweise oder den betroffenen Ausgangstext und versuche es erneut."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "This text is too long for the on-device model. Shorten your notes or the affected source text and try again."
+            }
+          }
+        }
+      },
+      "Ein Bild enthält keinen erkennbaren Text. Ergänze kurze Hinweise zu Ziel und Handlung oder bearbeite diesen Schritt einzeln.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Ein Bild enthält keinen erkennbaren Text. Ergänze kurze Hinweise zu Ziel und Handlung oder bearbeite diesen Schritt einzeln."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "An image has no recognizable text. Add brief notes about the goal and action, or edit that step individually."
+            }
+          }
+        }
+      },
+      "Apple Intelligence konnte für diese Inhalte keinen Vorschlag erstellen. Passe deine Hinweise an und versuche es erneut.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Apple Intelligence konnte für diese Inhalte keinen Vorschlag erstellen. Passe deine Hinweise an und versuche es erneut."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Apple Intelligence could not suggest text for this content. Adjust your notes and try again."
+            }
+          }
+        }
+      },
+      "Der Vorschlag entspricht nicht den Textgrenzen der Anleitung. Bitte erstelle ihn erneut oder kürze die Texte.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Der Vorschlag entspricht nicht den Textgrenzen der Anleitung. Bitte erstelle ihn erneut oder kürze die Texte."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "The suggestion exceeds the guide’s text limits. Generate it again or shorten the text."
+            }
+          }
+        }
+      },
+      "Die Textvorschläge konnten nicht erstellt werden. Deine Anleitung wurde nicht geändert. Versuche es erneut.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Die Textvorschläge konnten nicht erstellt werden. Deine Anleitung wurde nicht geändert. Versuche es erneut."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Text suggestions could not be created. Your guide has not been changed. Try again."
+            }
+          }
+        }
+      },
+      "Die Anleitung kann gerade nicht bearbeitet werden. Prüfe, ob Pro aktiv ist, und versuche es erneut.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Die Anleitung kann gerade nicht bearbeitet werden. Prüfe, ob Pro aktiv ist, und versuche es erneut."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "The guide cannot be edited right now. Check that Pro is active and try again."
+            }
+          }
+        }
+      },
+      "Die Anleitung wurde inzwischen geändert. Schließe den Assistenten und erstelle einen neuen Vorschlag für den aktuellen Stand.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Die Anleitung wurde inzwischen geändert. Schließe den Assistenten und erstelle einen neuen Vorschlag für den aktuellen Stand."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "The guide has changed. Close the assistant and generate a new suggestion for the current version."
+            }
+          }
+        }
+      },
+      "Anleitungstexte mit Apple Intelligence": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Anleitungstexte mit Apple Intelligence"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Guide text with Apple Intelligence"
+            }
+          }
+        }
+      },
+      "Apple Intelligence …": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Apple Intelligence …"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Apple Intelligence …"
+            }
+          }
+        }
+      },
+      "Anleitungstexte vorschlagen, überarbeiten oder kürzen": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Anleitungstexte vorschlagen, überarbeiten oder kürzen"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Suggest, improve or shorten guide text"
+            }
+          }
+        }
+      },
+      "Text mit Apple Intelligence …": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Text mit Apple Intelligence …"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Text with Apple Intelligence …"
+            }
+          }
+        }
+      },
+      "Aufgabe": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Aufgabe"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Task"
+            }
+          }
+        }
+      },
+      "Ziel oder ergänzende Hinweise": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Ziel oder ergänzende Hinweise"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Goal or additional notes"
+            }
+          }
+        }
+      },
+      "Beschreibe kurz, was die Anleitung erklären soll. Bei Bedarf ergänze Hinweise wie „Schritt 2: Ton ausschalten“.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Beschreibe kurz, was die Anleitung erklären soll. Bei Bedarf ergänze Hinweise wie „Schritt 2: Ton ausschalten“."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Briefly describe what the guide should explain. Add notes as needed, such as “Step 2: turn off sound”."
+            }
+          }
+        }
+      },
+      "Hier entstehen Titel und Einleitung. Für Schrittbeschreibungen füge zuerst Screenshots zur Anleitung hinzu.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Hier entstehen Titel und Einleitung. Für Schrittbeschreibungen füge zuerst Screenshots zur Anleitung hinzu."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Create a title and introduction here. Add screenshots to the guide first to generate step descriptions."
+            }
+          }
+        }
+      },
+      "%lld von %lld Textvorschlägen erstellt": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "%lld von %lld Textvorschlägen erstellt"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "%lld of %lld text suggestions created"
+            }
+          }
+        }
+      },
+      "Textvorschläge werden erstellt …": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Textvorschläge werden erstellt …"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Creating text suggestions …"
+            }
+          }
+        }
+      },
+      "Die Vorschläge erscheinen hier zur Prüfung. Erst „Übernehmen“ ändert deine Anleitung; anschließend ist alles gemeinsam rückgängig zu machen.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Die Vorschläge erscheinen hier zur Prüfung. Erst „Übernehmen“ ändert deine Anleitung; anschließend ist alles gemeinsam rückgängig zu machen."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Suggestions appear here for review. Your guide changes only when you choose “Apply”; all changes can then be undone together."
+            }
+          }
+        }
+      },
+      "Generierung stoppen": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Generierung stoppen"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Stop generating"
+            }
+          }
+        }
+      },
+      "Vorschläge erstellen": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Vorschläge erstellen"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Create suggestions"
+            }
+          }
+        }
+      },
+      "Neu erstellen": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Neu erstellen"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Generate again"
+            }
+          }
+        }
+      },
+      "Vorschläge prüfen und anpassen": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Vorschläge prüfen und anpassen"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Review and adjust suggestions"
+            }
+          }
+        }
+      },
+      "Prüfe besonders Bedienelemente und Handlungen. Apple Intelligence kann sich irren.": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Prüfe besonders Bedienelemente und Handlungen. Apple Intelligence kann sich irren."
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Check controls and actions carefully. Apple Intelligence can make mistakes."
+            }
+          }
+        }
+      },
+      "Bisheriger Text": {
+        "localizations": {
+          "de": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Bisheriger Text"
+            }
+          },
+          "en": {
+            "stringUnit": {
+              "state": "translated",
+              "value": "Previous text"
+            }
+          }
+        }
+      },
+    "Wähle eine einzelne Anleitung zum Bearbeiten oder verschiebe die Auswahl in den Papierkorb." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine einzelne Anleitung zum Bearbeiten oder verschiebe die Auswahl in den Papierkorb."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select a single guide to edit, or move the selection to Trash."
+          }
+        }
+      }
+    },
+    "Ausgewählte Anleitungen in den Papierkorb verschieben" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgewählte Anleitungen in den Papierkorb verschieben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move selected guides to Trash"
+          }
+        }
+      }
+    },
+    "⌘-Klick wählt mehrere Anleitungen, Umschalt-Klick einen Bereich. Entf oder Rücktaste verschiebt die Auswahl in den Papierkorb." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘-Klick wählt mehrere Anleitungen, Umschalt-Klick einen Bereich. Entf oder Rücktaste verschiebt die Auswahl in den Papierkorb."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Command-click selects multiple guides; Shift-click selects a range. Delete or Backspace moves the selection to Trash."
+          }
+        }
+      }
+    },
     "\n%lld × %lld Pixel · %@\nMit Stop beenden und im Videoeditor öffnen." : {
       "extractionState" : "manual",
       "localizations" : {

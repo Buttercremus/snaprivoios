@@ -756,7 +756,7 @@ final class EditorModel {
         history.commitTransform(transform); resetImageView(); changed(); focusRequest += 1
     }
     func undo() {
-        guard !isSwitchingImage, !isShowingImageSize else { return }
+        guard !isSwitchingImage, !isShowingImageSize, !isCanvasGestureActive else { return }
         if cropDraft != nil { cancelCrop(); return }
         endPresentationEditing()
         endStyleEditing()
@@ -766,7 +766,7 @@ final class EditorModel {
         if old != history.objects || crop != history.crop || resizedSize != history.resizedSize || canvasRect != history.canvasRect || transform != history.transform || presentation != history.presentation { changed() }
     }
     func redo() {
-        guard !isSwitchingImage, !isShowingImageSize else { return }
+        guard !isSwitchingImage, !isShowingImageSize, !isCanvasGestureActive else { return }
         if cropDraft != nil { cancelCrop(); return }
         endPresentationEditing()
         endStyleEditing()
@@ -910,7 +910,7 @@ final class EditorModel {
         tool = .selection; focusRequest += 1
     }
     func removeSelection() {
-        guard cropDraft == nil else { return }
+        guard !isSwitchingImage, !isCanvasGestureActive, cropDraft == nil else { return }
         finishTextEditing()
         guard !selectedIDs.isEmpty else { return }
         commit(history.objects.filter { !selectedIDs.contains($0.id) }); self.selection = nil

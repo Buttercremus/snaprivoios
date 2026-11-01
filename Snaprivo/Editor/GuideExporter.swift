@@ -4,6 +4,20 @@ import CoreText
 import ImageIO
 import SnagForgeDomain
 
+/// Bounded, transient UI pixels that are never persisted.
+struct GuideImagePreviews: Sendable {
+    struct Entry: Sendable {
+        let data: Data
+        let overview: CGImage
+        let detail: CGImage?
+    }
+    var entries: [UUID: Entry] = [:]
+    func image(for step: GuideStep, overview: Bool) -> CGImage? {
+        guard let entry = entries[step.id], entry.data == step.png else { return nil }
+        return overview ? entry.overview : entry.detail
+    }
+}
+
 enum GuideExporter {
     static func image(_ data: Data) throws -> CGImage {
         guard let size = GuideDocument.pngSize(data), let source = CGImageSourceCreateWithData(data as CFData, nil),
@@ -16,6 +30,32 @@ enum GuideExporter {
     static func validateImages(_ document: GuideDocument) throws {
         _ = try document.validated()
         for step in document.steps { try Task.checkCancellation(); _ = try image(step.png) }
+    }
+    /// Reuse the mandatory validation decode so new views have pixels in their first frame.
+    /// Detail pixels are limited to the first three steps and an optional search target.
+    static func preparePreviews(_ document: GuideDocument, revealing target: UUID? = nil) throws -> GuideImagePreviews {
+        _ = try document.validated()
+        var result = GuideImagePreviews()
+        for (index, step) in document.steps.enumerated() {
+            try Task.checkCancellation()
+            let pixels = try image(step.png)
+            let detail = index < 3 || step.id == target ? try scaledPreview(pixels, maximumDimension: 1280) : nil
+            result.entries[step.id] = GuideImagePreviews.Entry(data: step.png,
+                overview: try scaledPreview(pixels, maximumDimension: 112), detail: detail)
+        }
+        return result
+    }
+    static func scaledPreview(_ image: CGImage, maximumDimension: Int) throws -> CGImage {
+        let scale = min(1, Double(maximumDimension) / Double(max(image.width, image.height)))
+        let width = max(1, Int(Double(image.width) * scale)), height = max(1, Int(Double(image.height) * scale))
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            throw ProjectError.invalidDocument
+        }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let preview = context.makeImage() else { throw ProjectError.invalidDocument }
+        return preview
     }
     static func cleanCopy(_ document: GuideDocument) throws -> GuideDocument {
         var value = try document.validated()

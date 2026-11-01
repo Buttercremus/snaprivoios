@@ -43,6 +43,30 @@ import SnagForgeDomain
             c.setFillColor(color.cgColor); c.fill(CGRect(x: 21, y: 21, width: 48, height: 28))
             return c.makeImage()!
         }
+        let previewSource = CGContext(data: nil, width: 2560, height: 1600, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        previewSource.setFillColor(NSColor.red.cgColor); previewSource.fill(CGRect(x: 0, y: 0, width: 2560, height: 1600))
+        let previewPNG = try EditorRenderer.png(image: previewSource.makeImage()!, objects: [])
+        let previewDocument = GuideDocument(title: "Prepared previews", steps: (0..<7).map { GuideStep(title: "Step \($0)", png: previewPNG) })
+        let prepared = try await Task.detached {
+            try GuideExporter.preparePreviews(previewDocument, revealing: previewDocument.steps[6].id)
+        }.value
+        require(prepared.entries.count == 7)
+        for (index, step) in previewDocument.steps.enumerated() {
+            let overview = prepared.image(for: step, overview: true)!
+            require(max(overview.width, overview.height) == 112)
+            let detail = prepared.image(for: step, overview: false)
+            require((detail != nil) == (index < 3 || index == 6), "Unbounded or missing detail preview")
+            if let detail { require(max(detail.width, detail.height) == 1280) }
+        }
+        var changedPreviewStep = previewDocument.steps[0]
+        changedPreviewStep.png = try EditorRenderer.png(image: bitmap(.green), objects: [])
+        require(prepared.image(for: changedPreviewStep, overview: false) == nil, "An old preview replaced updated pixels")
+        var corruptPreviewDocument = previewDocument
+        corruptPreviewDocument.steps[4].png = Data([0])
+        do { _ = try GuideExporter.preparePreviews(corruptPreviewDocument); preconditionFailure("Skipped validation of a later step") }
+        catch { }
+
         let projects = ProjectStore(root: root.appendingPathComponent("Projects"))
         var mask = EditorObject(kind: .redact, start: CGPoint(x: 20, y: 20), end: CGPoint(x: 70, y: 50))
         mask.color = EditorColor(red: 0, green: 0, blue: 0)

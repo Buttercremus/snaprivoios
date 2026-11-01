@@ -9,6 +9,7 @@ struct GuideView: View {
     @State private var removing: UUID?
     @State private var deleting: UUID?
     @State private var navigationRequest = 0
+    @State private var assistantRequest: GuideAssistantRequest?
     @FocusState private var focusedStep: UUID?
     @FocusState private var focusedTitle: Bool
     @AccessibilityFocusState private var accessibleStep: UUID?
@@ -20,15 +21,21 @@ struct GuideView: View {
     var body: some View {
         HSplitView {
             if !model.documents.isEmpty || !model.trash.isEmpty || model.document != nil { guideList }
-            if model.showsTrash { trashView }
-            else if let document = model.document { editor(document) }
-            else { emptyView }
+            // A stable split column survives selection changes and document replacement.
+            ZStack {
+                if model.showsTrash { trashView }
+                else if model.selectedDocumentIDs.count > 1 { multipleSelectionView }
+                else if let document = model.document { editor(document) }
+                else { emptyView }
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .focusedSceneValue(\.guideEditor, model)
-        .disabled(model.isBusy || model.isSuspended)
-        .overlay {
-            if model.isBusy { ProgressView(String(localized: "Anleitung verarbeiten …")).padding().background(.regularMaterial, in: .rect(cornerRadius: 12)) }
+        .disabled(model.isBusyForControls || model.isSuspended)
+        // Keep the native split/list hierarchy interactive; a separate shield catches busy clicks.
+        .overlay { GuideActivityShield(model: model) }
+        .transaction(value: model.document?.id) { transaction in
+            transaction.animation = nil; transaction.disablesAnimations = true
         }
         .safeAreaInset(edge: .bottom) {
             VStack(alignment: .leading, spacing: 8) {
@@ -38,6 +45,7 @@ struct GuideView: View {
             }.padding(model.error != nil || model.notice != nil || !model.issues.isEmpty ? 12 : 0)
         }
         .task { await model.refresh() }
+        .sheet(item: $assistantRequest) { request in GuideAssistantView(request: request, guide: model) }
         .sheet(item: $model.imageRequest) { request in
             GuideProjectPicker(items: workspace.items, maximum: request.replacing != nil ? 1 : max(0, 100 - (model.document?.steps.count ?? 0))) { ids in
                 guard model.document?.id == request.documentID else { return }
@@ -78,16 +86,31 @@ struct GuideView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityIdentifier("guide.empty")
     }
+    private var multipleSelectionView: some View {
+        ContentUnavailableView {
+            Label(String(localized: "\(model.selectedDocumentIDs.count) ausgewählt"), systemImage: "doc.on.doc")
+        } description: {
+            Text(String(localized: "Wähle eine einzelne Anleitung zum Bearbeiten oder verschiebe die Auswahl in den Papierkorb."))
+        } actions: {
+            Button(String(localized: "In den Papierkorb"), systemImage: "trash") { model.trashSelection() }
+                .accessibilityIdentifier("guide.selection.trash")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("guide.multipleSelection")
+    }
 
     private func editor(_ document: GuideDocument) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Button(String(localized: "Rückgängig"), systemImage: "arrow.uturn.backward") { model.undo() }
-                    .disabled(!model.canUndo || !workspace.purchases.hasPro).labelStyle(.iconOnly).help(String(localized: "Rückgängig (⌘Z)"))
+                    .disabled(!model.canUndoForControls || !workspace.purchases.hasPro).labelStyle(.iconOnly).help(String(localized: "Rückgängig (⌘Z)"))
                     .accessibilityIdentifier("guide.undo")
                 Button(String(localized: "Wiederholen"), systemImage: "arrow.uturn.forward") { model.redo() }
-                    .disabled(!model.canRedo || !workspace.purchases.hasPro).labelStyle(.iconOnly)
+                    .disabled(!model.canRedoForControls || !workspace.purchases.hasPro).labelStyle(.iconOnly)
                     .accessibilityIdentifier("guide.redo")
+                Button(String(localized: "Apple Intelligence …"), systemImage: "sparkles") { openAssistant(.document) }
+                    .buttonStyle(.borderless).help(String(localized: "Anleitungstexte vorschlagen, überarbeiten oder kürzen"))
+                    .accessibilityIdentifier("guide.assistant.open")
                 Spacer()
                 Text(model.isSaving ? String(localized: "Wird gesichert …") : model.isDirty ? String(localized: "Ungesicherte Änderungen") : String(localized: "Automatisch gesichert"))
                     .font(.caption).foregroundStyle(.secondary)
@@ -106,7 +129,7 @@ struct GuideView: View {
                         TextField(String(localized: "Anleitungstitel"), text: field(\.title, name: "title", limit: 256))
                             .font(.title2).textFieldStyle(.roundedBorder).accessibilityIdentifier("guide.title").id(document.id).disabled(!workspace.purchases.hasPro)
                             .focused($focusedTitle)
-                            // The whole view is disabled while busy, so focus only after creation finishes.
+                            // Focus only after creation finishes, once actions are available again.
                             .task(id: model.focusesTitle && !model.isBusy) {
                                 guard model.focusesTitle, !model.isBusy else { return }
                                 await Task.yield()
@@ -126,7 +149,8 @@ struct GuideView: View {
                             } actions: {
                                 captureStepButton(document).buttonStyle(.glassProminent)
                                 libraryStepButton(document)
-                            }.accessibilityIdentifier("guide.steps.empty")
+                            }.frame(maxWidth: .infinity, alignment: .center)
+                                .accessibilityIdentifier("guide.steps.empty")
                         } else {
                             Text(String(localized: "Jeder Schritt behält seine eigene Bildkopie. Spätere Änderungen im Editor übernimmst du mit „Bild aktualisieren“."))
                                 .font(.caption).foregroundStyle(.secondary)
@@ -185,7 +209,8 @@ struct GuideView: View {
                 ForEach(Array(document.steps.enumerated()), id: \.element.id) { index, step in
                     Button { revealStep(step.id) } label: {
                         HStack(spacing: 8) {
-                            GuideImage(data: step.png, maximumDimension: 112).equatable().frame(width: 48, height: 36)
+                            GuideImage(data: step.png, maximumDimension: 112,
+                                prepared: model.imagePreviews.image(for: step, overview: true)).equatable().frame(width: 48, height: 36)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(String(localized: "Schritt \(index + 1)")).font(.caption).foregroundStyle(.secondary)
                                 Text(step.title).lineLimit(1).frame(maxWidth: 140, alignment: .leading)
@@ -244,6 +269,12 @@ struct GuideView: View {
             HStack {
                 Text(String(localized: "Anleitungen")).font(.headline)
                 Spacer()
+                GuideOpeningIndicator(model: model).frame(width: 16, height: 16)
+                Button(String(localized: "In den Papierkorb"), systemImage: "trash") { model.trashSelection() }
+                    .labelStyle(.iconOnly).buttonStyle(.borderless)
+                    .disabled(!model.canTrashSelectionForControls)
+                    .help(String(localized: "Ausgewählte Anleitungen in den Papierkorb verschieben"))
+                    .accessibilityIdentifier("guide.list.trashSelection")
                 Button(String(localized: "Neue Anleitung"), systemImage: "plus") { model.create() }
                     .labelStyle(.iconOnly).buttonStyle(.borderless).help(String(localized: "Neue Anleitung")).accessibilityIdentifier("guide.create")
             }.padding(16)
@@ -255,7 +286,7 @@ struct GuideView: View {
             if model.isSearching { ProgressView(String(localized: "Anleitungen durchsuchen …")).controlSize(.small).padding(.horizontal, 12) }
             if let error = model.searchError { Text(error).font(.caption).foregroundStyle(.red).padding(12) }
             Divider()
-            List(selection: Binding(get: { model.showsTrash ? nil : model.document?.id }, set: { if let id = $0 { model.open(id) } })) {
+            List(selection: Binding(get: { model.showsTrash ? Set<UUID>() : model.selectedDocumentIDs }, set: { model.selectDocuments($0) })) {
                 if !model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     ForEach(model.searchResults) { match in
                         Button { openSearchMatch(match) } label: {
@@ -280,18 +311,22 @@ struct GuideView: View {
                     }.fixedSize(horizontal: false, vertical: true).padding(.vertical, 4).help(document.title).tag(document.id)
                         .contextMenu {
                             Button(String(localized: "Anleitung duplizieren"), systemImage: "doc.on.doc") { model.duplicate(document.id) }.disabled(!workspace.purchases.hasPro)
-                            Button(String(localized: "In den Papierkorb"), systemImage: "trash", role: .destructive) { model.moveToTrash(document.id) }
+                            Button(String(localized: "In den Papierkorb"), systemImage: "trash", role: .destructive) {
+                                model.moveToTrash(model.selectedDocumentIDs.contains(document.id) ? model.selectedDocumentIDs : [document.id])
+                            }
                         }
                 }
                 }
             }.listStyle(.inset).scrollContentBackground(.hidden).frame(minHeight: 0, maxHeight: .infinity).accessibilityIdentifier("guide.list")
+                .onDeleteCommand { model.trashSelection() }
+                .help(String(localized: "⌘-Klick wählt mehrere Anleitungen, Umschalt-Klick einen Bereich. Entf oder Rücktaste verschiebt die Auswahl in den Papierkorb."))
                 // Rows inserted into the visible list keep a stale default height and clip their step count.
                 // Rebuilding on membership changes measures every row like the initial layout; reordering keeps the list.
                 .id(Set(model.documents.map(\.id)))
             Divider()
             VStack(alignment: .leading, spacing: 12) {
                 Button(String(localized: "Importieren …"), systemImage: "square.and.arrow.down") { model.chooseImport() }.accessibilityIdentifier("guide.import")
-                Button { model.showsTrash.toggle() } label: {
+                Button { if !model.isBusy { model.showsTrash.toggle() } } label: {
                     Label(String(localized: "Papierkorb") + " (\(model.trash.count))", systemImage: "trash")
                 }.accessibilityIdentifier("guide.trash")
                 Text(String(localized: "In „Alles sichern“ enthalten")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -315,6 +350,8 @@ struct GuideView: View {
             .accessibilityIdentifier("guide.addFromLibrary")
     }
     @ViewBuilder private func stepEditingActions(_ id: UUID, count: Int) -> some View {
+        Button(String(localized: "Text mit Apple Intelligence …"), systemImage: "sparkles") { openAssistant(.step(id)) }
+            .disabled(!workspace.purchases.hasPro)
         Button(String(localized: "Schritt duplizieren"), systemImage: "doc.on.doc") { model.duplicateStep(id) }
             .disabled(count >= 100 || !workspace.purchases.hasPro)
         Button(String(localized: "Schritt davor hinzufügen …"), systemImage: "plus") { model.chooseImages(at: .before(id)) }
@@ -374,7 +411,9 @@ struct GuideView: View {
                 .accessibilityLabel(String(localized: "Titel von Schritt \(index + 1)"))
                 .focused($focusedStep, equals: step.id)
                 .accessibilityFocused($accessibleStep, equals: step.id)
-            GuideImage(data: step.png, maximumDimension: 1280).equatable().frame(height: 240).frame(maxWidth: .infinity).accessibilityLabel(step.title)
+            GuideImage(data: step.png, maximumDimension: 1280,
+                prepared: model.imagePreviews.image(for: step, overview: false)).equatable()
+                .frame(height: 240).frame(maxWidth: .infinity).accessibilityLabel(step.title)
             if let source {
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: 12) { sourceActions(step, source: source) }
@@ -404,6 +443,11 @@ struct GuideView: View {
         NSApp.keyWindow?.makeFirstResponder(nil)
         model.selectedStep = id; navigationRequest += 1
     }
+    private func openAssistant(_ scope: GuideTextScope) {
+        guard !model.isBusy, !model.isSuspended, !model.showsTrash, model.selectedDocumentIDs.count <= 1,
+              let document = model.document, model.requestFeature(.guides) else { return }
+        assistantRequest = GuideAssistantRequest(source: document, scope: scope)
+    }
     private func moveStep(_ id: UUID, by offset: Int) {
         model.edit { $0.moveStep(id, by: offset) }; revealStep(id)
     }
@@ -417,7 +461,43 @@ struct GuideOutputMenu: View {
             Button(String(localized: "Markdown exportieren …")) { model.chooseExport(.markdown) }.disabled(model.document?.steps.isEmpty != false)
             Divider()
             Button(String(localized: "Bearbeitbare Anleitung exportieren …")) { model.chooseExport(.workingCopy) }
-        }.disabled(model.document == nil || model.isBusy || model.isSuspended || model.showsTrash)
+        }.disabled(model.document == nil || model.isBusyForControls || model.isSuspended || model.showsTrash || model.selectedDocumentIDs.count > 1)
+    }
+}
+
+/// Busy presentation observes its state independently of the split columns.
+private struct GuideActivityShield: View {
+    @Bindable var model: GuideModel
+    var body: some View {
+        Color.clear.contentShape(.rect)
+            .onTapGesture { }
+            .overlay {
+                if model.isBusy && !model.isOpeningDocument {
+                    ProgressView(String(localized: "Anleitung verarbeiten …"))
+                        .padding().background(.regularMaterial, in: .rect(cornerRadius: 12))
+                }
+            }
+            .allowsHitTesting(model.isBusy || model.isSuspended)
+            .accessibilityHidden(!model.isBusy)
+    }
+}
+
+/// Long opens get a small reserved indicator, never a popup over the entire editor.
+private struct GuideOpeningIndicator: View {
+    @Bindable var model: GuideModel
+    @State private var progressDocumentID: UUID?
+    var body: some View {
+        ProgressView(String(localized: "Anleitung verarbeiten …")).labelsHidden().controlSize(.small)
+            .opacity(model.isOpeningDocument && progressDocumentID == model.openingDocumentID ? 1 : 0)
+            .accessibilityHidden(!model.isOpeningDocument || progressDocumentID != model.openingDocumentID)
+            .allowsHitTesting(false)
+            .task(id: model.openingDocumentID) {
+                progressDocumentID = nil
+                guard let id = model.openingDocumentID else { return }
+                do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+                guard !Task.isCancelled, model.openingDocumentID == id else { return }
+                progressDocumentID = id
+            }
     }
 }
 private struct GuideFailureView: View {
@@ -518,7 +598,16 @@ private struct GuidePDFPreview: NSViewRepresentable {
 private struct GuideImage: View, Equatable {
     let data: Data?
     var maximumDimension: Int
-    var body: some View { ProjectThumbnail(data: data, maximumDimension: maximumDimension).accessibilityHidden(false) }
+    var prepared: CGImage? = nil
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.data == rhs.data && lhs.maximumDimension == rhs.maximumDimension && lhs.prepared === rhs.prepared
+    }
+    var body: some View {
+        Group {
+            if let prepared { Image(decorative: prepared, scale: 1).resizable().scaledToFit() }
+            else { ProjectThumbnail(data: data, maximumDimension: maximumDimension) }
+        }.accessibilityHidden(false)
+    }
 }
 
 /// An explicit AppKit drag handle keeps the button's click and the system drag distinct.

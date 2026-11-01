@@ -40,10 +40,12 @@ struct WorkspaceView: View {
                         }
                         Divider()
                         Button(String(localized: "Bereich als Preset sichern")) { workspace.saveLastCapturePreset() }
-                            .disabled(!workspace.screenshot.hasLastSelection)
+                            .disabled(!workspace.screenshot.hasLastSelection || workspace.isLoading)
                     } label: { Label(String(localized: "Aufnahmevorlagen"), systemImage: "rectangle.stack") }
                         .menuStyle(.borderlessButton)
-                }.buttonStyle(.plain).disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
+                }.buttonStyle(.plain)
+                    .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || (workspace.isLoading && workspace.editor?.isSwitchingImage != true))
+                    .allowsHitTesting(!workspace.isLoading)
                 if workspace.isDirectOCRBusy {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
@@ -151,12 +153,12 @@ struct WorkspaceView: View {
                             Label(String(localized: "Schritt hinzufügen"), systemImage: "photo.badge.plus")
                         }
                         .labelStyle(.titleAndIcon)
-                        .disabled(workspace.guides.document == nil || workspace.guides.isBusy || workspace.guides.isSuspended || workspace.guides.showsTrash || (workspace.guides.document?.steps.count ?? 0) >= 100)
+                        .disabled(workspace.guides.document == nil || workspace.guides.isBusyForControls || workspace.guides.isSuspended || workspace.guides.showsTrash || workspace.guides.selectedDocumentIDs.count > 1 || (workspace.guides.document?.steps.count ?? 0) >= 100)
                         .accessibilityIdentifier("guide.addImages")
                     }
                     ToolbarItem(placement: .primaryAction) {
                         Button(String(localized: "PDF-Vorschau"), systemImage: "doc.richtext") { workspace.guides.showPreview() }
-                            .disabled(workspace.guides.document?.steps.isEmpty != false || workspace.guides.isBusy || workspace.guides.isSuspended || workspace.guides.showsTrash)
+                            .disabled(workspace.guides.document?.steps.isEmpty != false || workspace.guides.isBusyForControls || workspace.guides.isSuspended || workspace.guides.showsTrash || workspace.guides.selectedDocumentIDs.count > 1)
                     }
                     ToolbarItem(placement: .primaryAction) { GuideOutputMenu(model: workspace.guides) }
                 } else {

@@ -6,6 +6,8 @@ Snaprivo ist eine native macOS-App zum Aufnehmen, Bearbeiten und Organisieren vo
 
 Dieser Plan ersetzt die Empfehlungen der ursprünglichen Entwicklungsstrategie vom 11. Oktober 2026. Er ist eine Produktspezifikation, keine Aussage über bereits implementierte Funktionen. Der tatsächliche Stand steht in der README. Zeiträume bleiben Schätzungen; Plattformverhalten muss mit signierten, sandboxed Builds auf echten Macs geprüft werden.
 
+Nachtrag 1. November 2026: Der Nutzer autorisiert die zuvor vorgeschlagene lokale Apple-Intelligence-Unterstützung für Anleitungstexte. Umfang: Ziel/Hinweise, Vorschläge für Titel/Einleitung und vorhandene Schritttexte, Überarbeiten/Kürzen, Deutsch/Englisch, Einzel-Schritt-Aktion, prüf- und bearbeitbare Vorschau sowie bewusstes Übernehmen als ein rückgängig machbarer Bearbeitungsschritt. Ausschließlich lokales Systemmodell und lokale Vision-Texterkennung; Bildanalyse optional ab macOS 27 nach Fähigkeitsprüfung. Ohne Modell bleibt die manuelle Bearbeitung erhalten. Anleitungsbearbeitung bleibt Pro. Keine automatische Klick-/Ablauferfassung, keine neuen Bildschritte oder Bilderzeugung, keine Cloud und keine neue Capture-Berechtigung. [Umsetzung und Abnahme](APPLE-INTELLIGENCE-ABNAHME.md).
+
 Die operative Reihenfolge, Checkboxen, Abhängigkeiten und Abnahmekriterien stehen im zentralen [ARBEITSPLAN.md](ARBEITSPLAN.md). Die kommerzielle Bewertung steht in [PRODUCT-BRIEF.md](PRODUCT-BRIEF.md); Die seit 18.10.2026 bestätigten Preise und Free-/Pro-Grenzen stehen verbindlich in [FREE-PRO-ABNAHME.md](FREE-PRO-ABNAHME.md).
 
 ## 1 Verbindliche Entscheidungen

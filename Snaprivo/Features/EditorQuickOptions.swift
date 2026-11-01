@@ -133,6 +133,11 @@ struct EditorQuickOptions: View {
         .onExitCommand {
             if activeSection != nil { selectSection(nil) } else { dismiss() }
         }
+        .onDeleteCommand {
+            guard model.canActOnSelection, !model.isSwitchingImage else { return }
+            dismiss()
+            model.removeSelection()
+        }
         .onDisappear { model.endStyleEditing() }
     }
 

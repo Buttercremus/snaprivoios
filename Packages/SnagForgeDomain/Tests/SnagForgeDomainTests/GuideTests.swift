@@ -11,6 +11,42 @@ private func guideFixture() -> GuideDocument {
     ])
 }
 
+@Test func guideBatchTrashPreservesUnselectedGuidesAndRestoresAllImages() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("GuideBatchTrash-\(UUID())")
+    defer { try? FileManager.default.removeItem(at: root) }
+    let store = GuideStore(root: root)
+    let values = (0..<3).map { index in var value = guideFixture(); value.title = "Guide \(index)"; return value }
+    for value in values { try await store.create(value) }
+    let selection: Set<UUID> = [values[0].id, values[2].id]
+    try await store.moveToTrash(selection, expectedRevisions: [values[0].id: 0])
+    let reopened = GuideStore(root: root)
+    #expect(try await reopened.list().documents.map(\.id) == [values[1].id])
+    #expect(try await Set(reopened.listTrash().documents.map(\.id)) == selection)
+    for value in values where selection.contains(value.id) {
+        try await reopened.restore(value.id)
+        #expect(try await reopened.load(value.id).document == value)
+    }
+}
+
+@Test func guideBatchTrashPreflightsMissingAndStaleTargetsBeforeAnyMarker() async throws {
+    let root = FileManager.default.temporaryDirectory.appendingPathComponent("GuideBatchPreflight-\(UUID())")
+    defer { try? FileManager.default.removeItem(at: root) }
+    let store = GuideStore(root: root)
+    var first = guideFixture(), second = guideFixture()
+    first.id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+    second.id = UUID(uuidString: "00000000-0000-0000-0000-000000000002")!
+    try await store.create(first); try await store.create(second)
+    _ = try await store.save(second, expectedRevision: 0)
+    await #expect(throws: ProjectError.staleRevision) {
+        try await store.moveToTrash([first.id, second.id], expectedRevisions: [second.id: 0])
+    }
+    #expect(try await store.listTrash().documents.isEmpty)
+    let missing = UUID(uuidString: "00000000-0000-0000-0000-000000000003")!
+    await #expect(throws: (any Error).self) { try await store.moveToTrash([first.id, missing]) }
+    #expect(try await store.listTrash().documents.isEmpty)
+    #expect(try await store.list().documents.count == 2)
+}
+
 @Test func guidePersistenceRoundTripRecoveryAndConcurrentWriters() async throws {
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("Guide-\(UUID())")
     defer { try? FileManager.default.removeItem(at: root) }

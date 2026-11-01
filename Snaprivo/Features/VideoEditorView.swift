@@ -64,14 +64,23 @@ struct VideoEditorView: View {
             }
             Spacer()
             HStack(spacing: 4) {
-                Button(String(localized: "Rückgängig"), systemImage: "arrow.uturn.backward") { Task { await model.undo() } }
+                Button { Task { await model.undo() } } label: {
+                    Label(String(localized: "Rückgängig"), systemImage: "arrow.uturn.backward")
+                        .foregroundStyle(model.canUndo ? Color.primary : Color(nsColor: .disabledControlTextColor))
+                }
                     .disabled(!model.canUndo).help(String(localized: "Rückgängig (⌘Z)"))
-                Button(String(localized: "Wiederholen"), systemImage: "arrow.uturn.forward") { Task { await model.redo() } }
+                Button { Task { await model.redo() } } label: {
+                    Label(String(localized: "Wiederholen"), systemImage: "arrow.uturn.forward")
+                        .foregroundStyle(model.canRedo ? Color.primary : Color(nsColor: .disabledControlTextColor))
+                }
                     .disabled(!model.canRedo).help(String(localized: "Wiederholen (⇧⌘Z)"))
             }.labelStyle(.iconOnly).buttonStyle(.glass)
-            Button(String(localized: "Schließen")) {
+            Button {
                 model.pausePlayback()
                 if model.hasUnappliedChanges { confirmsDiscard = true } else { dismiss() }
+            } label: {
+                Text(String(localized: "Schließen"))
+                    .foregroundStyle(model.isBusy ? Color(nsColor: .disabledControlTextColor) : Color.primary)
             }.disabled(model.isBusy).keyboardShortcut(.cancelAction).buttonStyle(.glass)
         }
     }

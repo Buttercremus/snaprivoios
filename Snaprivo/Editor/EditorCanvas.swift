@@ -712,8 +712,12 @@ final class CanvasView: NSView, NSTextViewDelegate {
         }
         return NSCursor(image: image, hotSpot: CGPoint(x: 10, y: 10))
     }()
+    private func hasKeyboardFocus(in view: NSView?) -> Bool {
+        guard let view, let focused = window?.firstResponder as? NSView else { return false }
+        return focused === view || focused.isDescendant(of: view)
+    }
     func closeQuickOptions() {
-        let restoreFocus = window?.firstResponder === quickToolbar
+        let restoreFocus = hasKeyboardFocus(in: quickToolbar)
         quickToolbar?.removeFromSuperview()
         quickToolbar = nil; quickOptionsObjectID = nil
         if let quickDismissMonitor { NSEvent.removeMonitor(quickDismissMonitor); self.quickDismissMonitor = nil }
@@ -744,6 +748,9 @@ final class CanvasView: NSView, NSTextViewDelegate {
         }))
         quickToolbar = host; quickOptionsObjectID = id
         quickOptionsContainer.addSubview(host)
+        // The toolbar is a sibling of the transformed canvas. Route unhandled
+        // keys through the canvas before continuing to their shared container.
+        host.nextResponder = self
         synchronizeQuickOptions()
         window?.makeFirstResponder(host)
         quickDismissMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
@@ -1522,6 +1529,11 @@ final class CanvasView: NSView, NSTextViewDelegate {
         if creatingText, model.editingTextObject?.kind == .callout { return }
         guard let object = model.editingTextObject else {
             if let textView {
+                // Finishing text also ends a pending creation/selection drag,
+                // even if its mouse-up has not reached the canvas.
+                start = nil; draggedID = nil; creatingText = false; creationRect = nil
+                textSelectionAnchor = nil; textResizeFromLeft = nil; lastDragPoint = nil
+                model.isCanvasGestureActive = false
                 textView.delegate = nil; textClipView?.removeFromSuperview()
                 self.textView = nil; textClipView = nil; textID = nil
             }
@@ -1618,7 +1630,11 @@ final class CanvasView: NSView, NSTextViewDelegate {
             model.preview = nil; start = nil; draggedID = nil; gestureObject = nil; model.selection = nil
             creatingText = false; creationRect = nil; textSelectionAnchor = nil; textResizeFromLeft = nil; arrowEndpoint = nil; draggingArrowBend = false; resizeHandle = nil; resizingGroupBounds = nil; snapGuides = []; draggingCalloutTip = false; draggingMagnifierSource = false; lastDragPoint = nil
             refreshComposition(); needsDisplay = true; window?.invalidateCursorRects(for: self)
-        } else if event.keyCode == 51 || event.keyCode == 117 { model.removeSelection() }
+        } else if event.keyCode == 51 || event.keyCode == 117 {
+            guard model.canActOnSelection else { return }
+            closeQuickOptions()
+            model.removeSelection()
+        }
         else { super.keyDown(with: event) }
     }
     override func keyUp(with event: NSEvent) {
@@ -1631,14 +1647,21 @@ final class CanvasView: NSView, NSTextViewDelegate {
         return super.resignFirstResponder()
     }
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard !model.isSwitchingImage else { return super.performKeyEquivalent(with: event) }
+        guard !model.isSwitchingImage,
+              hasKeyboardFocus(in: self) || hasKeyboardFocus(in: quickToolbar)
+                || hasKeyboardFocus(in: (superview as? EditorCanvasContainer)?.colorPickingView)
+        else { return false }
+        if let eventWindow = event.window, eventWindow !== window { return false }
         if let editor = textView, window?.firstResponder === editor { return editor.performKeyEquivalent(with: event) }
-        if window?.firstResponder is NSTextView { return super.performKeyEquivalent(with: event) }
-        guard event.modifierFlags.contains(.command) else { return super.performKeyEquivalent(with: event) }
+        if window?.firstResponder is NSTextView { return false }
+        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        guard modifiers.contains(.command), !modifiers.contains(.option), !modifiers.contains(.control) else { return false }
+        let character = event.charactersIgnoringModifiers?.lowercased()
+        guard !modifiers.contains(.shift) || ["z", "g", "+", "="].contains(character ?? "") else { return false }
         if event.keyCode == 36, let object = model.selectedObject {
             showQuickOptions(for: object.id); return true
         }
-        switch event.charactersIgnoringModifiers?.lowercased() {
+        switch character {
         case "z": event.modifierFlags.contains(.shift) ? model.redo() : model.undo(); return true
         case "c": model.copyPNG(); return true
         case "d": model.duplicateSelection(); return true
@@ -1648,7 +1671,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
         case "-": model.zoomBy(1 / 1.25); viewportChanged(); return true
         case "1": model.setZoom(1); viewportChanged(); return true
         case "0": model.fitImage(); viewportChanged(); return true
-        default: return super.performKeyEquivalent(with: event)
+        default: return false
         }
     }
 }

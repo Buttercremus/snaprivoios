@@ -10,7 +10,13 @@ import SnagForgeDomain
     let store: GuideStore
     private(set) var documents: [GuideSummary] = []
     private(set) var document: GuideDocument?
+    private(set) var imagePreviews = GuideImagePreviews()
     private(set) var trash: [GuideSummary] = []
+    private(set) var selectedDocumentIDs: Set<UUID> = []
+    private(set) var openingDocumentID: UUID?
+    var isOpeningDocument: Bool { openingDocumentID != nil }
+    /// Opening retains the current chrome; action guards still use `isBusy`.
+    var isBusyForControls: Bool { isBusy && !isOpeningDocument }
     var showsTrash = false
     struct ImageRequest: Identifiable {
         let id = UUID()
@@ -18,7 +24,15 @@ import SnagForgeDomain
         let replacing: UUID?
         let position: GuideInsertion
     }
-    var searchQuery = "" { didSet { if searchQuery != oldValue { searchResults = [] }; scheduleSearch() } }
+    var searchQuery = "" {
+        didSet {
+            if searchQuery != oldValue {
+                searchResults = []
+                if selectedDocumentIDs.count > 1 { selectedDocumentIDs = [] }
+            }
+            scheduleSearch()
+        }
+    }
     private(set) var searchResults: [GuideSearchMatch] = []
     private(set) var isSearching = false
     private(set) var searchError: String?
@@ -56,8 +70,15 @@ import SnagForgeDomain
     private var future: [HistoryEntry] = []
     @ObservationIgnored private var textGroup: String?
     @ObservationIgnored private var lastTextEdit = Date.distantPast
-    var canUndo: Bool { !past.isEmpty && !isBusy && !isSuspended }
-    var canRedo: Bool { !future.isEmpty && !isBusy && !isSuspended }
+    var canUndo: Bool { !past.isEmpty && !isBusy && !isSuspended && selectedDocumentIDs.count <= 1 }
+    var canRedo: Bool { !future.isEmpty && !isBusy && !isSuspended && selectedDocumentIDs.count <= 1 }
+    var canUndoForControls: Bool { !past.isEmpty && !isBusyForControls && !isSuspended && selectedDocumentIDs.count <= 1 }
+    var canRedoForControls: Bool { !future.isEmpty && !isBusyForControls && !isSuspended && selectedDocumentIDs.count <= 1 }
+    var canTrashSelectionForControls: Bool {
+        !selectedDocumentIDs.isEmpty && !showsTrash && !isBusyForControls && !isSuspended
+            && searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    var canTrashSelection: Bool { canTrashSelectionForControls && !isBusy }
     var selectedStep: UUID?
     var stepToReveal: UUID?
     /// Set by `create()`; the view focuses the title field once and resets it.
@@ -90,15 +111,17 @@ import SnagForgeDomain
         do {
             let result = try await store.list(), removed = try await store.listTrash()
             documents = result.documents; trash = removed.documents; issues = result.issues + removed.issues
+            selectedDocumentIDs.formIntersection(documents.map(\.id))
             scheduleSearch()
         }
         catch { issues = [error.localizedDescription] }
     }
-    private func run(context: FailureContext = .operation, _ action: @escaping @MainActor () async throws -> Void) {
+    private func run(context: FailureContext = .operation, opening id: UUID? = nil, _ action: @escaping @MainActor () async throws -> Void) {
         guard !isBusy, !isSuspended, panel == nil else { return }
+        openingDocumentID = id
         isBusy = true; error = nil; failureContext = context; notice = nil
         operation = Task {
-            defer { isBusy = false; operation = nil }
+            defer { isBusy = false; openingDocumentID = nil; operation = nil }
             do { try await action() }
             catch { self.failureContext = context; self.error = Self.message(error) }
         }
@@ -107,7 +130,7 @@ import SnagForgeDomain
         guard requestFeature(.guides), !isBusy, !isSuspended else { return }
         // Repeated clicks reuse the untouched new guide instead of listing empty copies.
         if let document, document.steps.isEmpty, document.introduction.isEmpty, document.title == String(localized: "Neue Anleitung") {
-            showsTrash = false; focusesTitle = true; return
+            selectedDocumentIDs = [document.id]; showsTrash = false; focusesTitle = true; return
         }
         run { [self] in
             guard await flush() else { return }
@@ -117,6 +140,9 @@ import SnagForgeDomain
         }
     }
     func open(_ id: UUID, revealing step: UUID? = nil, fromSearch: Bool = false) {
+        guard !isBusy, !isSuspended, panel == nil else { return }
+        let previousSelection = selectedDocumentIDs
+        selectedDocumentIDs = [id]
         guard id != document?.id else {
             showsTrash = false
             if fromSearch {
@@ -125,16 +151,30 @@ import SnagForgeDomain
             }
             return
         }
-        run { [self] in
+        run(opening: id) { [self] in
+            defer {
+                if document?.id != id { selectedDocumentIDs = previousSelection }
+            }
             guard await flush() else { return }
             let loaded = try await store.load(id), value = loaded.document
-            try await Task.detached { try GuideExporter.validateImages(value) }.value
-            install(value)
+            let images = try await Task.detached(priority: .userInitiated) {
+                try GuideExporter.preparePreviews(value, revealing: fromSearch ? step : nil)
+            }.value
+            install(value, images: images)
             if fromSearch {
                 selectedStep = step.flatMap { id in value.steps.contains { $0.id == id } ? id : nil }
                 stepToReveal = selectedStep ?? value.id
             }
             if loaded.recovered { notice = String(localized: "Vorheriger Speicherstand wiederhergestellt") }
+        }
+    }
+    func selectDocuments(_ ids: Set<UUID>) {
+        guard !isBusy, !isSuspended, panel == nil else { return }
+        let selection = ids.intersection(documents.map(\.id))
+        if selection.count == 1, let id = selection.first { open(id) }
+        else {
+            selectedDocumentIDs = selection
+            if !selection.isEmpty { showsTrash = false }
         }
     }
     func saveAsCopy() {
@@ -148,8 +188,10 @@ import SnagForgeDomain
             await refresh()
         }
     }
-    private func install(_ value: GuideDocument) {
+    private func install(_ value: GuideDocument, images: GuideImagePreviews = GuideImagePreviews()) {
+        imagePreviews = images
         document = value; selectedStep = value.steps.first?.id; preview = nil; isDirty = false
+        selectedDocumentIDs = [value.id]
         past = []; future = []; textGroup = nil; stepToReveal = nil; showsTrash = false
     }
     private func remember() {
@@ -199,6 +241,14 @@ import SnagForgeDomain
             if let i = value.steps.firstIndex(where: { $0.id == id }) { mutation(&value.steps[i]) }
         }
     }
+    /// Review acceptance uses the ordinary history/autosave path as one edit.
+    @discardableResult func applyTextDraft(_ draft: GuideTextDraft, basedOn source: GuideDocument) throws -> Bool {
+        guard !isBusy, !isSuspended, selectedDocumentIDs.count <= 1, !showsTrash,
+              requestFeature(.guides), let current = document else { return false }
+        let value = try draft.applying(to: current, basedOn: source)
+        edit { $0 = value }
+        return true
+    }
     private func restoreHistory(_ entry: HistoryEntry) {
         guard let current = document else { return }
         var value = entry.document
@@ -241,12 +291,28 @@ import SnagForgeDomain
         }
     }
     func moveToTrash(_ id: UUID) {
+        moveToTrash([id])
+    }
+    func trashSelection() {
+        guard canTrashSelection else { return }
+        moveToTrash(selectedDocumentIDs)
+    }
+    func moveToTrash(_ ids: Set<UUID>) {
+        guard !ids.isEmpty else { return }
         run { [self] in
             guard await flush() else { return }
-            let value = try await store.load(id).document
-            try await store.moveToTrash(id, expectedRevision: value.revision)
-            if document?.id == id { document = nil; selectedStep = nil; past = []; future = []; preview = nil }
-            await refresh()
+            do {
+                let expected = document.flatMap { ids.contains($0.id) ? [$0.id: $0.revision] : nil } ?? [:]
+                try await store.moveToTrash(ids, expectedRevisions: expected)
+                await finishTrashing(ids, completed: true)
+            } catch { await finishTrashing(ids, completed: false); throw error }
+        }
+    }
+    private func finishTrashing(_ ids: Set<UUID>, completed: Bool) async {
+        await refresh()
+        if completed { selectedDocumentIDs.subtract(ids) }
+        if let id = document?.id, ids.contains(id), completed || trash.contains(where: { $0.id == id }) {
+            document = nil; imagePreviews = GuideImagePreviews(); selectedStep = nil; past = []; future = []; preview = nil
         }
     }
     func restore(_ id: UUID) {
@@ -320,7 +386,7 @@ import SnagForgeDomain
         }
     }
     func showPreview() {
-        guard document?.steps.isEmpty == false else { return }
+        guard document?.steps.isEmpty == false, selectedDocumentIDs.count <= 1 else { return }
         run(context: .preview) { [self] in
             guard await flush(), let value = document else { return }
             preview = try await Task.detached(priority: .userInitiated) { try GuideExporter.pdf(value) }.value
@@ -329,7 +395,7 @@ import SnagForgeDomain
     enum Output: Equatable { case pdf, markdown, workingCopy }
     static var guideType: UTType { UTType(exportedAs: "com.snaprivo.guide", conformingTo: .data) }
     func chooseExport(_ output: Output) {
-        guard !isBusy, !isSuspended, panel == nil, let document else { return }
+        guard !isBusy, !isSuspended, panel == nil, selectedDocumentIDs.count <= 1, let document else { return }
         let dialog: NSSavePanel
         if output == .markdown {
             let open = NSOpenPanel(); open.canChooseFiles = false; open.canChooseDirectories = true
@@ -354,6 +420,7 @@ import SnagForgeDomain
         else { dialog.begin(completionHandler: completion) }
     }
     func export(_ output: Output, to url: URL, access: URL? = nil) {
+        guard selectedDocumentIDs.count <= 1 else { return }
         run(context: .output(output)) { [self] in
             guard await flush(), let value = document else { return }
             let scope = access ?? url, granted = scope.startAccessingSecurityScopedResource()
