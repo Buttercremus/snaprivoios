@@ -54,7 +54,7 @@ actor VideoRecordingFiles {
         guard let track = tracks.first, CMTimeGetSeconds(duration).isFinite, CMTimeGetSeconds(duration) > 0 else { throw VideoRecordingError.invalidMovie }
         let size = try await track.load(.naturalSize)
         guard size.width > 0, size.height > 0 else { throw VideoRecordingError.invalidMovie }
-        _ = try await movieInfo(asset)
+        let info = try await movieInfo(asset)
         if options.requiresAudio {
             let audio = try await asset.loadTracks(withMediaType: .audio)
             guard let audioTrack = audio.first else { throw VideoRecordingError.missingAudio }
@@ -76,7 +76,7 @@ actor VideoRecordingFiles {
         let target = root.appendingPathComponent("\(document.id).mp4")
         document.fileName = target.lastPathComponent; document.state = .finished
         document.duration = CMTimeGetSeconds(duration)
-        document.pixelSize = PixelSize(width: Int(size.width), height: Int(size.height))
+        document.pixelSize = info.size
         document.hasAudio = !(try await asset.loadTracks(withMediaType: .audio)).isEmpty
         document.modifiedAt = .now; document.failure = nil
         let thumbnail = try? await makeThumbnail(asset)
@@ -198,10 +198,15 @@ actor VideoRecordingFiles {
     }
     func document(_ id: UUID) throws -> VideoDocument { try readDocument(id) }
     func setTrim(_ id: UUID, trim: VideoTrim?, expectedRevision: Int) throws -> VideoDocument {
+        let current = try readDocument(id)
+        return try setEdit(id, trim: trim, presentation: current.presentation, expectedRevision: expectedRevision)
+    }
+    func setEdit(_ id: UUID, trim: VideoTrim?, presentation: VideoPresentation, expectedRevision: Int) throws -> VideoDocument {
         var document = try readDocument(id)
         guard document.revision == expectedRevision else { throw ProjectError.staleRevision }
         _ = try movieURL(id)
         document.trim = try trim?.normalized(duration: document.duration ?? 0)
+        document.presentation = presentation
         document.revision += 1; document.modifiedAt = .now
         try save(document); return document
     }
@@ -217,20 +222,24 @@ actor VideoRecordingFiles {
             throw VideoEditError.originalTarget
         }
         try Task.checkCancellation()
-        guard let trim = document.trim else { try export(source, to: target); return }
+        guard document.trim != nil || !document.presentation.isIdentity else { try export(source, to: target); return }
+        let trim = document.effectiveTrim
+        guard let sourceSize = document.pixelSize else { throw VideoRecordingError.invalidMovie }
         _ = try trim.validated(duration: document.duration ?? 0)
         let replacement = try FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: target, create: true)
         defer { try? FileManager.default.removeItem(at: replacement) }
         let temporary = replacement.appendingPathComponent("Video.mp4"), asset = AVURLAsset(url: source)
         guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else { throw VideoRecordingError.invalidMovie }
         session.timeRange = CMTimeRange(start: CMTime(seconds: trim.start, preferredTimescale: 60_000), end: CMTime(seconds: trim.end, preferredTimescale: 60_000))
+        session.videoComposition = try await VideoComposition.make(asset: asset, size: sourceSize, presentation: document.presentation)
         session.shouldOptimizeForNetworkUse = true
         // The SDK's async export already installs a cancellation handler and
         // keeps the session on this actor. A second handler would transfer it.
         try await session.export(to: temporary, as: .mp4, isolation: self)
         try Task.checkCancellation()
         let result = AVURLAsset(url: temporary), info = try await movieInfo(result)
-        guard abs(info.duration - trim.duration) <= 2.0 / 30, info.size == document.pixelSize, info.audio == document.hasAudio else { throw VideoRecordingError.invalidMovie }
+        let outputSize = document.presentation.isIdentity ? sourceSize : document.presentation.geometry(for: sourceSize)?.outputSize
+        guard abs(info.duration - trim.duration) <= 2.0 / 30, info.size == outputSize, info.audio == document.hasAudio else { throw VideoRecordingError.invalidMovie }
         if document.hasAudio {
             guard let track = try await result.loadTracks(withMediaType: .audio).first else { throw VideoRecordingError.missingAudio }
             let reader = try AVAssetReader(asset: result), output = AVAssetReaderTrackOutput(track: track, outputSettings: [AVFormatIDKey: kAudioFormatLinearPCM])
@@ -266,6 +275,8 @@ actor VideoRecordingFiles {
         guard let destination = CGImageDestinationCreateWithData(data, UTType.gif.identifier as CFString, frameCount, nil) else { throw VideoRecordingError.invalidMovie }
         let asset = AVURLAsset(url: source)
         let generator = AVAssetImageGenerator(asset: asset)
+        guard let sourceSize = document.pixelSize else { throw VideoRecordingError.invalidMovie }
+        generator.videoComposition = try await VideoComposition.make(asset: asset, size: sourceSize, presentation: document.presentation)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: options.maximumDimension, height: options.maximumDimension)
         generator.requestedTimeToleranceBefore = .zero
@@ -332,7 +343,9 @@ actor VideoRecordingFiles {
     private func movieInfo(_ asset: AVURLAsset) async throws -> (duration: Double, size: PixelSize, audio: Bool) {
         let duration = CMTimeGetSeconds(try await asset.load(.duration))
         guard duration.isFinite, duration > 0, let track = try await asset.loadTracks(withMediaType: .video).first else { throw VideoRecordingError.invalidMovie }
-        let size = try await track.load(.naturalSize)
+        let natural = try await track.load(.naturalSize)
+        let transform = try await track.load(.preferredTransform)
+        let size = CGRect(origin: .zero, size: natural).applying(transform).size
         guard size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0,
               size.width <= 32768, size.height <= 32768,
               let pixels = PixelSize(width: Int(size.width), height: Int(size.height)) else { throw VideoRecordingError.invalidMovie }

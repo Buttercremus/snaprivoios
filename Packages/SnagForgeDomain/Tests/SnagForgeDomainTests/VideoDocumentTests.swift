@@ -19,9 +19,41 @@ import Testing
     var document = VideoDocument(title: "Video", fileName: "clip.mp4")
     document.schemaVersion = 999
     #expect(throws: ProjectError.self) { try document.validated() }
-    document.schemaVersion = 3; document.duration = .infinity
+    document.schemaVersion = 4; document.duration = .infinity
     #expect(throws: ProjectError.self) { try document.validated() }
     document.duration = 1; document.pixelSize = PixelSize(width: Int.max, height: 1)
+    #expect(throws: ProjectError.self) { try document.validated() }
+}
+
+@Test func videoPresentationGeometryAndVersionedStorage() throws {
+    let source = PixelSize(width: 321, height: 181)!
+    var style = VideoPresentation()
+    #expect(style.isIdentity && style.isValid)
+    style.backdrop = .gradient; style.padding = 24; style.cornerRadius = 18; style.shadow = 0.5
+    let geometry = try #require(style.geometry(for: source))
+    #expect(geometry.outputSize == PixelSize(width: 370, height: 230))
+    #expect(geometry.videoFrame.width == 321 && geometry.videoFrame.minX == 24.5)
+    style.aspectRatio = .portrait
+    let portrait = try #require(style.geometry(for: source))
+    #expect(portrait.outputSize.width % 2 == 0 && portrait.outputSize.height % 2 == 0)
+    #expect(abs(Double(portrait.outputSize.width) / Double(portrait.outputSize.height) - 9.0 / 16) < 0.003)
+    var document = VideoDocument(title: "Styled", fileName: "clip.mp4", state: .finished, duration: 2, pixelSize: source)
+    document.presentation = style
+    #expect(try JSONDecoder().decode(VideoDocument.self, from: JSONEncoder().encode(document)).validated() == document)
+    var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(document)) as! [String: Any]
+    json["schemaVersion"] = 3
+    #expect(throws: ProjectError.self) { try JSONDecoder().decode(VideoDocument.self, from: JSONSerialization.data(withJSONObject: json)) }
+    json.removeValue(forKey: "presentation")
+    let legacy = try JSONDecoder().decode(VideoDocument.self, from: JSONSerialization.data(withJSONObject: json)).validated()
+    #expect(legacy.presentation.isIdentity && legacy.schemaVersion == 4)
+    for bad in [-1.0, .infinity, .nan, 121.0] {
+        var invalid = style; invalid.cornerRadius = bad
+        #expect(!invalid.isValid && invalid.geometry(for: source) == nil)
+    }
+    var oversized = style; oversized.padding = 241
+    #expect(!oversized.isValid)
+    #expect(style.geometry(for: PixelSize(width: 8192, height: 8192)!) == nil)
+    document.presentation.color.red = .nan
     #expect(throws: ProjectError.self) { try document.validated() }
 }
 @Test func videoBackupRejectsPartialDuplicateAndUnverifiedEntries() throws {

@@ -11,8 +11,8 @@ xcrun swiftc -swift-version 6 -target "$validation_target" -emit-library -emit-m
   -o "$validation_dir/libSnagForgeDomain.dylib"
 xcrun swiftc -swift-version 6 -target "$validation_target" -D VIDEO_EDITING_CHECKS -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
   -Xlinker -rpath -Xlinker "$validation_dir" \
-  Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Features/VideoTrimTimeline.swift Snaprivo/Features/VideoTrimHandle.swift Snaprivo/Features/VideoSecondsField.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoRecordingFiles.swift \
-  Tests/VideoRecordingChecks.swift Tests/VideoLifecycleChecks.swift Tests/VideoCountdownChecks.swift Tests/VideoLibraryChecks.swift Tests/VideoEditingChecks.swift Tests/VideoTimelineChecks.swift -o "$validation_dir/VideoEditingRunner"
+  Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Features/VideoTrimTimeline.swift Snaprivo/Features/VideoTrimHandle.swift Snaprivo/Features/VideoSecondsField.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift \
+  Tests/VideoRecordingChecks.swift Tests/VideoLifecycleChecks.swift Tests/VideoCountdownChecks.swift Tests/VideoLibraryChecks.swift Tests/VideoPresentationChecks.swift Tests/VideoEditingChecks.swift Tests/VideoTimelineChecks.swift -o "$validation_dir/VideoEditingRunner"
 if [[ "${1:-}" == "--sandbox" ]]; then
   ./scripts/run-sandbox-checks.sh VideoEditing "$validation_dir/VideoEditingRunner" "$validation_dir/libSnagForgeDomain.dylib"
   runner="$validation_dir/SnaprivoVideoEditingChecks.app/Contents/MacOS/VideoEditingRunner"

@@ -10,7 +10,7 @@ xcrun swiftc -swift-version 6 -target "$validation_target" -emit-library -emit-m
   -o "$validation_dir/libSnagForgeDomain.dylib"
 xcrun swiftc -swift-version 6 -target "$validation_target" -D VIDEO_VALIDATION_CHECKS -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
   -Xlinker -rpath -Xlinker "$validation_dir" \
-  Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoRecordingFiles.swift \
+  Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift \
   Tests/VideoRecordingChecks.swift Tests/VideoLifecycleChecks.swift Tests/VideoCountdownChecks.swift Tests/VideoLibraryChecks.swift Tests/VideoInterruptionChecks.swift \
   -o "$validation_dir/VideoValidationRunner"
 if [[ "${1:-}" == "--sandbox" ]]; then

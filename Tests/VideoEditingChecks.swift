@@ -8,6 +8,7 @@ import SnagForgeDomain
     static let selection = VideoTrim(start: 0.23, end: 0.77)
 
     static func run() async throws {
+        try await VideoPresentationChecks.run()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("VideoEditing-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
         let files = VideoRecordingFiles(root: root.appendingPathComponent("Videos"))

@@ -14,6 +14,6 @@ xcrun swiftc -swift-version 6 -I "$validation_dir" -L "$validation_dir" -lSnagFo
   -Xlinker -rpath -Xlinker "$validation_dir" \
   Snaprivo/App/AppPreferences.swift Snaprivo/App/CaptureShortcuts.swift Snaprivo/App/WorkspaceModel.swift Snaprivo/App/CompleteBackup.swift Snaprivo/App/ProPurchaseModel.swift Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/App/GuideModel.swift Snaprivo/Editor/GuideExporter.swift Snaprivo/App/LibrarySearchModel.swift Snaprivo/Editor/TextRecognitionService.swift \
   Snaprivo/Features/ShortcutRecorder.swift Snaprivo/Editor/EditorRenderer.swift Snaprivo/Editor/EditorModel.swift \
-  Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoRecordingFiles.swift Snaprivo/Capture/ScreenshotCoordinator.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/ScreenshotSelector.swift \
+  Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift Snaprivo/Capture/ScreenshotCoordinator.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/ScreenshotSelector.swift \
   Tests/TransferPrivacyChecks.swift Tests/EditorExportChecks.swift -o "$validation_dir/TransferPrivacyChecks"
 "$validation_dir/TransferPrivacyChecks" "$@"

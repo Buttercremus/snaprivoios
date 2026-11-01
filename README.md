@@ -4,6 +4,8 @@ Native Screenshot- und Bildschirmvideo-App für macOS 26+, von Anfang an für de
 
 **Icon-Wechsel (1. November 2026):** In der Editorleiste gleitet nach einem Mausklick nur die Auswahlmarkierung. Symbol- und Schriftgewichte bleiben dabei konstant; Tastatur und reduzierte Bewegung wechseln unmittelbar. Play/Pause im Videoeditor verwendet bei Mausklick einen nativen Symbolübergang. Die bestehende rechte Eigenschaftenleiste behält ihre Gestaltung. [Prüfnachweise](docs/BESTOF-ABNAHME.md).
 
+**Video-Gestaltung (1. November 2026):** Der Videoeditor zeigt neben der Vorschau Farbe/Verlauf, Außenabstand, Eckenradius, Schatten und Original/16:9/9:16/1:1/4:3. Vorschau im Stand und bei Wiedergabe sowie MP4/GIF verwenden dieselbe Komposition; die Editorgröße bleibt beim Wechsel stabil. Beim ersten Hintergrund wird eine sichtbare Rahmung vorbelegt. Gestaltung und Schnitt werden gemeinsam gesichert und per Undo/Redo zurückgenommen, das Original bleibt erhalten. Videoformat 4 liest die bisherigen Formate 1–3. Bestehende Pro-Grenzen und GIF-Limits gelten weiter. [Pixel-, Sandbox- und Bedienprüfungen](docs/BESTOF-ABNAHME.md).
+
 Die Steuerleiste und Vorschau der Scroll-Aufnahme haben transparente Fensterhintergründe, damit außerhalb ihrer abgerundeten Ecken keine weißen Rechteckflächen stehen bleiben.
 
 ## Audit-Korrekturen – 1. November 2026

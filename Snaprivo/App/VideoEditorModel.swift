@@ -18,6 +18,9 @@ enum VideoEditError: LocalizedError {
     @ObservationIgnored let player: AVPlayer
     private var draftStart: Double
     private var draftEnd: Double
+    private(set) var presentation = VideoPresentation()
+    private(set) var isPreparingPreview = false
+    @ObservationIgnored private var previewGeneration = 0
     var start: Double {
         get { draftStart }
         set { draftStart = hasProAccess() ? newValue : document.effectiveTrim.start; updatePlaybackBounds() }
@@ -40,13 +43,15 @@ enum VideoEditError: LocalizedError {
     @ObservationIgnored private var gifPanel: NSSavePanel?
     @ObservationIgnored private var playbackRevision = 0
     @ObservationIgnored private let onSave: @MainActor () async -> Void
-    private var history: [VideoTrim?]
+    private struct Edit: Equatable { var trim: VideoTrim?; var presentation: VideoPresentation }
+    private var history: [Edit]
     private var historyIndex = 0
 
     init(document: VideoDocument, url: URL, files: VideoRecordingFiles, onSave: @escaping @MainActor () async -> Void = {}) {
         id = document.id; self.document = document; self.files = files; self.onSave = onSave; originalURL = url
         draftStart = document.effectiveTrim.start; draftEnd = document.effectiveTrim.end
-        history = [document.trim]; player = AVPlayer(url: url)
+        presentation = document.presentation
+        history = [Edit(trim: document.trim, presentation: document.presentation)]; player = AVPlayer(url: url)
         player.actionAtItemEnd = .pause
         observer = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: 600), queue: .main) { [weak self] time in
             Task { @MainActor in self?.playbackMoved(time.seconds) }
@@ -56,7 +61,7 @@ enum VideoEditError: LocalizedError {
     var duration: Double { document.duration ?? 0 }
     var draft: VideoTrim { .init(start: start, end: end) }
     var isValid: Bool { (try? draft.validated(duration: duration)) != nil }
-    var hasUnappliedChanges: Bool { draft != document.effectiveTrim }
+    var hasUnappliedChanges: Bool { draft != document.effectiveTrim || presentation != document.presentation }
     var isBusy: Bool { isSaving || isExporting }
     var canApply: Bool { isValid && hasUnappliedChanges && !isBusy }
     var canUndo: Bool { historyIndex > 0 && !hasUnappliedChanges && !isBusy }
@@ -81,7 +86,7 @@ enum VideoEditError: LocalizedError {
     }
     private func startPlayback(from seconds: Double) {
         guard isValid, !isBusy else { return }
-        pausePlayback(); isPlaying = true
+        pausePlayback(); position = seconds; isPlaying = true
         let selection = draft, revision = playbackRevision
         player.seek(to: CMTime(seconds: seconds, preferredTimescale: 60_000), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] finished in
             Task { @MainActor in
@@ -108,7 +113,39 @@ enum VideoEditError: LocalizedError {
     func setStartFromPlayhead() { start = min(position, end - min(1.0 / 30, duration)) }
     func setEndFromPlayhead() { end = max(position, start + min(1.0 / 30, duration)) }
     func restoreOriginal() { start = 0; end = duration; seek(0) }
-    func discardDraft() { start = document.effectiveTrim.start; end = document.effectiveTrim.end; seek(start) }
+    func discardDraft() {
+        start = document.effectiveTrim.start; end = document.effectiveTrim.end
+        presentation = document.presentation; seek(start)
+    }
+    func setPresentation(_ value: VideoPresentation) {
+        guard !isBusy, hasProAccess(), value.isValid,
+              let size = document.pixelSize, value.geometry(for: size) != nil else { return }
+        pausePlayback(); presentation = value
+    }
+    func updatePreviewComposition() async {
+        previewGeneration += 1
+        let generation = previewGeneration, style = presentation
+        guard let item = player.currentItem, let size = document.pixelSize else { return }
+        isPreparingPreview = true; pausePlayback()
+        defer { if generation == previewGeneration { isPreparingPreview = false } }
+        do {
+            let composition = try await VideoComposition.make(asset: item.asset, size: size, presentation: style)
+            guard !Task.isCancelled, generation == previewGeneration, player.currentItem === item, observer != nil else { return }
+            // A paused AVPlayerLayer can retain its old decoded frame after merely
+            // changing videoComposition. Publish a fully configured item so it requests
+            // the styled frame even when the playhead has not moved.
+            if composition == nil && item.videoComposition == nil { return }
+            let updated = AVPlayerItem(asset: item.asset)
+            updated.videoComposition = composition
+            updated.seekingWaitsForVideoCompositionRendering = true
+            updated.reversePlaybackEndTime = CMTime(seconds: start, preferredTimescale: 60_000)
+            updated.forwardPlaybackEndTime = CMTime(seconds: end, preferredTimescale: 60_000)
+            player.replaceCurrentItem(with: updated)
+            seek(position)
+        } catch {
+            if !Task.isCancelled, generation == previewGeneration { self.error = error.localizedDescription }
+        }
+    }
     private func updatePlaybackBounds() {
         pausePlayback()
         guard isValid, let item = player.currentItem else { return }
@@ -124,7 +161,7 @@ enum VideoEditError: LocalizedError {
     }
     @discardableResult func apply() async -> Bool {
         guard canApply else { return !hasUnappliedChanges }
-        do { return await commit(try draft.normalized(duration: duration), historyDestination: nil) }
+        do { return await commit(Edit(trim: try draft.normalized(duration: duration), presentation: presentation), historyDestination: nil) }
         catch { self.error = error.localizedDescription; return false }
     }
     @discardableResult func undo() async -> Bool {
@@ -133,16 +170,16 @@ enum VideoEditError: LocalizedError {
     @discardableResult func redo() async -> Bool {
         guard canRedo else { return false }; return await commit(history[historyIndex + 1], historyDestination: historyIndex + 1)
     }
-    private func commit(_ trim: VideoTrim?, historyDestination: Int?) async -> Bool {
+    private func commit(_ edit: Edit, historyDestination: Int?) async -> Bool {
         guard requestFeature(.video) else { return false }
         guard !isBusy else { return false }
         isSaving = true; pausePlayback()
         let task = Task { [self] in
             do {
-                let next = try await files.setTrim(id, trim: trim, expectedRevision: document.revision)
+                let next = try await files.setEdit(id, trim: edit.trim, presentation: edit.presentation, expectedRevision: document.revision)
                 document = next
                 if let historyDestination { historyIndex = historyDestination }
-                else { history.removeSubrange((historyIndex + 1)..<history.count); history.append(trim); historyIndex += 1 }
+                else { history.removeSubrange((historyIndex + 1)..<history.count); history.append(edit); historyIndex += 1 }
                 discardDraft(); await onSave(); return true
             } catch { self.error = error.localizedDescription; return false }
         }
@@ -152,7 +189,7 @@ enum VideoEditError: LocalizedError {
     func reload() async {
         guard !isBusy else { return }
         do {
-            document = try await files.document(id); history = [document.trim]; historyIndex = 0
+            document = try await files.document(id); history = [Edit(trim: document.trim, presentation: document.presentation)]; historyIndex = 0
             discardDraft(); await onSave()
         } catch { self.error = error.localizedDescription }
     }

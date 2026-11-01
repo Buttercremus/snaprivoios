@@ -12,3 +12,22 @@ Die Auswahlfeder liegt jetzt nur auf der Markierung im Button-Hintergrund. Symbo
 - `git diff --check`: bestanden.
 
 Logs: `/tmp/Snaprivo-bestof-{build,toolbar,video}.log`. Der Screenshot des nativen Testfensters prüft die Darstellung, keine zeitliche Animationskurve. Persönliches Bewegungsgefühl mit schneller Mausbedienung und vollständige VoiceOver-Abnahme bleiben manuell.
+
+## A02 Video-Gestaltung
+
+Der Videoeditor hat eine größere, in ihrer Geometrie stabile Vorschau mit eigenem Gestaltungsbereich. Ohne Gestaltung bleibt die Ausgabe neutral. Farbe und editierbarer Zweifarbverlauf, Randabstand, gerundete Ecken, Schatten und fünf Seitenverhältnisse sind verfügbar. Beim ersten Hintergrund werden 32 px Abstand, 12 px Ecken und 35 % Schatten vorbelegt, damit die Änderung direkt sichtbar ist. Regler haben keine zusätzlichen Skalenpunkte. Die Ausgabegröße ist im scrollenden Gestaltungsbereich ablesbar.
+
+`VideoPresentation` liegt im Domain-Paket. Videoformat 4 speichert den Zustand und liest 1–3 neutral; ältere Apps dürfen das neue Format nicht still übernehmen. Die Originaldatei bleibt unverändert. Schnitt und Gestaltung bilden gemeinsam einen gesicherten Zustand mit Undo/Redo, Konfliktschutz und Backup. Das bisherige explizite Sichern bleibt erhalten. Videoschnitt/Gestaltung folgen der vorhandenen Pro-Grenze.
+
+Eine unveränderliche AVFoundation-Instruktion und ein Core-Image-Compositor versorgen AVPlayer, MP4 und GIF. Keine neue Paketabhängigkeit und keine private API. Die Ausgabe behält das gesamte Quellbild und ergänzt Fläche entsprechend dem Format; dies ist kein automatischer Motivzuschnitt. Encoderabmessungen sind gerade, die gestaltete Fläche ist auf 8192 px je Kante und 16 MP begrenzt. Eigene Hintergrundbilder und Motion Blur gehören nicht zu diesem Schritt.
+
+Zusätzliche Prüfungen deckten zwei Fehler vor Abschluss auf: gedrehte Quellen benötigen ihre dargestellte Größe und die Umrechnung zwischen Video- und Core-Image-Koordinaten; eine pausierte AVPlayerLayer behielt nach reinem Kompositionswechsel einen alten Frame. Die Korrektur veröffentlicht ein vollständig konfiguriertes PlayerItem am erhaltenen Player. Die Abspielposition reagiert schon beim Start des Seek, und dessen spätere Bestätigung bleibt gegen veraltete Wiedergabe geschützt.
+
+- `./scripts/build.sh -derivedDataPath build/BestOfApps/Xcode`: bestanden.
+- `./scripts/test.sh`: 184 Swift-Testing-Tests und 2 XCTest-Tests bestanden. Neue Prüfung für gerade Ausgabegrößen, Formate, Grenzen, Farb-/Zahlenvalidierung, Version-3-Migration und falsch deklarierte ältere Formate.
+- `./scripts/test-video-editing.sh` und `--sandbox`: bestanden. Neue echte Pixelprüfungen für Vorschau/MP4/GIF, Hintergründe, Ecken, Verläufe, Formate und gedrehte Farbquadranten; Ton/Schnitt, unveränderte Originalbytes, Wiederöffnen, Backup, Undo/Redo, Pro-Sperre und Abbruch vor Veröffentlichung. Ein AVPlayerItemVideoOutput liefert den gestalteten Frame ohne Abspielen; die bestehenden Wiedergabe-/Schnitt-/Neustartprüfungen bestehen ebenfalls.
+- Lokalisierung: 1373 App-, 7 InfoPlist- und 19 Domain-Texte mit vollständiger deutscher/englischer Compiler-Abdeckung und passenden Formatargumenten.
+- Native deutsche Prüf-App mit ausschließlich synthetischen Bildern/Clips: Verlauf im pausierten Zustand und bei Wiedergabe sichtbar; Sichern, Undo und Redo bedient. Original und 9:16 zeigen passende Vorschau und Ausgabegröße (384 × 244 bzw. 384 × 684 im Test). Die Editor-Screenshots bleiben vor und nach beiden Wechseln 1520 × 1376 Pixel groß. Die Prüf-App ist von der Produktionsbibliothek getrennt.
+- `git diff --check`: bestanden.
+
+Logs: `/tmp/Snaprivo-bestof-presentation-{build,video,sandbox,localization}.log`, Domain-Log `/tmp/Snaprivo-bestof-domain.log`. Keine Bildraten-, lange Aufnahme-, HDR- oder vollständige VoiceOver-Abnahme. Diese Ergebnisse bestätigen technische Ausgabe und synthetische Bedienung, keine neue Capture-/Berechtigungsabnahme.

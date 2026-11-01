@@ -292,10 +292,12 @@ struct VideoRecordingChecks {
         }
         print("Recorded MP4 verified: \(Int(size.width)) × \(Int(size.height)), \(duration) seconds, \(audio.count) audio tracks, two different decoded frames.")
     }
-    static func movie(at url: URL, includesAudio: Bool = false, amplitude: Double = 0.3, audioPulse: Bool = false) async throws {
+    static func movie(at url: URL, includesAudio: Bool = false, amplitude: Double = 0.3, audioPulse: Bool = false,
+                      transform: CGAffineTransform = .identity, quadrants: Bool = false) async throws {
         let writer = try AVAssetWriter(url: url, fileType: .mp4)
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 320, AVVideoHeightKey: 180])
         input.expectsMediaDataInRealTime = false
+        input.transform = transform
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB, kCVPixelBufferWidthKey as String: 320, kCVPixelBufferHeightKey as String: 180])
         writer.add(input)
         let audioInput = AVAssetWriterInput(mediaType: .audio, outputSettings: [
@@ -311,6 +313,15 @@ struct VideoRecordingChecks {
             let buffer = pixel!
             CVPixelBufferLockBaseAddress(buffer, [])
             memset(CVPixelBufferGetBaseAddress(buffer), Int32(index * 7), CVPixelBufferGetDataSize(buffer))
+            if quadrants {
+                let pixels = CVPixelBufferGetBaseAddress(buffer)!.assumingMemoryBound(to: UInt8.self)
+                for y in 0..<180 { for x in 0..<320 {
+                    let p = y * CVPixelBufferGetBytesPerRow(buffer) + x * 4
+                    let colors: [(UInt8, UInt8, UInt8)] = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
+                    let c = colors[(y >= 90 ? 2 : 0) + (x >= 160 ? 1 : 0)]
+                    pixels[p] = 255; pixels[p + 1] = c.0; pixels[p + 2] = c.1; pixels[p + 3] = c.2
+                } }
+            }
             CVPixelBufferUnlockBaseAddress(buffer, [])
             check(adaptor.append(buffer, withPresentationTime: CMTime(value: Int64(index), timescale: 30)))
             if includesAudio {

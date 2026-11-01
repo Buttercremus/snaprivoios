@@ -17,7 +17,7 @@ import Testing
     var json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(document)) as! [String: Any]
     json["schemaVersion"] = 1; json.removeValue(forKey: "revision")
     let migrated = try JSONDecoder().decode(VideoDocument.self, from: JSONSerialization.data(withJSONObject: json)).validated()
-    #expect(migrated.schemaVersion == 3 && migrated.trim == nil && migrated.revision == 0)
+    #expect(migrated.schemaVersion == 4 && migrated.trim == nil && migrated.revision == 0 && migrated.presentation.isIdentity)
     document.trim = .init(start: 0.5, end: 1.5); document.revision = 2
     #expect(try JSONDecoder().decode(VideoDocument.self, from: JSONEncoder().encode(document)).validated() == document)
     document.state = .failed
