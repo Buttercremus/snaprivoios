@@ -6,33 +6,39 @@ import SnagForgeDomain
 final class VideoFrameInstruction: NSObject, AVVideoCompositionInstructionProtocol, @unchecked Sendable {
     let timeRange: CMTimeRange
     let enablePostProcessing = false
-    let containsTweening = false
+    let containsTweening: Bool
     let requiredSourceTrackIDs: [NSValue]?
     let passthroughTrackID = kCMPersistentTrackID_Invalid
     let trackID: CMPersistentTrackID
     let transform: CGAffineTransform
     let sourceSize: PixelSize
     let presentation: VideoPresentation
+    let playback: VideoPlayback
+    let originalDuration: Double
 
     init(track: CMPersistentTrackID, duration: CMTime, transform: CGAffineTransform,
-         size: PixelSize, presentation: VideoPresentation) {
+         size: PixelSize, presentation: VideoPresentation, playback: VideoPlayback, originalDuration: Double) {
         trackID = track; timeRange = CMTimeRange(start: .zero, duration: duration)
         requiredSourceTrackIDs = [NSNumber(value: track)]
         self.transform = transform; sourceSize = size; self.presentation = presentation
+        self.playback = playback; self.originalDuration = originalDuration; containsTweening = !playback.zooms.isEmpty
     }
 }
 
 enum VideoComposition {
-    static func make(asset: AVAsset, size: PixelSize, presentation: VideoPresentation) async throws -> AVVideoComposition? {
-        guard !presentation.isIdentity else { return nil }
+    static func make(asset: AVAsset, size: PixelSize, presentation: VideoPresentation,
+                     playback: VideoPlayback = .init(), originalDuration: Double? = nil) async throws -> AVVideoComposition? {
+        guard !presentation.isIdentity || !playback.isIdentity else { return nil }
         guard let geometry = presentation.geometry(for: size),
               let track = try await asset.loadTracks(withMediaType: .video).first else { throw VideoRecordingError.invalidMovie }
         let transform = try await track.load(.preferredTransform)
         let duration = try await asset.load(.duration)
+        let sourceDuration = originalDuration ?? duration.seconds
+        _ = try playback.validated(duration: sourceDuration)
         let interval = try await track.load(.minFrameDuration)
-        let frameDuration = interval.isNumeric && interval.seconds > 0 ? interval : CMTime(value: 1, timescale: 30)
+        let frameDuration = playback.speed == 1 && interval.isNumeric && interval.seconds > 0 ? interval : CMTime(value: 1, timescale: 30)
         let instruction = VideoFrameInstruction(track: track.trackID, duration: duration, transform: transform,
-                                                size: size, presentation: presentation)
+                                                size: size, presentation: presentation, playback: playback, originalDuration: sourceDuration)
         let config = AVVideoComposition.Configuration(customVideoCompositorClass: VideoFrameCompositor.self,
             frameDuration: frameDuration, instructions: [instruction],
             renderSize: CGSize(width: geometry.outputSize.width, height: geometry.outputSize.height))
@@ -69,7 +75,9 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing, @unchecked Senda
             let input = CIImage(cvPixelBuffer: source).transformed(by: flip)
                 .transformed(by: instruction.transform).transformed(by: CGAffineTransform(scaleX: 1, y: -1))
             let normalized = input.transformed(by: CGAffineTransform(translationX: -input.extent.minX, y: -input.extent.minY))
-            let image = Self.render(normalized, presentation: instruction.presentation, geometry: geometry)
+            let time = instruction.playback.sourceTime(for: request.compositionTime.seconds, duration: instruction.originalDuration)
+            let focused = Self.focus(normalized, transform: instruction.playback.focus(at: time))
+            let image = Self.render(focused, presentation: instruction.presentation, geometry: geometry)
             let bounds = CGRect(x: 0, y: 0, width: geometry.outputSize.width, height: geometry.outputSize.height)
             context.render(image, to: buffer, bounds: bounds, colorSpace: CGColorSpace(name: CGColorSpace.sRGB))
             request.finish(withComposedVideoFrame: buffer)
@@ -77,6 +85,16 @@ final class VideoFrameCompositor: NSObject, AVVideoCompositing, @unchecked Senda
     }
     // Requests are completed synchronously; no owned queue or retained requests remain to cancel.
     func cancelAllPendingVideoCompositionRequests() {}
+
+    static func focus(_ source: CIImage, transform: VideoZoom.Transform) -> CIImage {
+        guard transform.scale > 1 else { return source }
+        let size = source.extent.size, width = size.width / transform.scale, height = size.height / transform.scale
+        let x = min(max(0, transform.centerX * size.width - width / 2), size.width - width)
+        let y = min(max(0, (1 - transform.centerY) * size.height - height / 2), size.height - height)
+        return source.cropped(to: CGRect(x: x, y: y, width: width, height: height))
+            .transformed(by: CGAffineTransform(translationX: -x, y: -y))
+            .transformed(by: CGAffineTransform(scaleX: transform.scale, y: transform.scale))
+    }
 
     static func render(_ source: CIImage, presentation: VideoPresentation, geometry: VideoPresentationGeometry) -> CIImage {
         let output = CGRect(x: 0, y: 0, width: geometry.outputSize.width, height: geometry.outputSize.height)

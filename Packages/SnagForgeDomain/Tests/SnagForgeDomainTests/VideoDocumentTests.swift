@@ -19,7 +19,7 @@ import Testing
     var document = VideoDocument(title: "Video", fileName: "clip.mp4")
     document.schemaVersion = 999
     #expect(throws: ProjectError.self) { try document.validated() }
-    document.schemaVersion = 4; document.duration = .infinity
+    document.schemaVersion = 5; document.duration = .infinity
     #expect(throws: ProjectError.self) { try document.validated() }
     document.duration = 1; document.pixelSize = PixelSize(width: Int.max, height: 1)
     #expect(throws: ProjectError.self) { try document.validated() }
@@ -45,7 +45,7 @@ import Testing
     #expect(throws: ProjectError.self) { try JSONDecoder().decode(VideoDocument.self, from: JSONSerialization.data(withJSONObject: json)) }
     json.removeValue(forKey: "presentation")
     let legacy = try JSONDecoder().decode(VideoDocument.self, from: JSONSerialization.data(withJSONObject: json)).validated()
-    #expect(legacy.presentation.isIdentity && legacy.schemaVersion == 4)
+    #expect(legacy.presentation.isIdentity && legacy.schemaVersion == 5)
     for bad in [-1.0, .infinity, .nan, 121.0] {
         var invalid = style; invalid.cornerRadius = bad
         #expect(!invalid.isValid && invalid.geometry(for: source) == nil)

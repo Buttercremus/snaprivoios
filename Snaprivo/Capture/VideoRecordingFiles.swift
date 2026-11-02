@@ -201,12 +201,13 @@ actor VideoRecordingFiles {
         let current = try readDocument(id)
         return try setEdit(id, trim: trim, presentation: current.presentation, expectedRevision: expectedRevision)
     }
-    func setEdit(_ id: UUID, trim: VideoTrim?, presentation: VideoPresentation, expectedRevision: Int) throws -> VideoDocument {
+    func setEdit(_ id: UUID, trim: VideoTrim?, presentation: VideoPresentation, playback: VideoPlayback? = nil, expectedRevision: Int) throws -> VideoDocument {
         var document = try readDocument(id)
         guard document.revision == expectedRevision else { throw ProjectError.staleRevision }
         _ = try movieURL(id)
         document.trim = try trim?.normalized(duration: document.duration ?? 0)
         document.presentation = presentation
+        if let playback { document.playback = playback }
         document.revision += 1; document.modifiedAt = .now
         try save(document); return document
     }
@@ -222,24 +223,30 @@ actor VideoRecordingFiles {
             throw VideoEditError.originalTarget
         }
         try Task.checkCancellation()
-        guard document.trim != nil || !document.presentation.isIdentity else { try export(source, to: target); return }
+        guard document.trim != nil || !document.presentation.isIdentity || !document.playback.isIdentity else { try export(source, to: target); return }
         let trim = document.effectiveTrim
         guard let sourceSize = document.pixelSize else { throw VideoRecordingError.invalidMovie }
         _ = try trim.validated(duration: document.duration ?? 0)
         let replacement = try FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: target, create: true)
         defer { try? FileManager.default.removeItem(at: replacement) }
-        let temporary = replacement.appendingPathComponent("Video.mp4"), asset = AVURLAsset(url: source)
+        let temporary = replacement.appendingPathComponent("Video.mp4")
+        let edit = try await VideoEditComposition.make(source: AVURLAsset(url: source), playback: document.playback, duration: document.duration ?? 0)
+        let asset = edit.asset
         guard let session = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetHighestQuality) else { throw VideoRecordingError.invalidMovie }
-        session.timeRange = CMTimeRange(start: CMTime(seconds: trim.start, preferredTimescale: 60_000), end: CMTime(seconds: trim.end, preferredTimescale: 60_000))
-        session.videoComposition = try await VideoComposition.make(asset: asset, size: sourceSize, presentation: document.presentation)
+        let start = document.playback.outputTime(for: trim.start, duration: document.duration ?? 0)
+        let end = document.playback.outputTime(for: trim.end, duration: document.duration ?? 0)
+        session.timeRange = CMTimeRange(start: CMTime(seconds: start, preferredTimescale: 60_000), end: CMTime(seconds: end, preferredTimescale: 60_000))
+        session.videoComposition = try await VideoComposition.make(asset: asset, size: sourceSize, presentation: document.presentation,
+            playback: document.playback, originalDuration: document.duration)
+        session.audioMix = edit.audioMix; session.audioTimePitchAlgorithm = .spectral
         session.shouldOptimizeForNetworkUse = true
         // The SDK's async export already installs a cancellation handler and
         // keeps the session on this actor. A second handler would transfer it.
         try await session.export(to: temporary, as: .mp4, isolation: self)
         try Task.checkCancellation()
         let result = AVURLAsset(url: temporary), info = try await movieInfo(result)
-        let outputSize = document.presentation.isIdentity ? sourceSize : document.presentation.geometry(for: sourceSize)?.outputSize
-        guard abs(info.duration - trim.duration) <= 2.0 / 30, info.size == outputSize, info.audio == document.hasAudio else { throw VideoRecordingError.invalidMovie }
+        let outputSize = document.presentation.isIdentity && document.playback.isIdentity ? sourceSize : document.presentation.geometry(for: sourceSize)?.outputSize
+        guard abs(info.duration - (end - start)) <= 2.0 / 30, info.size == outputSize, info.audio == document.hasAudio else { throw VideoRecordingError.invalidMovie }
         if document.hasAudio {
             guard let track = try await result.loadTracks(withMediaType: .audio).first else { throw VideoRecordingError.missingAudio }
             let reader = try AVAssetReader(asset: result), output = AVAssetReaderTrackOutput(track: track, outputSettings: [AVFormatIDKey: kAudioFormatLinearPCM])
@@ -265,18 +272,22 @@ actor VideoRecordingFiles {
         guard canonicalTarget != canonicalRoot, !canonicalTarget.hasPrefix(canonicalRoot + "/") else { throw VideoEditError.originalTarget }
         let duration = document.duration ?? 0
         let trim = try (document.trim ?? .init(start: 0, end: duration)).validated(duration: duration)
-        guard trim.duration <= options.maximumDuration + 0.0001 else { throw VideoRecordingError.gifDurationExceeded }
-        let exportDuration = trim.duration
+        let outputStart = document.playback.outputTime(for: trim.start, duration: duration)
+        let outputEnd = document.playback.outputTime(for: trim.end, duration: duration)
+        let exportDuration = outputEnd - outputStart
+        guard exportDuration <= options.maximumDuration + 0.0001 else { throw VideoRecordingError.gifDurationExceeded }
         let frameCount = max(1, Int(ceil(exportDuration * Double(options.framesPerSecond))))
         let replacement = try FileManager.default.url(for: .itemReplacementDirectory, in: .userDomainMask, appropriateFor: target, create: true)
         defer { try? FileManager.default.removeItem(at: replacement) }
         let temporary = replacement.appendingPathComponent("Video.gif")
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(data, UTType.gif.identifier as CFString, frameCount, nil) else { throw VideoRecordingError.invalidMovie }
-        let asset = AVURLAsset(url: source)
+        let edit = try await VideoEditComposition.make(source: AVURLAsset(url: source), playback: document.playback, duration: duration)
+        let asset = edit.asset
         let generator = AVAssetImageGenerator(asset: asset)
         guard let sourceSize = document.pixelSize else { throw VideoRecordingError.invalidMovie }
-        generator.videoComposition = try await VideoComposition.make(asset: asset, size: sourceSize, presentation: document.presentation)
+        generator.videoComposition = try await VideoComposition.make(asset: asset, size: sourceSize, presentation: document.presentation,
+            playback: document.playback, originalDuration: document.duration)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: options.maximumDimension, height: options.maximumDimension)
         generator.requestedTimeToleranceBefore = .zero
@@ -288,14 +299,14 @@ actor VideoRecordingFiles {
             try Task.checkCancellation()
             // ceil(duration * fps) already keeps every sample before the end.
             // Clamping by a whole GIF interval duplicates the start of short trims.
-            let seconds = trim.start + Double(index) / Double(options.framesPerSecond)
+            let seconds = outputStart + Double(index) / Double(options.framesPerSecond)
             let result = try await generator.image(at: CMTime(seconds: seconds, preferredTimescale: 60_000))
             let frameInterval = 1.0 / Double(options.framesPerSecond)
             // Encoded keyframes can be reported a single frame around the
             // requested timestamp; never allow a sample from a different trim
             // section to leak into the GIF.
-            guard result.actualTime.seconds >= trim.start - frameInterval,
-                  result.actualTime.seconds < trim.end + frameInterval else { throw VideoRecordingError.invalidMovie }
+            guard result.actualTime.seconds >= outputStart - frameInterval,
+                  result.actualTime.seconds < outputEnd + frameInterval else { throw VideoRecordingError.invalidMovie }
             CGImageDestinationAddImage(destination, result.image, frameProperties as CFDictionary)
         }
         guard CGImageDestinationFinalize(destination) else { throw VideoRecordingError.invalidMovie }

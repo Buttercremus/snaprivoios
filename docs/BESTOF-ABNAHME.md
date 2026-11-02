@@ -40,7 +40,7 @@ Die bestehende 360 × 56 pt große Leiste zeigt aktivierte Quellen mit Lautsprec
 
 - Build mit `./scripts/build.sh -derivedDataPath build/BestOfApps/Xcode`: bestanden.
 - `./scripts/test.sh`: 186 Swift-Testing-Tests und 2 XCTest-Tests bestanden, einschließlich Stille, Pegel, NaN/Unendlich, Grenzen und konstantem Signal.
-- `./scripts/test-video-editing.sh --sandbox --audio-levels`: PCM-Signal/Stille, unabhängige Messfenster, zurückgesetzte Uhr, veraltete Werte, aktivierte Quellen, native Geometrie und Aufnahmezustände einschließlich Stop/Abbruch/später Ereignisse bestanden. Auch die vollständige Video-Regression mit dem final gebauten Sandbox-Testhost bestand. Dessen AVPlayer-Prüfung erfordert einen entsperrten Mac; ein Versuch im Sperrzustand wurde nicht als bestandene Prüfung gewertet.
+- `./scripts/test-video-editing.sh --sandbox --audio-levels`: PCM-Signal/Stille, unabhängige Messfenster, zurückgesetzte Uhr, veraltete Werte, aktivierte Quellen, native Geometrie und Aufnahmezustände einschließlich Stop/Abbruch/später Ereignisse bestanden. Auch die vollständige Video-Regression mit dem final gebauten Sandbox-Testhost bestand. Ein vorheriger Versuch im Sperrzustand fiel am AVPlayer-Test aus und wurde nicht als bestandene Prüfung gewertet.
 - Lokalisierung: 1376 App-, 7 InfoPlist- und 19 Domain-Texte vollständig Deutsch/Englisch; native Sprach-/Neustartprüfungen bestanden.
 - Native deutsche Prüf-App mit synthetischen Werten: getrennte grüne Anzeigen, Icons, Zeit, Abmessungen und Stop in unverändert großer Leiste gesichtet. Keine echte Aufnahme gestartet.
 
@@ -67,3 +67,23 @@ Gesamt/2×/4×/8× vergrößern ausschließlich die gemeinsame Zeitskala in eine
 Build und vollständige Video-Sandbox-/Neustartregression bestanden. Zusätzliche Prüfungen bestätigen die Zeitskala aller vier Ansichten, native Mausbewegungen bei 8× mit verschobenem Griff sowie die weiterhin 0,1 s große Tastaturbewegung. Compiler-Abdeckung: 1385 App-, 7 InfoPlist- und 19 Domain-Texte vollständig Deutsch/Englisch. Die native Sichtprüfung des vollständigen scrollenden Editors ist noch offen: Der Mac war beim Öffnen des finalen Prüf-Builds erneut gesperrt. Operativer Gesamtpunkt A05 bleibt für diese Bedienprüfung, Teilstücke, Tempo/Lautstärke und manuelle Zoomabschnitte offen.
 
 Logs: `/tmp/Snaprivo-bestof-timeline-{build,sandbox}.log`.
+
+## A05 Zeitmontage und manueller Fokus
+
+`VideoPlayback` beschreibt bis zu 64 entfernte Quellbereiche, globales Tempo 0,25×–4×, Lautstärke 0–100 % und bis zu 32 getrennte Zoomabschnitte. Zeiten und Fokuspositionen bleiben am dargestellten Original ausgerichtet. Die Domain kennt keine Aufnahme-/UI-Frameworks. Validierung begrenzt Werte und Mengen, lehnt überlappende Zooms ab und erhält mindestens ein Quellbild in der Auswahl. Entfernte Bereiche werden beim Hinzufügen vereinigt und lassen sich einzeln wieder einsetzen.
+
+Eine unveränderliche AVComposition wird auf einem parallelen Executor aus dem Original aufgebaut. Audio und Video verwenden dieselben behaltenen Quellbereiche und dieselbe Skalierung. AVAudioMix übernimmt Lautstärke/Stille, der öffentliche Spectral-Algorithmus erhält bei Tempoänderung die Tonhöhe. AVPlayer, MP4 und GIF verwenden dieselbe Montage und denselben Core-Image-Fokus. Zooms verwenden eine weiche Ein-/Ausfahrt von höchstens 0,25 s je Seite; ihre Position ist vom linken oberen Rand des angezeigten Originals definiert. Die Ausgabe behält die Fläche und Gestaltung. Dies sind manuelle Abschnitte, keine automatische Cursorverfolgung.
+
+Videoformat 5 speichert alle Bearbeitungen in einem gemeinsamen Zustand und migriert 1–4. Älter deklarierte Dateien mit neuen Zeitdaten werden zurückgewiesen. Undo/Redo, Konfliktschutz, Sicherung und Wiederherstellung erfassen die neuen Daten. Die Originalbytes bleiben unverändert.
+
+Die Oberfläche ergänzt Tempo/Ton, innere Schnitte und Zoomabschnitte im vorhandenen scrollenden Videobereich. Ein Bereichspopover verwendet Originalzeit, Zoompositionen in Prozent und die Vergrößerung als Faktor. Übernehmen eines Zooms zeigt dessen Mitte, damit die Änderung unmittelbar beurteilbar ist. Entfernte Bereiche erscheinen farblich in der Quellzeitleiste; Ausgabedauer und Quellposition werden getrennt behandelt. Die rechte Eigenschaftenleiste des Bildeditors bleibt unverändert.
+
+Die Vorschau behält während eines Aufbaus den gewünschten Quellzeitpunkt und wendet ihn erst auf das passende neue PlayerItem an. Ein fehlgeschlagener Aufbau darf keinen älteren Arbeitsstand abspielen. Zeitbeobachter erhalten je PlayerItem eine Generation; verspätete Meldungen ersetzter oder geschlossener Items werden ignoriert.
+
+- Domain: 190 Swift-Testing- und 2 XCTest-Prüfungen bestanden, einschließlich Quell-/Ausgabezuordnung, Grenzwerte, Mengen, Zusammenführen, Fokuskurven und Migration.
+- `./scripts/test-video-editing.sh --sandbox --playback`: echte MP4-/GIF-Zeiten, entfernte Bilder, Ton-/Bildmarke, Viertellautstärke und Stille, Fokus im oberen linken Farbquadranten, Undo/Redo, Wiederöffnen, Pro-Sperre, Backup, Abbruch vor Veröffentlichung und unveränderte Originaldateien bestanden. Der Fokus-Pixeltest fordert den exakten Zeitpunkt an; eine freie Keyframe-Auswahl wäre für eine zeitabhängige Kamera ungeeignet.
+- Vollständige Video-/Export-/Neustartregression im Sandbox-Host sowie Bibliotheks-/Backup-/Dateigrenzen-/Unterbrechungsprüfungen bestanden. Zusätzliche Fälle prüfen ausstehende Quellpositionen, fehlgeschlagene Vorschau und geschlossene Player.
+- Native Sprach-/Neustartprüfung bestanden; Compiler-Abdeckung: 1403 App-, 7 InfoPlist- und 19 Domain-Texte vollständig Deutsch/Englisch.
+- Sichtbare Bedienprüfung des erweiterten Editors ist noch offen. Die bisherigen realen Capture-/Hardware-/VoiceOver-Grenzen gelten weiterhin.
+
+Logs: `/tmp/Snaprivo-bestof-playback-{domain,build,sandbox,full-sandbox,library,validation,localization}.log`. Öffentliche API-Grundlage: [AVMutableComposition](https://developer.apple.com/documentation/avfoundation/avmutablecomposition), [Time pitch algorithms](https://developer.apple.com/documentation/avfoundation/time-pitch-algorithm-settings).

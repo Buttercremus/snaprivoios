@@ -11,8 +11,8 @@ xcrun swiftc -swift-version 6 -target "$validation_target" -emit-library -emit-m
   -o "$validation_dir/libSnagForgeDomain.dylib"
 xcrun swiftc -swift-version 6 -target "$validation_target" -D VIDEO_EDITING_CHECKS -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
   -Xlinker -rpath -Xlinker "$validation_dir" \
-  Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Features/VideoTrimTimeline.swift Snaprivo/Features/VideoTrimHandle.swift Snaprivo/Features/VideoSecondsField.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoAudioMeter.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift \
-  Tests/VideoRecordingChecks.swift Tests/VideoLifecycleChecks.swift Tests/VideoCountdownChecks.swift Tests/VideoLibraryChecks.swift Tests/VideoPresentationChecks.swift Tests/VideoAudioMeterChecks.swift Tests/VideoEditingChecks.swift Tests/VideoTimelineChecks.swift -o "$validation_dir/VideoEditingRunner"
+  Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Features/VideoTrimTimeline.swift Snaprivo/Features/VideoTrimHandle.swift Snaprivo/Features/VideoSecondsField.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoAudioMeter.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoEditComposition.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift \
+  Tests/VideoRecordingChecks.swift Tests/VideoLifecycleChecks.swift Tests/VideoCountdownChecks.swift Tests/VideoLibraryChecks.swift Tests/VideoPresentationChecks.swift Tests/VideoAudioMeterChecks.swift Tests/VideoPlaybackChecks.swift Tests/VideoEditingChecks.swift Tests/VideoTimelineChecks.swift -o "$validation_dir/VideoEditingRunner"
 if [[ "${1:-}" == "--sandbox" ]]; then
   shift
   ./scripts/run-sandbox-checks.sh VideoEditing "$validation_dir/VideoEditingRunner" "$validation_dir/libSnagForgeDomain.dylib" "$@"
@@ -21,7 +21,7 @@ else
   "$validation_dir/VideoEditingRunner" "$@"
   runner="$validation_dir/VideoEditingRunner"
 fi
-if [[ "${1:-}" == "--audio-levels" ]]; then exit 0; fi
+if [[ "${1:-}" == "--audio-levels" || "${1:-}" == "--playback" ]]; then exit 0; fi
 restart_key="VideoEditing-$(uuidgen)"
 "$runner" --write "$restart_key"
 "$runner" --read "$restart_key"

@@ -10,7 +10,7 @@ struct VideoReviewView: View {
             if model.isQuickPreview { VideoQuickPreviewView(model: model) }
             else { VideoEditorView(model: model) }
         }
-        .task(id: model.presentation) { await model.updatePreviewComposition() }
+        .task(id: model.previewSettings) { await model.updatePreviewComposition() }
         .interactiveDismissDisabled(model.isBusy || model.hasUnappliedChanges)
         .onDisappear { model.stopPreview() }
     }
@@ -45,19 +45,19 @@ private struct VideoQuickPreviewView: View {
                     withAnimation(EditorMotion.panel(reduceMotion: reduceMotion)) { model.togglePlayback() }
                 } label: {
                     Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
-                        .foregroundStyle(model.isBusy || model.isPreparingPreview ? Color(nsColor: .disabledControlTextColor) : .primary)
+                        .foregroundStyle(model.isBusy || !model.isPreviewReady ? Color(nsColor: .disabledControlTextColor) : .primary)
                         .contentTransition(.symbolEffect(.replace)).frame(width: 20, height: 20)
                 }
                 .buttonStyle(.glass).keyboardShortcut(.space, modifiers: [])
                 .accessibilityLabel(model.isPlaying ? String(localized: "Pause") : String(localized: "Abspielen"))
                 .accessibilityIdentifier("video.quickPreview.play")
-                .disabled(model.isBusy || model.isPreparingPreview)
+                .disabled(model.isBusy || !model.isPreviewReady)
                 Slider(value: Binding(get: { model.position }, set: { model.scrub(to: $0) }), in: model.start...model.end)
                     .accessibilityLabel(String(localized: "Abspielposition"))
                     .accessibilityValue(VideoTimeText.clock(model.position))
                     .accessibilityIdentifier("video.quickPreview.position")
-                    .disabled(model.isBusy || model.isPreparingPreview)
-                Text(VideoTimeText.clock(model.end - model.start)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                    .disabled(model.isBusy || !model.isPreviewReady)
+                Text(VideoTimeText.clock(model.outputDuration)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
             }
             HStack(spacing: 12) {
                 Text(String(localized: "In der Videobibliothek gesichert.")).font(.caption).foregroundStyle(.secondary)
@@ -109,7 +109,13 @@ struct VideoEditorView: View {
                     }
                     .accessibilityIdentifier("video.editor.player")
                 Divider()
-                ScrollView { VideoPresentationOptions(model: model).padding(.trailing, 4) }
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        VideoPlaybackOptions(model: model)
+                        Divider()
+                        VideoPresentationOptions(model: model)
+                    }.padding(.trailing, 4)
+                }
                     .frame(width: 224)
             }
             transport
@@ -123,7 +129,7 @@ struct VideoEditorView: View {
                         .help(String(localized: "Zeitleiste für genauere Schnitte vergrößern."))
                         .accessibilityIdentifier("video.editor.timelineZoom")
                     Button(String(localized: "Zurücksetzen")) { if model.requestFeature(.video) { model.restoreOriginal() } }
-                        .disabled(model.isBusy || (model.start == 0 && model.end == model.duration))
+                        .disabled(model.isBusy || (model.start == 0 && model.end == model.duration && model.playback.removed.isEmpty))
                         .help(String(localized: "Gesamtes Video verwenden"))
                         .accessibilityIdentifier("video.editor.reset")
                 }
@@ -137,7 +143,7 @@ struct VideoEditorView: View {
                     Button(String(localized: "Video bearbeiten · Pro"), systemImage: "lock") { _ = model.requestFeature(.video) }
                 }
                 if !model.isValid {
-                    Text(String(localized: "Start und Ende müssen innerhalb des Originals liegen. Behalte mindestens ein Videobild."))
+                    Text(String(localized: "Behalte im Schnittbereich mindestens ein Videobild außerhalb der entfernten Abschnitte."))
                         .font(.caption).foregroundStyle(.red)
                 }
             }
@@ -200,7 +206,7 @@ struct VideoEditorView: View {
                 .help(model.isPlaying ? String(localized: "Pause") : String(localized: "Abspielen"))
                 .labelStyle(.iconOnly).buttonStyle(.glass).controlSize(.large)
                 .keyboardShortcut(.space, modifiers: [])
-                .disabled(!model.isValid || model.isBusy || model.isPreparingPreview).accessibilityIdentifier("video.editor.play")
+                .disabled(!model.isValid || model.isBusy || !model.isPreviewReady).accessibilityIdentifier("video.editor.play")
             HStack(spacing: 4) {
                 Button(String(localized: "Ein Videobild zurück"), systemImage: "backward.frame") { model.stepFrame(-1) }
                     .help(String(localized: "Ein Videobild zurück"))
@@ -214,7 +220,7 @@ struct VideoEditorView: View {
                 .accessibilityValue(VideoTimeText.clock(model.position))
                 .accessibilityIdentifier("video.editor.position")
             Spacer()
-            Text(VideoTimeText.selection(max(0, model.end - model.start)))
+            Text(VideoTimeText.selection(model.outputDuration))
                 .font(.callout.monospacedDigit().weight(.medium))
                 .accessibilityIdentifier("video.editor.selectionDuration")
         }.accessibilityElement(children: .contain)

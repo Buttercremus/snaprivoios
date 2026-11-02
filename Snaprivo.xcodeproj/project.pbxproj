@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		A04200000000000000000002 /* VideoAudioMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04200000000000000000001; };
+		A04300000000000000000002 /* VideoEditComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04300000000000000000001; };
+		A04400000000000000000002 /* VideoPlaybackOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04400000000000000000001; };
 		A04100000000000000000002 /* VideoComposition.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04100000000000000000001; };
 		04200CFFD12D083534B07BB1 /* Snaprivo/Resources/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3685E330EC5277A9DD5661C6 /* Snaprivo/Resources/Assets.xcassets */; };
 		0EF57D748BA824C82273C438 /* Snaprivo/Features/ImageOutputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 797A8EDCC344ADDEC6661094 /* Snaprivo/Features/ImageOutputView.swift */; };
@@ -94,6 +96,8 @@
 
 /* Begin PBXFileReference section */
 		A04200000000000000000001 /* VideoAudioMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/VideoAudioMeter.swift; sourceTree = SOURCE_ROOT; };
+		A04300000000000000000001 /* VideoEditComposition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/VideoEditComposition.swift; sourceTree = SOURCE_ROOT; };
+		A04400000000000000000001 /* VideoPlaybackOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoPlaybackOptions.swift; sourceTree = SOURCE_ROOT; };
 		A04100000000000000000001 /* VideoComposition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/VideoComposition.swift; sourceTree = SOURCE_ROOT; };
 		147A7302576B19F2F5285652 /* Snaprivo/Features/InsertImageButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/InsertImageButton.swift; sourceTree = SOURCE_ROOT; };
 		1AE2C7788D5D4709BB70DFCF /* Snaprivo/Features/RedactionSuggestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/RedactionSuggestionView.swift; sourceTree = SOURCE_ROOT; };
@@ -218,6 +222,8 @@
 				A03000000000000000000001 /* Snaprivo/Capture/VideoRecordingFiles.swift */,
 				A04100000000000000000001 /* VideoComposition.swift */,
 				A04200000000000000000001 /* VideoAudioMeter.swift */,
+				A04300000000000000000001 /* VideoEditComposition.swift */,
+				A04400000000000000000001 /* VideoPlaybackOptions.swift */,
 				772A4BCB6564702A3954BD84 /* Capture */,
 				C7E9FB2EA6C3B8C3CE97645E /* Editor */,
 				FC4A695F02A8A53A129DCB9A /* App */,
@@ -482,6 +488,8 @@
 				A03000000000000000000002 /* Snaprivo/Capture/VideoRecordingFiles.swift in Sources */,
 				A04100000000000000000002 /* VideoComposition.swift in Sources */,
 				A04200000000000000000002 /* VideoAudioMeter.swift in Sources */,
+				A04300000000000000000002 /* VideoEditComposition.swift in Sources */,
+				A04400000000000000000002 /* VideoPlaybackOptions.swift in Sources */,
 				A02900000000000000000002 /* Snaprivo/Features/EditorFilmstripView.swift in Sources */,
 				A02800000000000000000006 /* Snaprivo/Features/GuideView.swift in Sources */,
 				A02800000000000000000004 /* Snaprivo/Editor/GuideExporter.swift in Sources */,

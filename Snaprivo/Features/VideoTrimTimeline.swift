@@ -105,6 +105,13 @@ struct VideoTrimTimeline: View {
                 .frame(width: scale.width, height: 48)
                 .clipShape(.rect(cornerRadius: 4))
                 .overlay(alignment: .leading) {
+                    ForEach(Array(model.playback.removed.enumerated()), id: \.offset) { _, range in
+                        Rectangle().fill(.red.opacity(0.35))
+                            .frame(width: max(0, scale.x(for: range.end) - scale.x(for: range.start)))
+                            .offset(x: scale.x(for: range.start))
+                    }.allowsHitTesting(false)
+                }
+                .overlay(alignment: .leading) {
                     Rectangle().fill(.black.opacity(0.6)).frame(width: start).allowsHitTesting(false)
                 }
                 .overlay(alignment: .trailing) {

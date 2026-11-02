@@ -9,6 +9,7 @@ import SnagForgeDomain
 
     static func run() async throws {
         try VideoAudioMeterChecks.run()
+        try await VideoPlaybackChecks.run()
         try await VideoPresentationChecks.run()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("VideoEditing-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -290,6 +291,8 @@ private actor ExportPublishGate {
         if CommandLine.arguments.dropFirst().first == "--audio-levels" {
             try VideoAudioMeterChecks.run()
             try await VideoLifecycleChecks.engines()
+        } else if CommandLine.arguments.dropFirst().first == "--playback" {
+            try await VideoPlaybackChecks.run()
         } else if CommandLine.arguments.count == 3 { try await VideoEditingChecks.restart(write: CommandLine.arguments[1] == "--write", key: CommandLine.arguments[2]) }
         else { try await VideoEditingChecks.run() }
     }
