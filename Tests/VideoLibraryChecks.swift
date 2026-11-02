@@ -102,7 +102,11 @@ import SnagForgeDomain
         opened = nil
         await model.showPreview(recording: ready)
         let preview = model.preview!
-        require(preview.id == first.id && opened == nil, "Internal preview opened an external app")
+        require(preview.id == first.id && opened == nil && preview.isQuickPreview, "Recording did not reach the internal quick preview")
+        let player = preview.player
+        preview.seek(0.4); preview.openEditor()
+        require(!preview.isQuickPreview && preview.player === player && preview.position == 0.4 && !preview.isPlaying,
+            "Editor handoff replaced the player, lost position or played automatically")
         preview.start = 0.1; preview.end = 0.9
         require(!(await model.finishPendingWork()), "Library quit discarded a pending video edit")
         preview.error = nil
@@ -110,6 +114,11 @@ import SnagForgeDomain
         require(model.items.first { $0.id == first.id }?.document.trim == VideoTrim(start: 0.1, end: 0.9), "Saved preview did not refresh the library")
         require(await model.finishPendingWork())
         preview.stopPreview(); model.preview = nil
+        await model.showPreview(recording: ready, directlyEdit: true)
+        require(model.preview?.isQuickPreview == false, "Direct editor preference was ignored")
+        model.preview?.stopPreview(); model.preview = nil
+        await model.showPreview(recording: root.appendingPathComponent(ready.lastPathComponent))
+        require(model.preview == nil && model.error != nil, "Foreign recording URL was adopted")
         // Disposable caches must not hide the recording; oversized metadata must
         // fail before decoding or publishing a restore. Sparse files use no large buffers.
         func oversized(_ url: URL, bytes: UInt64) throws {

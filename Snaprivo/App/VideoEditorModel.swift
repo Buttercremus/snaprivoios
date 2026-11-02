@@ -13,6 +13,7 @@ enum VideoEditError: LocalizedError {
     @ObservationIgnored var hasProAccess: @MainActor () -> Bool = { true }
     let id: UUID
     private(set) var document: VideoDocument
+    private(set) var isQuickPreview: Bool
     let files: VideoRecordingFiles
     let originalURL: URL
     @ObservationIgnored let player: AVPlayer
@@ -47,8 +48,9 @@ enum VideoEditError: LocalizedError {
     private var history: [Edit]
     private var historyIndex = 0
 
-    init(document: VideoDocument, url: URL, files: VideoRecordingFiles, onSave: @escaping @MainActor () async -> Void = {}) {
+    init(document: VideoDocument, url: URL, files: VideoRecordingFiles, quickPreview: Bool = false, onSave: @escaping @MainActor () async -> Void = {}) {
         id = document.id; self.document = document; self.files = files; self.onSave = onSave; originalURL = url
+        isQuickPreview = quickPreview
         draftStart = document.effectiveTrim.start; draftEnd = document.effectiveTrim.end
         presentation = document.presentation
         history = [Edit(trim: document.trim, presentation: document.presentation)]; player = AVPlayer(url: url)
@@ -66,6 +68,10 @@ enum VideoEditError: LocalizedError {
     var canApply: Bool { isValid && hasUnappliedChanges && !isBusy }
     var canUndo: Bool { historyIndex > 0 && !hasUnappliedChanges && !isBusy }
     var canRedo: Bool { historyIndex + 1 < history.count && !hasUnappliedChanges && !isBusy }
+    func openEditor() {
+        guard !isBusy else { return }
+        pausePlayback(); isQuickPreview = false
+    }
     func seek(_ seconds: Double) {
         guard seconds.isFinite else { return }
         pausePlayback(); position = min(max(0, seconds), duration)

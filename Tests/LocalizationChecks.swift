@@ -100,11 +100,14 @@ import SnagForgeDomain
             : "1 Abschnitt · \(size) Pixel\nPrüfe die Übergänge in der Vorschau."))
         let recording = String(format: String(localized: "● Aufnahme läuft · %02d:%02d"), 1, 5)
         precondition(recording == (english ? "● Recording · 01:05" : "● Aufnahme läuft · 01:05"))
-        let recordingDetail = String(localized: "\n\(width) × \(height) Pixel · \(title)\nMit Stop beenden und im Videoeditor öffnen.")
+        let recordingDetail = String(localized: "\n\(width) × \(height) Pixel · \(title)\nMit Stop beenden und die Aufnahme ansehen.")
         precondition(recordingDetail == (english
-            ? "\n\(size) pixels · \(title)\nChoose Stop to finish and open the video editor."
-            : "\n\(size) Pixel · \(title)\nMit Stop beenden und im Videoeditor öffnen."))
+            ? "\n\(size) pixels · \(title)\nChoose Stop to finish and review the recording."
+            : "\n\(size) Pixel · \(title)\nMit Stop beenden und die Aufnahme ansehen."))
         precondition(String(localized: "Mikrofon aufnehmen") == (english ? "Record microphone" : "Mikrofon aufnehmen"))
+        precondition(String(localized: "Video fertig") == (english ? "Video ready" : "Video fertig"))
+        precondition(String(localized: "Bearbeiten") == (english ? "Edit" : "Bearbeiten"))
+        precondition(String(localized: "Direkt im Videoeditor öffnen") == (english ? "Open directly in the video editor" : "Direkt im Videoeditor öffnen"))
         precondition(String(localized: "Systemton und Mikrofon") == (english ? "System audio and microphone" : "Systemton und Mikrofon"))
         precondition(String(localized: "Die Videoaufnahme wurde unerwartet beendet. Bitte erneut aufnehmen.") == (english
             ? "The video recording ended unexpectedly. Please record again."

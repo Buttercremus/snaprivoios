@@ -100,7 +100,7 @@ struct VideoLibraryView: View {
         .sheet(item: $renaming) { document in
             ProjectRenameSheet(title: document.title, heading: String(localized: "Video umbenennen"), prompt: String(localized: "Videoname")) { await model.rename(document.id, title: $0) }
         }
-        .sheet(item: $model.preview) { preview in VideoEditorView(model: preview) }
+        .sheet(item: $model.preview) { preview in VideoReviewView(model: preview) }
         .alert(String(localized: "Videoaktion fehlgeschlagen"), isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }

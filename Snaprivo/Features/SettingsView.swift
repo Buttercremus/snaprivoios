@@ -52,6 +52,12 @@ private struct GeneralSettings: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
             CaptureClipboardSettings(preferences: preferences)
+            Section(String(localized: "Nach der Videoaufnahme")) {
+                Toggle(String(localized: "Direkt im Videoeditor öffnen"), isOn: $preferences.opensVideoEditorAfterCapture)
+                    .accessibilityIdentifier("settings.video.directEditor")
+                Text(String(localized: "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek."))
+                    .font(.callout).foregroundStyle(.secondary)
+            }
             Section(String(localized: "Projekte")) {
                 LabeledContent(String(localized: "Speicherung"), value: String(localized: "Lokal · Automatisch"))
                 Text(String(localized: "Aufnahmen und importierte Bilder bleiben mit ihren Markierungen und Zuschnitten in der Bibliothek bearbeitbar. ⌘S sichert sofort."))

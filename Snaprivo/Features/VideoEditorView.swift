@@ -2,6 +2,94 @@ import SwiftUI
 import AVKit
 import SnagForgeDomain
 
+/// This stable host owns playback across the preview-to-editor handoff.
+struct VideoReviewView: View {
+    @Bindable var model: VideoEditorModel
+    var body: some View {
+        VStack(spacing: 0) {
+            if model.isQuickPreview { VideoQuickPreviewView(model: model) }
+            else { VideoEditorView(model: model) }
+        }
+        .task(id: model.presentation) { await model.updatePreviewComposition() }
+        .interactiveDismissDisabled(model.isBusy || model.hasUnappliedChanges)
+        .onDisappear { model.stopPreview() }
+    }
+}
+
+private struct VideoQuickPreviewView: View {
+    @Bindable var model: VideoEditorModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(String(localized: "Video fertig")).font(.title3.weight(.semibold))
+                    Text(model.document.title).font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer()
+                Button { dismiss() } label: {
+                    Text(String(localized: "Schließen"))
+                        .foregroundStyle(model.isBusy ? Color(nsColor: .disabledControlTextColor) : .primary)
+                }
+                    .buttonStyle(.glass).keyboardShortcut(.cancelAction).disabled(model.isBusy)
+                    .accessibilityIdentifier("video.quickPreview.close")
+            }
+            NativeVideoPreview(player: model.player)
+                .frame(minHeight: 200, maxHeight: .infinity)
+                .background(.black).clipShape(.rect(cornerRadius: 8))
+                .overlay { if model.isPreparingPreview { ProgressView() } }
+                .accessibilityIdentifier("video.quickPreview.player")
+            HStack(spacing: 12) {
+                Button {
+                    withAnimation(EditorMotion.panel(reduceMotion: reduceMotion)) { model.togglePlayback() }
+                } label: {
+                    Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
+                        .foregroundStyle(model.isBusy || model.isPreparingPreview ? Color(nsColor: .disabledControlTextColor) : .primary)
+                        .contentTransition(.symbolEffect(.replace)).frame(width: 20, height: 20)
+                }
+                .buttonStyle(.glass).keyboardShortcut(.space, modifiers: [])
+                .accessibilityLabel(model.isPlaying ? String(localized: "Pause") : String(localized: "Abspielen"))
+                .accessibilityIdentifier("video.quickPreview.play")
+                .disabled(model.isBusy || model.isPreparingPreview)
+                Slider(value: Binding(get: { model.position }, set: { model.scrub(to: $0) }), in: model.start...model.end)
+                    .accessibilityLabel(String(localized: "Abspielposition"))
+                    .accessibilityValue(VideoTimeText.clock(model.position))
+                    .accessibilityIdentifier("video.quickPreview.position")
+                    .disabled(model.isBusy || model.isPreparingPreview)
+                Text(VideoTimeText.clock(model.end - model.start)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            HStack(spacing: 12) {
+                Text(String(localized: "In der Videobibliothek gesichert.")).font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                if model.isExporting {
+                    ProgressView().controlSize(.small)
+                    Button(String(localized: "Export abbrechen")) { model.cancelExport() }.buttonStyle(.glass)
+                } else {
+                    Button { model.openEditor() } label: {
+                        Label(String(localized: "Bearbeiten"), systemImage: "slider.horizontal.3")
+                            .foregroundStyle(model.isBusy ? Color(nsColor: .disabledControlTextColor) : .primary)
+                    }
+                        .buttonStyle(.glass).disabled(model.isBusy).accessibilityIdentifier("video.quickPreview.edit")
+                    Button {
+                        Task { if await model.prepareExport() { model.chooseExport() } }
+                    } label: {
+                        Text(String(localized: "MP4 exportieren …"))
+                            .foregroundStyle(model.isBusy ? Color(nsColor: .disabledControlTextColor) : .primary)
+                    }.buttonStyle(.glassProminent).disabled(model.isBusy).accessibilityIdentifier("video.quickPreview.export")
+                }
+            }
+        }
+        .padding(20).frame(minWidth: 600, idealWidth: 680, minHeight: 400, idealHeight: 480)
+        .alert(String(localized: "Videoaktion fehlgeschlagen"), isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
+            Button("OK") { model.error = nil }
+        } message: { Text(model.error ?? "") }
+        .alert(String(localized: "Dateiaktion abgeschlossen"), isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
+            Button("OK") { model.notice = nil }
+        } message: { Text(model.notice ?? "") }
+    }
+}
+
 struct VideoEditorView: View {
     @Bindable var model: VideoEditorModel
     @Environment(\.dismiss) private var dismiss
@@ -50,9 +138,7 @@ struct VideoEditorView: View {
             Divider()
             footer
         }.padding(20).frame(minWidth: 760, idealWidth: 1040, minHeight: 640, idealHeight: 760)
-        .task(id: model.presentation) { await model.updatePreviewComposition() }
         .interactiveDismissDisabled(model.isBusy || model.hasUnappliedChanges)
-        .onDisappear { model.stopPreview() }
         .alert(String(localized: "Änderungen vor dem Schließen sichern?"), isPresented: $confirmsDiscard) {
             Button(String(localized: "Änderungen sichern")) { Task { if await model.apply() { dismiss() } } }
                 .disabled(!model.canApply)

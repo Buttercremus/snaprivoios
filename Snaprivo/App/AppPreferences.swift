@@ -134,6 +134,7 @@ final class AppPreferences {
     var videoMouseClicks: Bool { didSet { defaults.set(videoMouseClicks, forKey: "capture.videoMouseClicks") } }
     var videoSystemAudio: Bool { didSet { defaults.set(videoSystemAudio, forKey: "capture.videoSystemAudio") } }
     var videoMicrophone: Bool { didSet { defaults.set(videoMicrophone, forKey: "capture.videoMicrophone") } }
+    var opensVideoEditorAfterCapture: Bool { didSet { defaults.set(opensVideoEditorAfterCapture, forKey: "capture.videoDirectEditor") } }
     var captureDelay: Int { didSet { defaults.set(captureDelay, forKey: "capture.defaultDelay") } }
     var includesCursor: Bool { didSet { defaults.set(includesCursor, forKey: "capture.includesCursor") } }
     var quickPreviewAfterCapture: Bool { didSet { defaults.set(quickPreviewAfterCapture, forKey: "capture.quickPreview") } }
@@ -184,6 +185,7 @@ final class AppPreferences {
         let delay = defaults.integer(forKey: "capture.defaultDelay")
         captureDelay = [0, 3, 5].contains(delay) ? delay : 0
         includesCursor = defaults.bool(forKey: "capture.includesCursor")
+        opensVideoEditorAfterCapture = defaults.bool(forKey: "capture.videoDirectEditor")
         quickPreviewAfterCapture = defaults.bool(forKey: "capture.quickPreview")
         copyAfterCapture = defaults.bool(forKey: "capture.copyAfterCapture")
         suggestsGuideTextOnCapture = defaults.object(forKey: "guides.suggestTextOnCapture") as? Bool ?? true

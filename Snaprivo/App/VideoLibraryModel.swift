@@ -33,23 +33,23 @@ import SnagForgeDomain
             return true
         } catch { self.error = error.localizedDescription; return false }
     }
-    func showPreview(_ id: UUID) async {
-        guard preview == nil, !isBusy else { return }
+    func showPreview(_ id: UUID, quickPreview: Bool = false) async {
+        guard preview == nil, !isBusy, !isSuspended else { return }
         do {
             let document = try await files.document(id), url = try await files.movieURL(id)
             guard preview == nil else { return }
-            preview = VideoEditorModel(document: document, url: url, files: files) { [weak self] in await self?.refresh() }
+            preview = VideoEditorModel(document: document, url: url, files: files, quickPreview: quickPreview) { [weak self] in await self?.refresh() }
             preview?.requestFeature = { [weak self] in self?.requestFeature($0) ?? false }
             preview?.hasProAccess = { [weak self] in self?.hasProAccess() ?? false }
         } catch { self.error = error.localizedDescription }
     }
-    func showPreview(recording url: URL) async {
+    func showPreview(recording url: URL, directlyEdit: Bool = false) async {
         await refresh()
         guard url.deletingLastPathComponent().standardizedFileURL == files.root.standardizedFileURL,
               let item = items.first(where: { $0.document.state == .finished && $0.document.fileName == url.lastPathComponent }) else {
             error = VideoRecordingError.invalidMovie.localizedDescription; return
         }
-        await showPreview(item.id)
+        await showPreview(item.id, quickPreview: !directlyEdit)
     }
     func reveal(_ id: UUID) async {
         do { NSWorkspace.shared.activateFileViewerSelecting([try await files.movieURL(id)]) }

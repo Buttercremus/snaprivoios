@@ -44,10 +44,13 @@ import SnagForgeDomain
         precondition(preferences.automaticallyFitsImage, "Existing installations must keep fit as their default")
         preferences.automaticallyFitsImage = false
         precondition(!preferences.videoSystemAudio && !preferences.videoMicrophone && !preferences.videoMouseClicks)
+        precondition(!preferences.opensVideoEditorAfterCapture)
+        preferences.opensVideoEditorAfterCapture = true
         preferences.videoSystemAudio = true; preferences.videoMicrophone = true; preferences.videoMouseClicks = true
         preferences.toolbarSize = .large; preferences.captureDelay = 5; preferences.includesCursor = true; preferences.copyAfterCapture = true
         let restored = AppPreferences(defaults: UserDefaults(suiteName: suite)!)
         precondition(restored.videoSystemAudio && restored.videoMicrophone && restored.videoMouseClicks)
+        precondition(restored.opensVideoEditorAfterCapture)
         precondition(restored.toolbarSize == .large && restored.captureDelay == 5 && restored.includesCursor && restored.copyAfterCapture)
         precondition(!restored.automaticallyFitsImage, "Actual-pixel opening preference did not survive restart")
         checkToolbarOrder(defaults: defaults, suite: suite)

@@ -1,6 +1,108 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "Video fertig" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video fertig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video ready"
+          }
+        }
+      }
+    },
+    "Bearbeiten" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bearbeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
+    },
+    "In der Videobibliothek gesichert." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Videobibliothek gesichert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved in your video library."
+          }
+        }
+      }
+    },
+    "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otherwise, show a compact preview with playback, export and editing. The video stays in your library."
+          }
+        }
+      }
+    },
+    "Direkt im Videoeditor öffnen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direkt im Videoeditor öffnen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open directly in the video editor"
+          }
+        }
+      }
+    },
+    "Nach der Videoaufnahme" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach der Videoaufnahme"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After recording a video"
+          }
+        }
+      }
+    },
     "Wartet auf Audiodaten" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -52,19 +154,19 @@
         }
       }
     },
-    "\n%lld × %lld Pixel · %@\nMit Stop beenden und im Videoeditor öffnen." : {
+    "\n%lld × %lld Pixel · %@\nMit Stop beenden und die Aufnahme ansehen." : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\n%lld × %lld Pixel · %@\nMit Stop beenden und im Videoeditor öffnen."
+            "value" : "\n%lld × %lld Pixel · %@\nMit Stop beenden und die Aufnahme ansehen."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "\n%lld × %lld pixels · %@\nChoose Stop to finish and open the video editor."
+            "value" : "\n%lld × %lld pixels · %@\nChoose Stop to finish and review the recording."
           }
         }
       }

@@ -616,7 +616,7 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
         case .starting: text = String(localized: "Video wird gestartet …")
         case .recording:
             let seconds = Int(Date.now.timeIntervalSince(startedAt ?? .now))
-            text = String(format: String(localized: "● Aufnahme läuft · %02d:%02d"), seconds / 60, seconds % 60) + String(localized: "\n\(outputSize?.width ?? 0) × \(outputSize?.height ?? 0) Pixel · \(audioDescription)\nMit Stop beenden und im Videoeditor öffnen.")
+            text = String(format: String(localized: "● Aufnahme läuft · %02d:%02d"), seconds / 60, seconds % 60) + String(localized: "\n\(outputSize?.width ?? 0) × \(outputSize?.height ?? 0) Pixel · \(audioDescription)\nMit Stop beenden und die Aufnahme ansehen.")
         case .stopping: text = String(localized: "Video wird beendet und MP4 fertiggestellt …")
         case .finished: text = String(localized: "Video fertig. Jetzt als MP4 speichern.\nEine lokale Kopie bleibt in Snaprivo erhalten.")
         case .failed: text = String(localized: "Video konnte nicht aufgenommen werden. Bitte schließen und erneut versuchen.")

@@ -149,6 +149,11 @@ private actor UIExportHold {
                     return PreparedVideoRecording(transport: UICompletedVideoTransport(), pixelSize: PixelSize(width: 320, height: 180)!)
                 }
             })
+        // Only this synthetic flow activates the nonactivating production panel
+        // so native UI automation can reach Stop without touching a real source.
+        session.onState = { _, recording in
+            if recording { NSApp.windows.first { $0.identifier?.rawValue == "video.recordingToolbar" }?.makeKeyAndOrderFront(nil) }
+        }
         session.onFinished = { url in
             Task {
                 workspace.libraryShowsVideos = true; workspace.section = .library
@@ -172,7 +177,7 @@ private actor UIExportHold {
                 let item = try await files.list().items.first { $0.document.fileName == movie.lastPathComponent }!
                 _ = try await files.setTrim(item.id, trim: .init(start: 0.234567, end: 1.876543), expectedRevision: 0)
                 workspace.libraryShowsVideos = true; workspace.section = .library
-                await workspace.videos.showPreview(recording: movie)
+                await workspace.videos.showPreview(recording: movie, directlyEdit: true)
             } catch { workspace.importError = error.localizedDescription }
         }
     }

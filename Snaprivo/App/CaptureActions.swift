@@ -67,7 +67,7 @@ enum CaptureLauncher {
         }, authorizeRecognition: { workspace.requirePro(.textRecognition) }, onRecognitionCapture: { image, codesOnly in
             workspace.recognizeCapturedText(image, codesOnly: codesOnly, onFinished: { dismissWindow(id: "capture") })
         }, onVideoCapture: { url in
-            await workspace.videos.showPreview(recording: url)
+            await workspace.videos.showPreview(recording: url, directlyEdit: workspace.preferences.opensVideoEditorAfterCapture)
             AppWindows.show("workspace", using: openWindow)
             dismissWindow(id: "capture")
         }) { image in

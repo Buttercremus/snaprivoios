@@ -2,6 +2,8 @@
 
 Native Screenshot- und Bildschirmvideo-App für macOS 26+, von Anfang an für den Mac App Store und Liquid Glass konzipiert.
 
+**Video-Schnellvorschau (2. November 2026):** Nach einer fertigen Aufnahme erscheint zuerst eine kompakte Vorschau mit Abspielen, Zeitleiste, MP4-Export und „Bearbeiten“. Beim Wechsel in den Editor bleiben dieselbe Datei, derselbe Player und die Abspielposition erhalten. Schließen entfernt nur die Vorschau. Unter „Allgemein → Nach der Videoaufnahme“ lässt sich das direkte Öffnen im Videoeditor einschalten; Videos aus der Bibliothek öffnen weiterhin den Editor. [Nachweise](docs/BESTOF-ABNAHME.md).
+
 **Audio-Pegel (2. November 2026):** Die laufende Aufnahme zeigt Systemton und Mikrofon getrennt, jeweils nur für aktivierte Quellen. Die kompakte Leiste bleibt gleich groß. Messwerte stammen aus den bereits vorhandenen ScreenCaptureKit-Samples, mit höchstens zehn UI-Aktualisierungen pro Sekunde und Quelle. Es werden keine zusätzlichen Audioaufnahmen, Berechtigungen oder gespeicherten Audiodaten erzeugt. Stille bleibt von fehlenden Messdaten und Aufnahmefehlern getrennt. Synthetische Signal-/Zustandsprüfungen und native Darstellung bestanden; reale Tonquellen bleiben separat abzunehmen. [Nachweise](docs/BESTOF-ABNAHME.md).
 
 **Icon-Wechsel (1. November 2026):** In der Editorleiste gleitet nach einem Mausklick nur die Auswahlmarkierung. Symbol- und Schriftgewichte bleiben dabei konstant; Tastatur und reduzierte Bewegung wechseln unmittelbar. Play/Pause im Videoeditor verwendet bei Mausklick einen nativen Symbolübergang. Die bestehende rechte Eigenschaftenleiste behält ihre Gestaltung. [Prüfnachweise](docs/BESTOF-ABNAHME.md).

@@ -45,3 +45,17 @@ Die bestehende 360 × 56 pt große Leiste zeigt aktivierte Quellen mit Lautsprec
 - Native deutsche Prüf-App mit synthetischen Werten: getrennte grüne Anzeigen, Icons, Zeit, Abmessungen und Stop in unverändert großer Leiste gesichtet. Keine echte Aufnahme gestartet.
 
 Logs: `/tmp/Snaprivo-bestof-audio-{build,domain,video,sandbox,localization}.log`. Reale Tonquellen, Signal-/Bildsynchronität einer neuen Hardwareaufnahme und vollständige VoiceOver-Abnahme bleiben offen.
+
+## A04 Video-Schnellvorschau
+
+Nur erfolgreich finalisierte Aufnahmen öffnen die neue kompakte Vorschau mit Abspielen, Scrubber, MP4-Export und „Bearbeiten“. Die Bibliothekskarte öffnet weiterhin direkt den Editor. Unter Allgemein lässt sich der direkte Editor auch nach der Aufnahme dauerhaft einschalten. Standard ist die Schnellvorschau.
+
+Ein beständiger Sheet-Container besitzt Player-Lebenszyklus und Kompositionsaufgabe. Der Wechsel in den Editor pausiert und behält dasselbe Modell, denselben AVPlayer, dieselbe Datei und die Position. Erst das Schließen des gesamten Sheets entfernt den Zeitbeobachter und beendet die Vorschau. Export verwendet unverändert den gemeinsamen validierten Exportpfad; es entsteht keine zweite importierte Aufnahme. Fremde oder nicht finalisierte Dateipfade werden nicht übernommen.
+
+- Build, Videobibliotheks-/Neustartprüfungen, gespeicherte Einstellungs-/Neustartprüfungen und vollständige Video-/Export-/Neustartprüfung im Sandbox-Host: bestanden.
+- Modellprüfungen bestätigen Schnellvorschau nach Aufnahme, Spieler-/Positionsübergabe, direkten Editor und Ablehnung eines fremden gleichnamigen Dateipfads.
+- Native deutsche Prüf-App: synthetische Aufnahme per Stop beendet, kompakte Vorschau gesichtet, Abspielen und Scrubber bedient. „Bearbeiten“ übernimmt die gesetzte Position 0,6 s. Nach Schließen steht weiterhin genau ein Video in der Bibliothek; dessen Karte öffnet direkt den Editor. Die bestehende Pro-Sperre bleibt erkennbar. Der abschließende Build zeigt kontrastreiche aktive Aktionen auch im inaktiven Fenster. MP4 öffnet den nativen Sichern-Dialog; Abbrechen und anschließendes Schließen erhalten das Bibliotheksvideo.
+- Lokalisierung: 1382 App-, 7 InfoPlist- und 19 Domain-Texte einschließlich des angepassten Aufnahmeabschlusses vollständig Deutsch/Englisch.
+- Vollständige VoiceOver- und reale Aufnahmeabnahme werden damit nicht ersetzt.
+
+Logs: `/tmp/Snaprivo-bestof-preview-{build,library,settings,sandbox,localization}.log`.
