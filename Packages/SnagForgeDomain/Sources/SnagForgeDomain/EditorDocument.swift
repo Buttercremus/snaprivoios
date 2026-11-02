@@ -236,7 +236,14 @@ public struct EditorTextStyle: Equatable, Codable, Sendable {
     public var weight: Weight
     public var italic: Bool
     public var alignment: Alignment
-    public init(family: String? = nil, weight: Weight = .semibold, italic: Bool = false, alignment: Alignment = .left) {
+    /// Format 20. Absent means not underlined, so unchanged text keeps its earlier encoding.
+    public var underline: Bool?
+    public var isUnderlined: Bool {
+        get { underline == true }
+        set { underline = newValue ? true : nil }
+    }
+    public init(family: String? = nil, weight: Weight = .semibold, italic: Bool = false, alignment: Alignment = .left, underline: Bool = false) {
         self.family = family; self.weight = weight; self.italic = italic; self.alignment = alignment
+        self.underline = underline ? true : nil
     }
 }

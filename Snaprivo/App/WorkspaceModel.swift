@@ -101,12 +101,14 @@ final class WorkspaceModel {
     }
     private(set) var hasOpenedExternalFile = false
     var showsOnboarding = false
-    var libraryShowsVideos = false
+    var libraryMedia = LibraryMedia.images
     let storage: StorageLocations
     var captureConfiguration: CaptureConfiguration
     var pendingCapture: UUID?
     /// Guide that receives the next started image capture as its final step.
     @ObservationIgnored var pendingGuideCapture: UUID?
+    /// Set by the instant shortcut for the one selection it starts; the preference covers every capture.
+    @ObservationIgnored var capturesNextImmediately = false
     var isScrollCapture = false
     private(set) var store: ProjectStore
     private(set) var isChangingLibrary = false
@@ -202,7 +204,8 @@ final class WorkspaceModel {
         }
         screenshot.onVideoLibraryChange = { [weak self] in
             guard let self else { return }
-            await self.videos.refresh(); self.libraryShowsVideos = true; self.section = .library
+            // The combined view shows and presents videos too; only the image tab switches over.
+            await self.videos.refresh(); if self.libraryMedia == .images { self.libraryMedia = .videos }; self.section = .library
         }
     }
     func refreshLibrary() async {
@@ -784,6 +787,8 @@ final class WorkspaceModel {
 }
 
 enum WorkspaceSection: Hashable { case library, editor, guides }
+/// The library's media filter: both kinds in one grid, or one of them with its full management.
+enum LibraryMedia: Hashable { case all, images, videos }
 
 extension WorkspaceModel {
     var canChangeStorage: Bool {

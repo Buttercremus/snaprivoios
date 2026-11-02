@@ -43,6 +43,24 @@ import SnagForgeDomain
             return layout.location(forGlyphAt: 0).x
         }
         precondition(glyphOrigin(.left) < glyphOrigin(.center) && glyphOrigin(.center) < glyphOrigin(.right))
+        // Underline must reach the exported pixels as one line under the words, spaces included.
+        func longestDarkRun(underlined: Bool) throws -> (run: Int, extent: Int) {
+            var value = EditorObject(kind: .text, start: CGPoint(x: 40, y: 60), text: "il il il", fontSize: 40)
+            value.color = EditorColor(red: 0, green: 0, blue: 0); value.textStyle = EditorTextStyle(underline: underlined)
+            let bitmap = NSBitmapImageRep(data: try EditorRenderer.png(image: image, objects: [value]))!
+            var longest = 0, minX = Int.max, maxX = 0
+            for y in 0..<bitmap.pixelsHigh {
+                var run = 0
+                for x in 0..<bitmap.pixelsWide {
+                    guard bitmap.colorAt(x: x, y: y)!.brightnessComponent < 0.5 else { run = 0; continue }
+                    run += 1; longest = max(longest, run); minX = min(minX, x); maxX = max(maxX, x)
+                }
+            }
+            return (longest, maxX - minX + 1)
+        }
+        let plainRun = try longestDarkRun(underlined: false), underlinedRun = try longestDarkRun(underlined: true)
+        precondition(plainRun.run < plainRun.extent / 3, "Synthetic glyphs already form a long line")
+        precondition(underlinedRun.run >= plainRun.extent * 8 / 10, "Underline missing from rendered text")
         var auto = object; auto.textWidth = nil
         precondition(EditorRenderer.textRect(auto).width < 500 && EditorRenderer.textContainerWidth(auto) < 500)
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 800, height: 600), styleMask: .borderless, backing: .buffered, defer: false)
@@ -91,6 +109,13 @@ import SnagForgeDomain
         var centre = style; centre.alignment = .center
         model.updateStyle(textStyle: centre); canvas.synchronizeTextEditor()
         precondition(editor.selectedRange() == NSRange(location: 0, length: 5) && editor.alignment == .center && editor.font == EditorRenderer.font(model.editingTextObject!))
+        // The inline editor shows the underline at once, for existing and newly typed text, and drops it again.
+        var underlined = centre; underlined.isUnderlined = true
+        model.updateStyle(textStyle: underlined); canvas.synchronizeTextEditor()
+        func underlineValue() -> Int? { editor.textStorage!.attribute(.underlineStyle, at: 0, effectiveRange: nil) as? Int }
+        precondition(underlineValue() == NSUnderlineStyle.single.rawValue && editor.typingAttributes[.underlineStyle] as? Int == NSUnderlineStyle.single.rawValue)
+        model.updateStyle(textStyle: centre); canvas.synchronizeTextEditor()
+        precondition(underlineValue() == nil && editor.typingAttributes[.underlineStyle] == nil && model.editingTextObject!.textStyle == centre)
         model.finishTextEditing(); model.undo(); precondition(model.history.objects == moved)
         for _ in 0..<500 where model.isDirty || model.isSaving { try await Task.sleep(for: .milliseconds(10)) }
         precondition(!model.isDirty && model.saveError == nil)
@@ -102,6 +127,6 @@ import SnagForgeDomain
         restored.copyPNG(to: pasteboard)
         for _ in 0..<500 where restored.isExporting { try await Task.sleep(for: .milliseconds(10)) }
         precondition(pasteboard.data(forType: .png) == png)
-        print("Typography checks passed: legacy font, font traits/fallback, paragraph layout, live independent tail, frame resize, four directions, duplicate, inline selection, undo/redo, autosave/reopen and resized/cropped PNG/clipboard.")
+        print("Typography checks passed: legacy font, font traits/fallback, paragraph layout, underline pixels and inline editor, live independent tail, frame resize, four directions, duplicate, inline selection, undo/redo, autosave/reopen and resized/cropped PNG/clipboard.")
     }
 }

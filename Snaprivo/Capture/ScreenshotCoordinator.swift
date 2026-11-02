@@ -114,7 +114,8 @@ final class ScreenshotCoordinator {
                 selector = selectionUI
                 status = String(localized: "Fenster oder Bereich auswählen …")
                 guard let selected = try await selectionUI.select(source: scrolling ? .region : configuration.source, windows: windows, desktop: desktop, media: configuration.media, allowsVideoAction: !scrolling && !imageOnly, scrolling: scrolling && !imageOnly, allowsScrolling: !imageOnly, destination: destination,
-                    confirmsImmediately: confirmsImmediately && !scrolling) else { return }
+                    confirmsImmediately: confirmsImmediately && !scrolling,
+                    videoOptions: .init(audio: videoAudio, delaySeconds: configuration.delaySeconds)) else { return }
                 try Task.checkCancellation()
                 guard !imageOnly || (selected.media == .image && !selected.isScrolling) else { throw ScreenshotError.invalidRegion }
                 if selected.destination != .image { guard authorizeRecognition() else { return } }
@@ -140,7 +141,8 @@ final class ScreenshotCoordinator {
                     guard authorizeCapture(false, true) else { return }
                     let session = VideoRecordingSession(selection: selected, includesCursor: configuration.includesCursor, showsMouseClicks: videoMouseClicks,
                                                         selectionOverlay: selectionUI.takeVideoOverlay(),
-                                                        delaySeconds: configuration.delaySeconds, audio: videoAudio, files: videoFiles)
+                                                        delaySeconds: selected.videoOptions?.delaySeconds ?? configuration.delaySeconds,
+                                                        audio: selected.videoOptions?.audio ?? videoAudio, files: videoFiles)
                     videoSession = session
                     session.onState = { [weak self] text, recording in self?.status = text; self?.isRecordingVideo = recording }
                     session.onPermissionFailure = { [weak self] error in self?.handleCaptureFailure(error) }

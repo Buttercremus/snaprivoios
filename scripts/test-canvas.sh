@@ -13,5 +13,5 @@ xcrun swiftc -swift-version 6 -I "$validation_dir" -L "$validation_dir" -lSnagFo
   -Xlinker -rpath -Xlinker "$validation_dir" \
   Snaprivo/Editor/EditorRenderer.swift Snaprivo/Editor/EditorModel.swift \
   Snaprivo/Editor/EditorCanvas.swift Snaprivo/Editor/EditorArrangementModel.swift Tests/DrawingWorkflowChecks.swift Tests/EditorArrangementChecks.swift Tests/CanvasChecks.swift Tests/ZoomCanvasChecks.swift Tests/CropCanvasChecks.swift Tests/RepeatedToolCanvasChecks.swift Tests/InstructionToolChecks.swift Tests/SelectionGripChecks.swift Tests/CanvasExpansionChecks.swift Tests/HollowShapeCanvasChecks.swift \
-  Tests/KeyboardEditingChecks.swift Tests/AnnotationToolsChecks.swift -o "$validation_dir/CanvasChecks"
+  Tests/KeyboardEditingChecks.swift Tests/AnnotationToolsChecks.swift Tests/MarqueeSelectionChecks.swift -o "$validation_dir/CanvasChecks"
 "$validation_dir/CanvasChecks" "$@"

@@ -339,7 +339,7 @@ struct EditorToolItem: Identifiable {
     var id: String { tool.rawValue }
 
     static let all: [Self] = [
-        .init(tool: .selection, title: String(localized: "Auswahl"), symbol: "cursorarrow", hint: String(localized: "Objekte auswählen und verschieben")),
+        .init(tool: .selection, title: String(localized: "Auswahl"), symbol: "cursorarrow", hint: String(localized: "Objekte anklicken oder auf freier Fläche einen Auswahlrahmen ziehen. Umschalt ergänzt die Auswahl.")),
         .init(tool: .arrow, title: String(localized: "Pfeil"), symbol: "arrow.up.right", hint: String(localized: "Pfeil aufziehen; Umschalt hält die Richtung in 45°-Schritten")),
         .init(tool: .text, title: String(localized: "Text"), symbol: "textformat", hint: String(localized: "Ins Bild klicken, um Text einzufügen")),
         .init(tool: .callout, title: String(localized: "Callout"), symbol: "text.bubble", hint: String(localized: "Sprechblase mit Live-Vorschau aufziehen, dann Text eingeben")),

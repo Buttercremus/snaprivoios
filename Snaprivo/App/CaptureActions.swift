@@ -7,6 +7,7 @@ enum CaptureLauncher {
         guard workspace.editor?.isShowingImageSize != true, !workspace.isDirectOCRBusy, !workspace.screenshot.isBusy, !workspace.isLoading else { return }
         workspace.pendingCapture = nil
         workspace.pendingGuideCapture = nil
+        workspace.capturesNextImmediately = false
         workspace.isScrollCapture = false
         AppWindows.show("capture", using: openWindow)
     }
@@ -22,22 +23,25 @@ enum CaptureLauncher {
                         dismissWindow: DismissWindowAction, scrolling: Bool = false, video: Bool = false, guide: UUID? = nil) {
         if action == .repeatLast { workspace.repeatLastCapture(using: openWindow, dismissWindow: dismissWindow); return }
         if action == .text || action == .code { workspace.captureText(using: openWindow, dismissWindow: dismissWindow, codesOnly: action == .code); return }
+        let recordsVideo = video || action.isVideo
+        let recordsScroll = scrolling || action == .scrolling
         // Leave native menu tracking before an existing setup view starts selection.
         Task { @MainActor in
             guard workspace.editor?.isShowingImageSize != true, !workspace.isDirectOCRBusy, !workspace.screenshot.isBusy, !workspace.isLoading, workspace.pendingCapture == nil else { return }
-            guard workspace.authorizeCapture(scrolling: scrolling, video: video) else {
+            guard workspace.authorizeCapture(scrolling: recordsScroll, video: recordsVideo) else {
                 if workspace.showPaywallWindow == nil { AppWindows.show("workspace", using: openWindow) }
                 return
             }
-            workspace.isScrollCapture = scrolling
+            workspace.isScrollCapture = recordsScroll
             // Every started capture overwrites the target, so a cancelled guide capture never leaks into the next one.
-            workspace.pendingGuideCapture = video ? nil : guide
+            workspace.pendingGuideCapture = recordsVideo ? nil : guide
             workspace.captureConfiguration = action.configuration(using: workspace.preferences.captureConfiguration)
-            if video {
+            workspace.capturesNextImmediately = action == .instantRegion && !recordsVideo && !recordsScroll
+            if recordsVideo {
                 workspace.captureConfiguration.media = .video
-                workspace.captureConfiguration.source = action == .display ? .display : action == .window ? .window : .region
+                if !action.isVideo { workspace.captureConfiguration.source = action == .display ? .display : action == .window ? .window : .region }
             }
-            if !video, let error = workspace.storage.libraryError {
+            if !recordsVideo, let error = workspace.storage.libraryError {
                 workspace.importError = error
                 AppWindows.show("workspace", using: openWindow)
                 return
@@ -54,7 +58,8 @@ enum CaptureLauncher {
     static func begin(workspace: WorkspaceModel, using openWindow: OpenWindowAction,
                       dismissWindow: DismissWindowAction, requestPermission: Bool = false) {
         let guide = workspace.captureConfiguration.media == .image ? workspace.pendingGuideCapture : nil
-        workspace.pendingGuideCapture = nil
+        let immediately = workspace.preferences.capturesImmediately || workspace.capturesNextImmediately
+        workspace.pendingGuideCapture = nil; workspace.capturesNextImmediately = false
         guard workspace.authorizeCapture(scrolling: workspace.isScrollCapture, video: workspace.captureConfiguration.media == .video) else { return }
         if workspace.captureConfiguration.media == .image, let error = workspace.storage.libraryError {
             workspace.importError = error
@@ -63,7 +68,7 @@ enum CaptureLauncher {
         }
         workspace.editor?.finishTextEditing()
         workspace.screenshot.start(configuration: workspace.captureConfiguration, requestPermission: requestPermission, scrolling: workspace.isScrollCapture, videoMouseClicks: workspace.preferences.videoMouseClicks, videoAudio: .init(systemAudio: workspace.preferences.videoSystemAudio, microphone: workspace.preferences.videoMicrophone), activatesOnImageCapture: guide != nil || !workspace.preferences.quickPreviewAfterCapture,
-            confirmsImmediately: workspace.preferences.capturesImmediately, onFailure: {
+            confirmsImmediately: immediately, onFailure: {
             AppWindows.show("capture", using: openWindow)
         }, authorizeRecognition: { workspace.requirePro(.textRecognition) }, onRecognitionCapture: { image, codesOnly in
             workspace.recognizeCapturedText(image, codesOnly: codesOnly, onFinished: { dismissWindow(id: "capture") })
@@ -90,23 +95,7 @@ struct CaptureMenuItems: View {
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
-        Button(String(localized: "Neue Aufnahme"), systemImage: "viewfinder") {
-            CaptureLauncher.capture(.region, workspace: workspace, using: openWindow, dismissWindow: dismissWindow)
-        }
-        .keyboardShortcut(workspace.captureShortcuts.bindings[.region]?.keyboardShortcut)
-        .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
-        Button(String(localized: "Letzten Bereich erneut aufnehmen"), systemImage: "arrow.clockwise") {
-            CaptureLauncher.capture(.repeatLast, workspace: workspace, using: openWindow, dismissWindow: dismissWindow)
-        }.keyboardShortcut(workspace.captureShortcuts.bindings[.repeatLast]?.keyboardShortcut)
-            .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading || !workspace.screenshot.hasLastSelection)
-        Button(String(localized: "Text direkt erfassen"), systemImage: "text.viewfinder") {
-            CaptureLauncher.capture(.text, workspace: workspace, using: openWindow, dismissWindow: dismissWindow)
-        }.keyboardShortcut(workspace.captureShortcuts.bindings[.text]?.keyboardShortcut)
-            .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
-        Button(String(localized: "QR-Code scannen"), systemImage: "qrcode.viewfinder") {
-            CaptureLauncher.capture(.code, workspace: workspace, using: openWindow, dismissWindow: dismissWindow)
-        }.keyboardShortcut(workspace.captureShortcuts.bindings[.code]?.keyboardShortcut)
-            .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
+        ForEach(CaptureAction.primaryMenuActions, id: \.rawValue) { action in captureButton(action) }
         if workspace.isDirectOCRBusy {
             Button(String(localized: "Texterfassung abbrechen"), systemImage: "xmark.circle") {
                 workspace.cancelDirectTextCapture()
@@ -132,29 +121,7 @@ struct CaptureMenuItems: View {
             }
         }
         Divider()
-        ForEach([CaptureAction.display, .delayedRegion], id: \.rawValue) { action in
-            Button(action.title, systemImage: action.symbol) {
-                CaptureLauncher.capture(action, workspace: workspace, using: openWindow, dismissWindow: dismissWindow)
-            }
-            .keyboardShortcut(workspace.captureShortcuts.bindings[action]?.keyboardShortcut)
-            .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
-        }
-        Button(String(localized: "Scroll-Aufnahme …"), systemImage: "arrow.down.square") {
-            CaptureLauncher.capture(.region, workspace: workspace, using: openWindow, dismissWindow: dismissWindow, scrolling: true)
-        }
-        .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
-        Button(String(localized: "Video: Bereich aufnehmen …"), systemImage: "video") {
-            CaptureLauncher.capture(.region, workspace: workspace, using: openWindow, dismissWindow: dismissWindow, video: true)
-        }
-        .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
-        Button(String(localized: "Video: Bildschirm aufnehmen …"), systemImage: "display") {
-            CaptureLauncher.capture(.display, workspace: workspace, using: openWindow, dismissWindow: dismissWindow, video: true)
-        }
-        .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
-        Button(String(localized: "Video: Fenster aufnehmen …"), systemImage: "macwindow") {
-            CaptureLauncher.capture(.window, workspace: workspace, using: openWindow, dismissWindow: dismissWindow, video: true)
-        }
-        .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading)
+        ForEach(CaptureAction.additionalMenuActions, id: \.rawValue) { action in captureButton(action) }
         Button(String(localized: "Lokale Videoaufnahmen …"), systemImage: "folder") {
             Task {
                 let root = workspace.videos.files.root
@@ -179,6 +146,14 @@ struct CaptureMenuItems: View {
                 Button(String(localized: "Aufnahme abbrechen"), systemImage: "xmark.circle") { workspace.screenshot.cancel() }
             }
         }
+    }
+    private func captureButton(_ action: CaptureAction) -> some View {
+        Button(action.title, systemImage: action.symbol) {
+            CaptureLauncher.capture(action, workspace: workspace, using: openWindow, dismissWindow: dismissWindow)
+        }
+        .keyboardShortcut(workspace.captureShortcuts.bindings[action]?.keyboardShortcut)
+        .disabled(workspace.screenshot.isBusy || workspace.isDirectOCRBusy || workspace.isLoading
+                  || (action == .repeatLast && !workspace.screenshot.hasLastSelection))
     }
 }
 

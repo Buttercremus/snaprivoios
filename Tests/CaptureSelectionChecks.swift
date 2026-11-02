@@ -173,7 +173,7 @@ struct CaptureSelectionChecks {
         precondition(NSCursor.current === NSCursor.arrow, "Confirmation toolbar cursor was overwritten")
         view.mouseMoved(with: event(.mouseMoved, 200, 380))
         precondition(NSCursor.current === view.selectionCursor(at: CGPoint(x: 200, y: 380)), "Leaving the toolbar lost the crosshair")
-        let buttons = (toolbar as! CaptureReviewToolbar).actionButtons
+        let buttons = (toolbar as! CaptureReviewToolbar).actionButtons.filter { !$0.isHidden }
         precondition(buttons.count == 8, "Missing native confirmation controls/photo/source choices")
         toolbar.layoutSubtreeIfNeeded()
         for button in buttons {
@@ -319,13 +319,42 @@ struct CaptureSelectionChecks {
         let photoButton = (actionToolbar as! CaptureReviewToolbar).actionButtons.first { $0.accessibilityIdentifier() == "capture.confirm" }!
         let videoButton = (actionToolbar as! CaptureReviewToolbar).actionButtons.first { $0.accessibilityIdentifier() == "capture.video" }!
         photoButton.performClick(nil)
-        precondition(!view.isVideo && view.reviewDraft == preservedDraft && captures == 3,
-                     "Photo must immediately confirm the existing selection")
+        precondition(!view.isVideo && view.reviewDraft == preservedDraft && captures == 2,
+                     "Returning from Video to Photo must keep the selection without capturing")
+        photoButton.performClick(nil)
+        precondition(captures == 3, "Photo must confirm once its mode is active")
         let imageSelection = ScreenshotSelection(displayID: 1, draft: preservedDraft, screenFrame: view.screenFrame, media: .image)
         precondition(imageSelection.media == .image && imageSelection.windowID == nil)
         videoButton.performClick(nil)
-        let selectedVideo = ScreenshotSelection(displayID: 1, draft: preservedDraft, screenFrame: view.screenFrame, media: .video)
-        precondition(view.isVideo && view.reviewDraft == preservedDraft && captures == 4)
+        let defaultVideoOptions = VideoCaptureOptions(audio: .init(systemAudio: true), delaySeconds: 3)
+        view.videoOptions = defaultVideoOptions
+        precondition(view.isVideo && view.reviewDraft == preservedDraft && captures == 3,
+                     "Video mode started REC before the user could choose sound")
+        precondition(view.subviews.first { $0.accessibilityIdentifier() == "capture.reviewToolbar" } === actionToolbar,
+                     "Changing media replaced the selection toolbar")
+        let review = actionToolbar as! CaptureReviewToolbar
+        let mic = review.actionButtons.first { $0.accessibilityIdentifier() == "capture.video.microphone" }!
+        let system = review.actionButtons.first { $0.accessibilityIdentifier() == "capture.video.systemAudio" }!
+        for systemOn in [false, true] {
+            for microphoneOn in [false, true] {
+                if view.videoOptions.audio.systemAudio != systemOn { system.performClick(nil) }
+                if view.videoOptions.audio.microphone != microphoneOn { mic.performClick(nil) }
+                precondition(view.videoOptions.audio == VideoAudioOptions(systemAudio: systemOn, microphone: microphoneOn) && captures == 3)
+                precondition(review.videoOptions == view.videoOptions && view.reviewDraft == preservedDraft)
+            }
+        }
+        review.actionButtons.first { $0.accessibilityIdentifier() == "capture.video.start" }!.performClick(nil)
+        let selectedVideo = ScreenshotSelection(displayID: 1, draft: preservedDraft, screenFrame: view.screenFrame, media: .video, videoOptions: view.videoOptions)
+        precondition(captures == 4 && selectedVideo.videoOptions?.audio == VideoAudioOptions(systemAudio: true, microphone: true))
+        precondition(selectedVideo.videoOptions?.delaySeconds == 3 && defaultVideoOptions.audio.microphone == false,
+                     "Session changes lost the seeded countdown or mutated the defaults")
+        for dimensions in [CGSize(width: 1068, height: 56), CGSize(width: 728, height: 112)] {
+            let bar = CaptureReviewToolbar(isVideo: true)
+            bar.targetLayoutWidth = dimensions.width; bar.frame.size = dimensions; bar.layoutSubtreeIfNeeded()
+            for button in bar.actionButtons where !button.isHidden {
+                precondition(bar.bounds.contains(button.convert(button.bounds, to: bar)), "Video controls are clipped in the horizontal/compact layout")
+            }
+        }
         precondition(selectedVideo.media == .video && selectedVideo.windowID == 42)
         let videoDraft = view.reviewDraft!
         view.reviewDraft = videoDraft.moving(by: CGSize(width: 20, height: 0), within: view.screenFrame)

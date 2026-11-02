@@ -205,6 +205,7 @@ private struct QuickCaptureThumbnail: View {
     @State private var recognition = QuickImageRecognitionModel()
     @FocusState private var closeIsFocused: Bool
     @AccessibilityFocusState private var closeHasAccessibilityFocus: Bool
+    /// Copy, text and QR appear on hover only; keyboard and VoiceOver reach the same actions under „Mehr“.
     private var showsHoverActions: Bool { isHovered || showsRecognition }
     private var showsCloseButton: Bool { isHovered || closeIsFocused || closeHasAccessibilityFocus }
     var body: some View {
@@ -254,7 +255,8 @@ private struct QuickCaptureThumbnail: View {
                 .accessibilityHidden(!showsHoverActions)
                 .disabled(recognition.isBusy || !model.hasConfirmedImageForToolbar)
             }
-            .overlay(alignment: .topTrailing) {
+            // Close sits top-left, where macOS windows and notifications put it.
+            .overlay(alignment: .topLeading) {
                 Button(action: close) {
                     Image(systemName: "xmark")
                         .font(.system(size: 11, weight: .semibold))
@@ -275,19 +277,9 @@ private struct QuickCaptureThumbnail: View {
                     .padding(8).help(String(localized: "Vorschau schließen; Aufnahme bleibt in der Bibliothek"))
             }
             HStack(spacing: 7) {
-                Button(String(localized: "Kopieren"), systemImage: "doc.on.doc") { model.copyPNG() }
-                    .labelStyle(.iconOnly).help(String(localized: "PNG kopieren"))
                 Button(String(localized: "PNG exportieren …"), systemImage: "square.and.arrow.down") { model.exportPNG() }
                     .labelStyle(.iconOnly).help(String(localized: "PNG exportieren …"))
                 PinImageButton(model: model, size: workspace.preferences.toolbarSize, iconOnly: true)
-                Button(String(localized: "Text kopieren"), systemImage: "text.viewfinder") { recognize(codesOnly: false) }
-                    .labelStyle(.iconOnly).help(String(localized: "Text erkennen und kopieren"))
-                    .accessibilityIdentifier("quickCapture.thumbnail.copyText")
-                    .disabled(recognition.isBusy || !model.hasConfirmedImageForToolbar)
-                Button(String(localized: "QR lesen"), systemImage: "qrcode.viewfinder") { recognize(codesOnly: true) }
-                    .labelStyle(.iconOnly).help(String(localized: "QR lesen"))
-                    .accessibilityIdentifier("quickCapture.thumbnail.scanCode")
-                    .disabled(recognition.isBusy || !model.hasConfirmedImageForToolbar)
                 Spacer(minLength: 0)
                 if model.copyState == .copied {
                     Image(systemName: "checkmark").foregroundStyle(.green).accessibilityLabel(String(localized: "Kopiert"))

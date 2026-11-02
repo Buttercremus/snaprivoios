@@ -6,81 +6,111 @@ struct ProPaywallView: View {
     var feature: ProFeature?
     @Environment(\.dismiss) private var dismiss
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Label("Snaprivo Pro", systemImage: "sparkles").font(.largeTitle.bold())
-            Text(String(localized: "Einmal kaufen. Pro dauerhaft freischalten.")).font(.title3)
-            Text(String(localized: "Lange Inhalte aufnehmen, verständliche Anleitungen erstellen und Abläufe mit Bild und Ton erklären."))
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            if let feature, !model.hasPro {
-                Label(String(localized: "Pro-Funktion: \(feature.title)"), systemImage: "lock")
-                    .font(.callout).accessibilityIdentifier("pro.requestedFeature")
-            }
+        VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    benefit("text.viewfinder", String(localized: "Texterkennung"), String(localized: "Text aus Bildern und Bereichen kopieren, Bildinhalte in der Bibliothek durchsuchen."))
-                    benefit("arrow.down.square", String(localized: "Scroll-Aufnahmen"), String(localized: "Lange Webseiten und Inhalte in einer Aufnahme festhalten."))
-                    benefit("list.number", String(localized: "Anleitungen"), String(localized: "Mehrere Bilder zu bearbeitbaren Schritten verbinden und als PDF oder Markdown ausgeben."))
-                    benefit("video", String(localized: "Video mit Ton und Schnitt"), String(localized: "Bereich, Fenster oder Bildschirm mit Systemton und Mikrofon aufnehmen, trimmen und als MP4 speichern."))
-                    benefit("paintbrush", String(localized: "Erweiterte Bildwerkzeuge"), String(localized: "Callouts, Schrittnummern, Textmarker, zusätzliche Formen, handgezeichnete Stile, eigene Vorlagen und eingefügte Bilder."))
-                    benefit("square.stack", String(localized: "Gestaltung und Ordnung"), String(localized: "Präsentationshintergründe, Tags und Sammlungen für wiederkehrende Arbeit."))
+                VStack(alignment: .leading, spacing: 24) {
+                    header
+                    if let feature, !model.hasPro {
+                        Label(String(localized: "Pro-Funktion: \(feature.title)"), systemImage: "sparkles")
+                            .font(.callout.weight(.medium)).foregroundStyle(.tint)
+                            .accessibilityIdentifier("pro.requestedFeature")
+                    }
+                    LazyVGrid(columns: [GridItem(.flexible(), alignment: .topLeading), GridItem(.flexible(), alignment: .topLeading)], alignment: .leading, spacing: 24) {
+                        benefit("text.viewfinder", String(localized: "Texterkennung"), String(localized: "Text kopieren und Bildinhalte durchsuchen."))
+                        benefit("arrow.down.square", String(localized: "Scroll-Aufnahmen"), String(localized: "Lange Seiten in einer Aufnahme festhalten."))
+                        benefit("list.number", String(localized: "Anleitungen"), String(localized: "Schritte erklären und als PDF oder Markdown teilen."))
+                        benefit("video", String(localized: "Video mit Ton und Schnitt"), String(localized: "Aufnehmen, schneiden und mit Zooms gestalten."))
+                        benefit("paintbrush", String(localized: "Erweiterte Bildwerkzeuge"), String(localized: "Mit Callouts, Markierungen und eigenen Stilen erklären."))
+                        benefit("square.stack", String(localized: "Gestaltung und Ordnung"), String(localized: "Hintergründe, Tags und Sammlungen für deine Arbeit."))
+                    }
                     DisclosureGroup(String(localized: "Das bleibt kostenlos")) {
                         Text(String(localized: "Unbegrenzte Screenshots, Schnellvorschau, Anheften, grundlegende Bildwerkzeuge, Abdecken, Objektliste, lokale Bibliothek, Titelsuche, Favoriten und PNG/JPEG/Bild-PDF. Vorhandene Inhalte öffnen, exportieren, sichern, wiederherstellen und löschen bleibt immer möglich."))
-                            .font(.callout).foregroundStyle(.secondary).padding(.top, 6)
-                    }
-                }.padding(.trailing, 8)
-            }.frame(height: 240)
+                            .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true).padding(.top, 8)
+                    }.font(.callout).foregroundStyle(.secondary)
+                }.padding(24)
+            }
             Divider()
-            if model.hasPro {
-                Label(String(localized: "Pro ist aktiviert"), systemImage: "checkmark.seal.fill").foregroundStyle(.green)
-            } else if let offer = model.offer {
+            purchaseArea.padding(24).background(.background.secondary)
+        }
+        .frame(width: 640, height: 660)
+        .task { await model.start() }
+    }
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 12) {
+                Image(systemName: "viewfinder")
+                    .font(.system(size: 28, weight: .medium)).foregroundStyle(.tint)
+                    .frame(width: 56, height: 56).background(.tint.opacity(0.1), in: .rect(cornerRadius: 12))
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
-                    if offer.laterPrice != nil {
-                        Text(String(localized: "Einführungspreis")).font(.caption.weight(.semibold)).foregroundStyle(.tint)
-                    }
-                    Text(String(localized: "\(offer.price) einmalig")).font(.title2.bold())
+                    Text("Snaprivo Pro").font(.title2.weight(.semibold))
+                    Text(String(localized: "Einmal kaufen. Dauerhaft nutzen."))
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+            Text(String(localized: "Mehr aus jeder Aufnahme."))
+                .font(.system(size: 28, weight: .semibold)).fixedSize(horizontal: false, vertical: true)
+            Text(String(localized: "Halte fest, was wichtig ist. Erkläre es mit Bild, Video und klaren Schritten."))
+                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+    private var purchaseArea: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if model.hasPro {
+                Label(String(localized: "Pro ist aktiviert"), systemImage: "checkmark.seal.fill")
+                    .font(.headline).foregroundStyle(.green)
+            } else if let offer = model.offer {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(offer.price).font(.system(size: 28, weight: .semibold))
                         .accessibilityIdentifier("pro.price")
-                    if let laterPrice = offer.laterPrice {
-                        Text(String(localized: "Nach der Einführung: \(laterPrice) einmalig. Für deinen Kauf fallen später keine weiteren Zahlungen an."))
-                            .font(.caption).foregroundStyle(.secondary)
+                    Text(String(localized: "einmalig")).foregroundStyle(.secondary)
+                    Spacer()
+                    if offer.laterPrice != nil {
+                        Text(String(localized: "Einführungspreis")).font(.caption.weight(.medium))
+                            .padding(.horizontal, 8).padding(.vertical, 4)
+                            .background(.tint.opacity(0.1), in: .capsule).foregroundStyle(.tint)
                     }
+                }
+                if let laterPrice = offer.laterPrice {
+                    Text(String(localized: "Nach der Einführung: \(laterPrice) einmalig. Für deinen Kauf fallen später keine weiteren Zahlungen an."))
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             } else if !model.isLoading {
-                Text(String(localized: "Der Kauf ist im Store gerade nicht verfügbar. Du kannst Snaprivo Free weiter nutzen und den Preis erneut laden."))
-                    .font(.callout).foregroundStyle(.secondary)
+                Label(String(localized: "Der Preis ist gerade nicht verfügbar."), systemImage: "tag")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            Text(String(localized: "Kein Abo. Kein eigenes Konto. Die enthaltenen Pro-Funktionen bleiben dauerhaft freigeschaltet."))
-                .font(.caption).foregroundStyle(.secondary)
-            if let error = model.error { Text(error).foregroundStyle(.red).textSelection(.enabled) }
-            if let message = model.message { Text(message).foregroundStyle(.secondary) }
-            if model.isLoading || model.isBusy { ProgressView().controlSize(.small) }
-            HStack {
+            Text(String(localized: "Kein Abo. Kein eigenes Konto. Pro bleibt dauerhaft freigeschaltet."))
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if let error = model.error { Text(error).font(.callout).foregroundStyle(.red).textSelection(.enabled).fixedSize(horizontal: false, vertical: true) }
+            if let message = model.message { Text(message).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
+            HStack(spacing: 12) {
                 Button(String(localized: "Käufe wiederherstellen")) { Task { await model.restore() } }
-                    .disabled(model.isBusy || model.isLoading)
-                Spacer()
+                    .buttonStyle(.link).disabled(model.isBusy || model.isLoading)
+                if model.isLoading || model.isBusy { ProgressView().controlSize(.small) }
+                Spacer(minLength: 0)
                 Button(String(localized: "Schließen")) { dismiss() }.keyboardShortcut(.cancelAction)
                 if !model.hasPro {
-                    Button { Task { await model.buy() } } label: {
-                        Text(model.offer.map { String(localized: "Pro freischalten · \($0.price)") } ?? String(localized: "Preis nicht verfügbar"))
+                    if let offer = model.offer {
+                        Button(String(localized: "Pro freischalten · \(offer.price)")) { Task { await model.buy() } }
+                            .buttonStyle(.glassProminent).controlSize(.large)
+                            .disabled(!model.purchasesEnabled || model.isBusy || model.isLoading)
+                            .accessibilityIdentifier("pro.buy")
+                    } else {
+                        Button(String(localized: "Preis laden")) { Task { await model.reload() } }
+                            .buttonStyle(.glassProminent).controlSize(.large)
+                            .disabled(model.isBusy || model.isLoading).accessibilityIdentifier("pro.reload")
                     }
-                    .buttonStyle(.glassProminent)
-                    .disabled(!model.purchasesEnabled || model.offer == nil || model.isBusy || model.isLoading)
-                    .accessibilityIdentifier("pro.buy")
                 }
             }
-            if !model.hasPro {
-                Button(String(localized: "Erneut laden")) { Task { await model.reload() } }
-                    .disabled(model.isBusy || model.isLoading).font(.caption)
-            }
-        }.padding(28).frame(width: 590)
-            .task { await model.start() }
+        }
     }
     private func benefit(_ symbol: String, _ title: String, _ description: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: symbol).foregroundStyle(.tint).frame(width: 24).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.headline)
-                Text(description).font(.callout).foregroundStyle(.secondary)
+            Image(systemName: symbol).font(.system(size: 20)).foregroundStyle(.tint)
+                .frame(width: 28, height: 28).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline).fixedSize(horizontal: false, vertical: true)
+                Text(description).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }.accessibilityElement(children: .combine)
     }

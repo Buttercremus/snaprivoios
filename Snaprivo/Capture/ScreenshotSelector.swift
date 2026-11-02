@@ -19,7 +19,7 @@ final class ScreenshotSelector {
     private var scrollOverlay: CaptureSelectionOverlay?
     private var videoOverlay: CaptureSelectionOverlay?
 
-    func select(source: CaptureSource, windows: [CapturableWindow], desktop: FrozenDesktop, media: CaptureMedia = .image, allowsVideoAction: Bool = true, scrolling: Bool = false, allowsScrolling: Bool = true, destination: CaptureImageDestination = .image, confirmsImmediately: Bool = false) async throws -> ScreenshotSelection? {
+    func select(source: CaptureSource, windows: [CapturableWindow], desktop: FrozenDesktop, media: CaptureMedia = .image, allowsVideoAction: Bool = true, scrolling: Bool = false, allowsScrolling: Bool = true, destination: CaptureImageDestination = .image, confirmsImmediately: Bool = false, videoOptions: VideoCaptureOptions = .init()) async throws -> ScreenshotSelection? {
         let screens = NSScreen.screens
         let screenChoices = screens.compactMap { screen -> CaptureScreenChoice? in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32 else { return nil }
@@ -66,6 +66,8 @@ final class ScreenshotSelector {
                 view.isVideo = media == .video
                 view.isScrolling = scrolling
                 view.confirmsImmediately = confirmsImmediately
+                view.videoOptions = videoOptions
+                view.onVideoOptionsChange = { [weak self] options in self?.views.forEach { $0.videoOptions = options } }
                 view.imageDestination = destination
                 view.onDestinationChange = { [weak self] value in
                     self?.views.forEach { $0.imageDestination = value }
@@ -95,7 +97,7 @@ final class ScreenshotSelector {
                     panel?.makeFirstResponder(view)
                 }
                 view.onConfirm = { [weak self, weak view] draft in
-                    self?.finish(ScreenshotSelection(displayID: id, draft: draft, screenFrame: screen.frame, media: view?.isVideo == true ? .video : .image, isScrolling: view?.isScrolling == true, destination: view?.imageDestination ?? .image))
+                    self?.finish(ScreenshotSelection(displayID: id, draft: draft, screenFrame: screen.frame, media: view?.isVideo == true ? .video : .image, isScrolling: view?.isScrolling == true, destination: view?.imageDestination ?? .image, videoOptions: view?.videoOptions))
                 }
                 view.onRestart = { [weak self] in self?.restart() }
                 view.onCancel = { [weak self] in self?.finish(nil) }
@@ -446,8 +448,11 @@ final class SelectionView: NSView {
     var imageDestination: CaptureImageDestination = .image { didSet { updateReview() } }
     var onDestinationChange: ((CaptureImageDestination) -> Void)?
     var onMediaChange: ((Bool) -> Void)?
+    var videoOptions = VideoCaptureOptions() { didSet { if oldValue != videoOptions { updateReview() } } }
+    var onVideoOptionsChange: ((VideoCaptureOptions) -> Void)?
     var isVideo = false {
         didSet {
+            guard oldValue != isVideo else { return }
             setAccessibilityLabel(isVideo ? String(localized: "Video-Auswahl") : String(localized: "Screenshot aufnehmen"))
             updateReview()
         }
@@ -770,14 +775,18 @@ final class SelectionView: NSView {
                     self.isVideo = video
                     self.isScrolling = false
                     self.onMediaChange?(video)
-                    self.confirm()
+                }
+                controls.onStartVideo = { [weak self] in self?.confirm() }
+                controls.onVideoOptionsChange = { [weak self] options in
+                    self?.videoOptions = options; self?.onVideoOptionsChange?(options)
                 }
                 controls.onDestinationCapture = { [weak self] destination in
                     guard let self else { return }
+                    let returnsToPhoto = self.isVideo && destination == .image
                     self.imageDestination = destination
                     self.isScrolling = false; self.isVideo = false
                     self.onDestinationChange?(destination); self.onMediaChange?(false)
-                    self.confirm()
+                    if !returnsToPhoto { self.confirm() }
                 }
                 controls.onScrollCapture = { [weak self] in
                     guard let self else { return }
@@ -794,24 +803,36 @@ final class SelectionView: NSView {
                 toolbar = controls
             }
             let local = localRect(draft.rect)
-            toolbar?.setVideo(isVideo)
+            toolbar?.setVideoOptions(videoOptions)
             toolbar?.setScrolling(isScrolling)
             toolbar?.setDestination(imageDestination)
+            toolbar?.setVideo(isVideo)
             toolbar?.source = mode
             toolbar?.screenChoices = screenChoices
             toolbar?.selectedScreenID = draft.rect == screenFrame ? displayID : nil
-            let margin: CGFloat = 12, height = CaptureReviewToolbar.height
-            let width = min(CaptureReviewToolbar.preferredWidth(allowsVideoAction: allowsVideoAction), bounds.width - 2 * margin)
+            let margin: CGFloat = 12
+            let width = min(CaptureReviewToolbar.preferredWidth(allowsVideoAction: allowsVideoAction, video: isVideo), bounds.width - 2 * margin)
+            let height = isVideo && width < 1000 ? CaptureReviewToolbar.height * 2 : CaptureReviewToolbar.height
             let x = min(max(local.midX - width / 2, margin), bounds.maxX - width - margin)
             let below = local.minY - height - 8, above = local.maxY + 8
             let y = below >= margin ? below : above + height <= bounds.maxY - margin ? above : margin
-            toolbar?.frame = CGRect(x: x, y: y, width: width, height: height)
+            let target = CGRect(x: x, y: y, width: width, height: height)
+            toolbar?.targetLayoutWidth = width
+            let animate = toolbar?.window != nil && toolbar?.frame.size != target.size
+                && toolbar?.frame.height == target.height
+                && NSApp.currentEvent?.type == .leftMouseUp && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            if animate {
+                NSAnimationContext.runAnimationGroup { context in
+                    context.duration = 0.16; context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                    toolbar?.animator().frame = target
+                }
+            } else { toolbar?.frame = target }
             toolbar?.setDimensions(pixelDimensions(draft.rect).replacingOccurrences(of: " px", with: ""))
             toolbar?.needsLayout = true
             if isVideo && draft.windowID != nil {
-                caption = String(localized: "Ganzes Fenster aufnehmen und beim Verschieben folgen. Rahmen ändern: fester Bereich. Enter: Bestätigen. Esc: Abbrechen.")
+                caption = String(localized: "Ganzes Fenster aufnehmen und beim Verschieben folgen. Rahmen ändern: fester Bereich. Enter: Video starten. Esc: Abbrechen.")
             } else {
-                caption = String(localized: "Auswahl: \(pixelDimensions(draft.rect)). Im Bild ziehen: neuer Bereich. Rahmenkante: verschieben. Griffe: Größe ändern. Enter: \(isVideo ? String(localized: "Bereich bestätigen") : String(localized: "Aufnehmen")). Esc: Abbrechen.")
+                caption = String(localized: "Auswahl: \(pixelDimensions(draft.rect)). Im Bild ziehen: neuer Bereich. Rahmenkante: verschieben. Griffe: Größe ändern. Enter: \(isVideo ? String(localized: "Video starten") : String(localized: "Aufnehmen")). Esc: Abbrechen.")
             }
             toolbar?.toolTip = String(localized: "Im Bild ziehen: neuer Bereich · Rahmenkante ziehen: verschieben · Griffe ziehen: Größe ändern")
         } else {
@@ -945,10 +966,14 @@ struct CaptureScreenChoice: Equatable {
 @MainActor
 final class CaptureReviewToolbar: CaptureToolbarSurface {
     static let height = CaptureToolbarSurface.barHeight
-    static func preferredWidth(allowsVideoAction: Bool) -> CGFloat { allowsVideoAction ? 728 : 640 }
+    static func preferredWidth(allowsVideoAction: Bool, video: Bool = false) -> CGFloat { video ? 1068 : allowsVideoAction ? 728 : 640 }
     /// The pixel size is itself the control for entering an exact size, like the source and screen menus.
     let size = CaptureFlatButton(frame: .zero)
     var onCapture: ((Bool) -> Void)?
+    var onStartVideo: (() -> Void)?
+    var onVideoOptionsChange: ((VideoCaptureOptions) -> Void)?
+    private(set) var videoOptions = VideoCaptureOptions()
+    var targetLayoutWidth: CGFloat?
     var onScrollCapture: (() -> Void)?
     var onDestinationCapture: ((CaptureImageDestination) -> Void)?
     var onRestart: (() -> Void)?
@@ -969,8 +994,13 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
     private let sourceButton = CaptureFlatButton(frame: .zero)
     private let restart = CaptureFlatButton(frame: .zero)
     private let cancel = CaptureFlatButton(frame: .zero)
+    private let systemAudio = CaptureFlatButton(frame: .zero)
+    private let microphone = CaptureFlatButton(frame: .zero)
+    private let options = CaptureFlatButton(frame: .zero)
+    private let record = CaptureFlatButton(frame: .zero)
     private var dividers: [NSView] = []
     private var isScrolling = false
+    private var isVideo = false
     private var destination: CaptureImageDestination = .image
     private var videoButton: CaptureFlatButton?
     private(set) var actionButtons: [NSButton] = []
@@ -979,6 +1009,7 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
     init(isVideo: Bool = false, allowsVideoAction: Bool = true, allowsScrolling: Bool = true) {
         self.allowsScrolling = allowsScrolling
         super.init(frame: CGRect(x: 0, y: 0, width: Self.preferredWidth(allowsVideoAction: allowsVideoAction), height: Self.height), subdued: true)
+        wantsLayer = true; layer?.masksToBounds = true; layer?.cornerRadius = 18
         setAccessibilityLabel(String(localized: "Aufnahme bestätigen"))
         setAccessibilityIdentifier("capture.reviewToolbar")
         mediaGroup.wantsLayer = true; mediaGroup.layer?.cornerRadius = 18; mediaGroup.layer?.masksToBounds = true
@@ -1021,11 +1052,22 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
         configure(cancel, title: "", symbol: "xmark", action: #selector(cancelPressed), identifier: "capture.cancel")
         cancel.flatCell.iconSize = 20
         cancel.setAccessibilityLabel(String(localized: "Abbrechen")); cancel.toolTip = String(localized: "Abbrechen (Esc)")
+        configure(systemAudio, title: "", symbol: "speaker.slash", action: #selector(toggleSystemAudio), identifier: "capture.video.systemAudio")
+        configure(microphone, title: "", symbol: "mic.slash", action: #selector(toggleMicrophone), identifier: "capture.video.microphone")
+        for button in [systemAudio, microphone] { button.setButtonType(.pushOnPushOff); button.setAccessibilityRole(.checkBox) }
+        systemAudio.toolTip = String(localized: "Systemton nur für diese Aufnahme ein- oder ausschalten")
+        microphone.toolTip = String(localized: "Standardmikrofon nur für diese Aufnahme ein- oder ausschalten. Zugriff erst beim Start.")
+        configure(options, title: "", symbol: "gearshape", action: #selector(showVideoOptions(_:)), identifier: "capture.video.options")
+        options.setAccessibilityLabel(String(localized: "Videooptionen")); options.setAccessibilityRole(.popUpButton)
+        configure(record, title: String(localized: "Aufnehmen"), symbol: "record.circle", action: #selector(startVideo), identifier: "capture.video.start")
+        record.flatCell.fill = .systemRed; record.flatCell.foreground = .white
+        record.setAccessibilityLabel(String(localized: "Video starten"))
         for _ in 0..<5 {
             let divider = Self.divider()
             controls.addSubview(divider); dividers.append(divider)
         }
         setVideo(isVideo); setScrolling(false)
+        setVideoOptions(.init())
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
@@ -1038,10 +1080,13 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
     override func layout() {
         super.layout()
         let withoutVideo: CGFloat = videoButton == nil ? 88 : 0
-        let baseWidth = Self.preferredWidth(allowsVideoAction: videoButton != nil)
-        let scale = min(1, bounds.width / baseWidth)
-        let left = (bounds.width - baseWidth * scale) / 2
-        let height = Self.controlHeight * scale, y = (bounds.height - height) / 2
+        let compactVideo = isVideo && bounds.height > Self.height
+        let wideVideo = isVideo && !compactVideo
+        let baseWidth = Self.preferredWidth(allowsVideoAction: videoButton != nil, video: wideVideo)
+        let layoutWidth = targetLayoutWidth ?? bounds.width
+        let scale = min(1, layoutWidth / baseWidth)
+        let left = (layoutWidth - baseWidth * scale) / 2
+        let height = Self.controlHeight * scale, y = bounds.height - Self.height / 2 - height / 2
         func rect(_ x: CGFloat, _ width: CGFloat) -> NSRect {
             NSRect(x: left + x * scale, y: y, width: width * scale, height: height)
         }
@@ -1055,19 +1100,33 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
         for (button, x, width) in [(screen, CGFloat(226), CGFloat(116)), (sourceButton, 362, 96), (size, 476, 136), (restart, 626, 36), (cancel, 682, 36)] {
             button.frame = rect(x - withoutVideo, width)
         }
+        size.isHidden = wideVideo; restart.isHidden = wideVideo
+        if wideVideo {
+            microphone.frame = rect(476, 160); systemAudio.frame = rect(652, 160)
+            options.frame = rect(828, 36); record.frame = rect(880, 124); cancel.frame = rect(1020, 36)
+        } else if compactVideo {
+            for (button, x, width) in [(microphone, CGFloat(20), CGFloat(188)), (systemAudio, 224, 188), (options, 428, 36), (record, 484, 232)] {
+                var frame = rect(x, width); frame.origin.y = (Self.height - height) / 2; button.frame = frame
+            }
+        }
         for button in actionButtons.compactMap({ $0 as? CaptureFlatButton }) {
             let primary = button === capture || button === videoButton
-            button.font = .systemFont(ofSize: (primary ? 14 : 12) * scale,
-                                      weight: button === capture ? .semibold : primary ? .medium : .regular)
+            let audioOrRecord = button === microphone || button === systemAudio || button === record
+            button.font = .systemFont(ofSize: (primary ? 14 : isVideo && audioOrRecord ? 13 : 12) * scale,
+                                      weight: .semibold)
+            button.flatCell.symbolWeight = .medium
+            button.flatCell.foreground = .white
             button.flatCell.contentScale = scale; button.needsDisplay = true
         }
         // Monospaced digits keep the size steady while dragging; long values shrink to fit beside the chevron.
-        let digits = NSFont.monospacedDigitSystemFont(ofSize: 12 * scale, weight: .medium)
+        let digits = NSFont.monospacedDigitSystemFont(ofSize: 12 * scale, weight: .semibold)
         let available = size.frame.width - 40 * scale
-        size.font = .monospacedDigitSystemFont(ofSize: min(12 * scale, 12 * scale * available / max(1, (size.title as NSString).size(withAttributes: [.font: digits]).width)), weight: .medium)
-        size.flatCell.foreground = NSColor.white.withAlphaComponent(0.82)
-        for (divider, x) in zip(dividers, [CGFloat(216), 352, 468, 618, 672]) {
-            divider.frame = NSRect(x: left + (x - withoutVideo) * scale, y: (bounds.height - 32 * scale) / 2, width: 1, height: 32 * scale)
+        size.font = .monospacedDigitSystemFont(ofSize: min(12 * scale, 12 * scale * available / max(1, (size.title as NSString).size(withAttributes: [.font: digits]).width)), weight: .semibold)
+        size.flatCell.foreground = .white
+        let positions: [CGFloat] = wideVideo ? [216, 352, 468, 820, 1012] : [216, 352, 468, 618, 672]
+        for (divider, x) in zip(dividers, positions) {
+            divider.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.2).cgColor
+            divider.frame = NSRect(x: left + (x - withoutVideo) * scale, y: y + (height - 32 * scale) / 2, width: 1, height: 32 * scale)
         }
     }
     func setDimensions(_ text: String) {
@@ -1075,13 +1134,54 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
         size.title = text; size.setAccessibilityValue(text); needsLayout = true
     }
     func setVideo(_ video: Bool) {
+        isVideo = video
+        setGlassPresentation(true)
+        for button in [microphone, systemAudio, options, record] { button.isHidden = !video }
         photoSelection.isHidden = video
         capture.flatCell.foreground = .white; choices.flatCell.foreground = .white
         videoButton?.flatCell.fill = video ? Self.accent : nil
         videoButton?.flatCell.foreground = .white
-        capture.toolTip = video ? String(localized: "Screenshot aufnehmen") : String(localized: "Screenshot aufnehmen (Enter)")
-        videoButton?.toolTip = video ? String(localized: "Video aufnehmen (Enter)") : String(localized: "Video aufnehmen")
+        capture.toolTip = video ? String(localized: "Zurück zu Foto") : String(localized: "Screenshot aufnehmen (Enter)")
+        videoButton?.toolTip = String(localized: "Videooptionen anzeigen")
         capture.needsDisplay = true; choices.needsDisplay = true; videoButton?.needsDisplay = true
+        needsLayout = true
+    }
+    func setVideoOptions(_ value: VideoCaptureOptions) {
+        videoOptions = value
+        for (button, enabled, title, symbol, label) in [
+            (microphone, value.audio.microphone, String(localized: "Mikrofon an"), "mic", String(localized: "Mikrofon aufnehmen")),
+            (systemAudio, value.audio.systemAudio, String(localized: "Systemton an"), "speaker.wave.2", String(localized: "Systemton aufnehmen"))] {
+            button.title = enabled ? title : button === microphone ? String(localized: "Ohne Mikrofon") : String(localized: "Ohne Systemton")
+            button.image = NSImage(systemSymbolName: enabled ? symbol : button === microphone ? "mic.slash" : "speaker.slash", accessibilityDescription: nil)
+            // Off is still an available control; the label, slashed symbol and AX value carry its state.
+            button.flatCell.foreground = .white
+            button.state = enabled ? .on : .off
+            button.setAccessibilityLabel(label); button.setAccessibilityValue(enabled ? 1 : 0); button.needsDisplay = true
+        }
+        options.toolTip = String(localized: "Vorlauf: \(value.delaySeconds) Sekunden · Genaue Größe · Neu auswählen")
+    }
+    @objc private func toggleMicrophone() { var value = videoOptions; value.audio.microphone.toggle(); setVideoOptions(value); onVideoOptionsChange?(value) }
+    @objc private func toggleSystemAudio() { var value = videoOptions; value.audio.systemAudio.toggle(); setVideoOptions(value); onVideoOptionsChange?(value) }
+    @objc private func startVideo() { onStartVideo?() }
+    @objc private func showVideoOptions(_ sender: NSButton) {
+        let menu = NSMenu()
+        menu.addItem(withTitle: String(localized: "Vorlauf"), action: nil, keyEquivalent: "")
+        for seconds in [0, 3, 5] {
+            let item = NSMenuItem(title: seconds == 0 ? String(localized: "Keine") : String(localized: "\(seconds) Sekunden"), action: #selector(chooseVideoDelay(_:)), keyEquivalent: "")
+            item.target = self; item.tag = seconds; item.state = seconds == videoOptions.delaySeconds ? .on : .off; menu.addItem(item)
+        }
+        menu.addItem(.separator())
+        let sizeItem = NSMenuItem(title: String(localized: "Genaue Größe in Pixeln eingeben"), action: #selector(videoEditSize), keyEquivalent: "")
+        sizeItem.target = self; menu.addItem(sizeItem)
+        let reset = NSMenuItem(title: String(localized: "Neu auswählen"), action: #selector(restartPressed), keyEquivalent: ""); reset.target = self; menu.addItem(reset)
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.minY), in: sender)
+    }
+    @objc private func chooseVideoDelay(_ sender: NSMenuItem) { var value = videoOptions; value.delaySeconds = sender.tag; setVideoOptions(value); onVideoOptionsChange?(value) }
+    @objc private func videoEditSize() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, window != nil else { return }
+            onEditSize?(options)
+        }
     }
     func setScrolling(_ scrolling: Bool) {
         isScrolling = scrolling

@@ -12,6 +12,8 @@ struct SettingsView: View {
                 .tabItem { Label(String(localized: "Speicherorte"), systemImage: "folder") }
             CaptureSettings(workspace: workspace)
                 .tabItem { Label(String(localized: "Aufnahme"), systemImage: "viewfinder") }
+            VideoCaptureSettings(preferences: workspace.preferences)
+                .tabItem { Label(String(localized: "Video"), systemImage: "video") }
             ShortcutSettings(shortcuts: workspace.captureShortcuts)
                 .tabItem { Label(String(localized: "Tastenkürzel"), systemImage: "keyboard") }
             PrivacySettings(screenshot: workspace.screenshot)
@@ -51,13 +53,6 @@ private struct GeneralSettings: View {
                 Text(String(localized: "System übernimmt die Einstellung von macOS. Die Auswahl gilt sofort für Snaprivo und bleibt gespeichert."))
                     .font(.callout).foregroundStyle(.secondary)
             }
-            CaptureClipboardSettings(preferences: preferences)
-            Section(String(localized: "Nach der Videoaufnahme")) {
-                Toggle(String(localized: "Direkt im Videoeditor öffnen"), isOn: $preferences.opensVideoEditorAfterCapture)
-                    .accessibilityIdentifier("settings.video.directEditor")
-                Text(String(localized: "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek."))
-                    .font(.callout).foregroundStyle(.secondary)
-            }
             Section(String(localized: "Projekte")) {
                 LabeledContent(String(localized: "Speicherung"), value: String(localized: "Lokal · Automatisch"))
                 Text(String(localized: "Aufnahmen und importierte Bilder bleiben mit ihren Markierungen und Zuschnitten in der Bibliothek bearbeitbar. ⌘S sichert sofort."))
@@ -82,6 +77,7 @@ struct CaptureClipboardSettings: View {
     var body: some View {
         Section(String(localized: "Nach dem Screenshot")) {
             Toggle(String(localized: "Schnellvorschau nach der Aufnahme"), isOn: $preferences.quickPreviewAfterCapture)
+                .accessibilityIdentifier("settings.capture.quickPreview")
             Text(String(localized: "Bis zu fünf Aufnahmen bleiben unten links griffbereit. Schließen entfernt nur die Vorschau; die Bilder bleiben in der Bibliothek."))
                 .font(.callout).foregroundStyle(.secondary)
             Toggle(String(localized: "Screenshot automatisch in die Zwischenablage kopieren"), isOn: $preferences.copyAfterCapture)
@@ -276,7 +272,7 @@ private struct CaptureSettings: View {
                 })) {
                     Text(String(localized: "Keine")).tag(0); Text(String(localized: "3 Sekunden")).tag(3); Text(String(localized: "5 Sekunden")).tag(5)
                 }.accessibilityIdentifier("settings.capture.delay")
-                Text(String(localized: "Bei Screenshots vor der Auswahl, bei Video direkt nach dem Klick auf „Video“. Während des Vorlaufs kannst du abbrechen."))
+                Text(String(localized: "Bei Screenshots vor der Auswahl. Für Videos lässt sich der Vorlauf vor jedem Start noch anpassen."))
                     .font(.callout).foregroundStyle(.secondary)
                 Toggle(String(localized: "Mauszeiger aufnehmen"), isOn: Binding(get: { workspace.preferences.includesCursor }, set: {
                     workspace.preferences.includesCursor = $0
@@ -290,31 +286,43 @@ private struct CaptureSettings: View {
                 Text(String(localized: "Loslassen nach dem Aufziehen oder ein Klick auf ein Fenster nimmt direkt auf. Hältst du beim Loslassen ⌥ gedrückt, erscheint die Leiste zum Anpassen. Video und Scroll-Aufnahme behalten die Leiste."))
                     .font(.callout).foregroundStyle(.secondary)
             }
-            Section(String(localized: "Videoton")) {
-                Toggle(String(localized: "Mausklicks im Video hervorheben"), isOn: Binding(
-                        get: { workspace.preferences.videoMouseClicks },
-                        set: { workspace.preferences.videoMouseClicks = $0 }))
-                    .accessibilityIdentifier("settings.capture.mouseClicks")
-                Toggle(String(localized: "Systemton aufnehmen"), isOn: Binding(
-                    get: { workspace.preferences.videoSystemAudio },
-                    set: { workspace.preferences.videoSystemAudio = $0 }))
-                    .accessibilityIdentifier("settings.capture.systemAudio")
-                Text(String(localized: "Nimmt auch Ton von Apps außerhalb des Bildausschnitts auf."))
-                    .font(.callout).foregroundStyle(.secondary)
-                Toggle(String(localized: "Mikrofon aufnehmen"), isOn: Binding(
-                    get: { workspace.preferences.videoMicrophone },
-                    set: { workspace.preferences.videoMicrophone = $0 }))
-                    .accessibilityIdentifier("settings.capture.microphone")
-                Text(String(localized: "Die Tonoptionen gelten für neue Videos. Mikrofonzugriff fragt macOS erst beim Aufnahmestart an."))
-                    .font(.callout).foregroundStyle(.secondary)
-            }
             CaptureClipboardSettings(preferences: workspace.preferences)
             Section(String(localized: "Ausgabe")) {
-                LabeledContent(String(localized: "Bildformat"), value: String(localized: "PNG · sRGB · mit Transparenz"))
-                Text(String(localized: "„PNG speichern …“ exportiert den bearbeiteten Ausschnitt an einen gewählten Ort. Das Original bleibt im Projekt erhalten."))
+                LabeledContent(String(localized: "Bildformate"), value: ImageOutputFormat.allCases.map { $0.rawValue.uppercased() }.joined(separator: " · "))
+                Text(String(localized: "„Bildausgabe“ bietet PNG, JPEG und Bild-PDF. Die direkte PNG-Aktion und die Zwischenablage verwenden PNG. Das Original bleibt im Projekt erhalten."))
                     .font(.callout).foregroundStyle(.secondary)
             }
         }.formStyle(.grouped)
+    }
+}
+
+private struct VideoCaptureSettings: View {
+    @Bindable var preferences: AppPreferences
+    var body: some View {
+        Form {
+            Section {
+                Text(String(localized: "Vor jeder Videoaufnahme kannst du Systemton, Mikrofon und Vorlauf prüfen. Änderungen dort gelten nur für diese Aufnahme."))
+                    .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Section(String(localized: "Vorgaben für neue Videos")) {
+                Toggle(String(localized: "Systemton aufnehmen"), isOn: $preferences.videoSystemAudio)
+                    .accessibilityIdentifier("settings.capture.systemAudio")
+                Text(String(localized: "Nimmt auch Ton von Apps außerhalb des Bildausschnitts auf."))
+                    .font(.callout).foregroundStyle(.secondary)
+                Toggle(String(localized: "Mikrofon aufnehmen"), isOn: $preferences.videoMicrophone)
+                    .accessibilityIdentifier("settings.capture.microphone")
+                Text(String(localized: "Verwendet das Standardmikrofon von macOS. Zugriff wird erst beim Aufnahmestart angefragt."))
+                    .font(.callout).foregroundStyle(.secondary)
+                Toggle(String(localized: "Mausklicks im Video hervorheben"), isOn: $preferences.videoMouseClicks)
+                    .accessibilityIdentifier("settings.capture.mouseClicks")
+            }
+            Section(String(localized: "Nach der Videoaufnahme")) {
+                Toggle(String(localized: "Direkt im Videoeditor öffnen"), isOn: $preferences.opensVideoEditorAfterCapture)
+                    .accessibilityIdentifier("settings.video.directEditor")
+                Text(String(localized: "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek."))
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+        }.formStyle(.grouped).accessibilityIdentifier("settings.video")
     }
 }
 
@@ -328,28 +336,18 @@ private struct ShortcutSettings: View {
                 Text(String(localized: "Snaprivo muss dafür laufen. Die Menüs in Snaprivo bleiben mit den gewählten Kürzeln bedienbar."))
                     .font(.callout).foregroundStyle(.secondary)
             } header: { Text(String(localized: "Aufnahme-Tastenkürzel")) }
+            Section(String(localized: "Foto, Text und Scrollen")) {
+                shortcutRows(CaptureAction.menuActions.filter { !$0.isVideo })
+            }
+            Section(String(localized: "Video")) {
+                shortcutRows(CaptureAction.menuActions.filter(\.isVideo))
+                Text(String(localized: "Video- und Scroll-Kürzel sind zunächst nicht belegt. Lege deine Kombination fest; sie erscheint auch im Aufnahme-Menü."))
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+            Section(String(localized: "Alternative Aufnahmebelegung")) {
+                shortcutRows([.window])
+            }
             Section {
-                ForEach([CaptureAction.region, .display, .delayedRegion, .window], id: \.rawValue) { action in
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack {
-                            Label(action.title, systemImage: action.symbol)
-                            Spacer(minLength: 8)
-                            ShortcutRecorder(action: action, shortcuts: shortcuts).frame(width: 170, height: 30)
-                            Button { shortcuts.setShortcut(nil, for: action) } label: { Image(systemName: "xmark.circle.fill") }
-                                .buttonStyle(.borderless).foregroundStyle(.secondary)
-                                .help(String(localized: "Kürzel für \(action.title) entfernen"))
-                                .accessibilityLabel(String(localized: "Kürzel für \(action.title) entfernen"))
-                                .disabled(shortcuts.bindings[action] == nil)
-                        }
-                        if shortcuts.recordingAction == action {
-                            Text(shortcuts.recordingError ?? String(localized: "Jetzt ⌘, ⌥ oder ⌃ zusammen mit einer Taste drücken. Esc: abbrechen · ⌫: entfernen"))
-                                .font(.callout).foregroundStyle(shortcuts.recordingError == nil ? Color.secondary : Color.orange)
-                        } else if shortcuts.unavailable.contains(action) {
-                            Text(String(localized: "Nicht verfügbar. Möglicherweise von macOS oder einer anderen App belegt; wähle ein anderes Kürzel."))
-                                .font(.callout).foregroundStyle(.orange)
-                        }
-                    }
-                }
                 HStack {
                     Button(String(localized: "Standardkürzel wiederherstellen")) { shortcuts.restoreDefaults() }
                     Spacer()
@@ -364,6 +362,29 @@ private struct ShortcutSettings: View {
         }
         .formStyle(.grouped)
         .onDisappear { shortcuts.cancelRecording() }
+    }
+    private func shortcutRows(_ actions: [CaptureAction]) -> some View {
+        ForEach(actions, id: \.rawValue) { action in
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Label(action.title, systemImage: action.symbol)
+                    Spacer(minLength: 8)
+                    ShortcutRecorder(action: action, shortcuts: shortcuts).frame(width: 170, height: 30)
+                    Button { shortcuts.setShortcut(nil, for: action) } label: { Image(systemName: "xmark.circle.fill") }
+                        .buttonStyle(.borderless).foregroundStyle(.secondary)
+                        .help(String(localized: "Kürzel für \(action.title) entfernen"))
+                        .accessibilityLabel(String(localized: "Kürzel für \(action.title) entfernen"))
+                        .disabled(shortcuts.bindings[action] == nil)
+                }
+                if shortcuts.recordingAction == action {
+                    Text(shortcuts.recordingError ?? String(localized: "Jetzt ⌘, ⌥ oder ⌃ zusammen mit einer Taste drücken. Esc: abbrechen · ⌫: entfernen"))
+                        .font(.callout).foregroundStyle(shortcuts.recordingError == nil ? Color.secondary : Color.orange)
+                } else if shortcuts.unavailable.contains(action) {
+                    Text(String(localized: "Nicht verfügbar. Möglicherweise von macOS oder einer anderen App belegt; wähle ein anderes Kürzel."))
+                        .font(.callout).foregroundStyle(.orange)
+                }
+            }
+        }
     }
 }
 

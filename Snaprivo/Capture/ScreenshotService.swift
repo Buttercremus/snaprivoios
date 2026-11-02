@@ -16,6 +16,25 @@ struct CaptureWindowRegion: Equatable {
 
 enum CaptureImageDestination: String, Sendable { case image, text, code }
 
+struct VideoAudioOptions: Equatable, Sendable {
+    var systemAudio = false
+    var microphone = false
+    var requiresAudio: Bool { systemAudio || microphone }
+    var summary: String {
+        switch (systemAudio, microphone) {
+        case (false, false): String(localized: "ohne Ton")
+        case (true, false): String(localized: "Systemton · Mikrofon aus")
+        case (false, true): String(localized: "Mikrofon · Systemton aus")
+        case (true, true): String(localized: "Systemton und Mikrofon")
+        }
+    }
+}
+
+struct VideoCaptureOptions: Equatable, Sendable {
+    var audio = VideoAudioOptions()
+    var delaySeconds = 0
+}
+
 struct ScreenshotSelection {
     let displayID: CGDirectDisplayID
     let rect: CGRect
@@ -24,15 +43,17 @@ struct ScreenshotSelection {
     let media: CaptureMedia
     let isScrolling: Bool
     let destination: CaptureImageDestination
+    let videoOptions: VideoCaptureOptions?
 
-    init(displayID: CGDirectDisplayID, rect: CGRect, screenFrame: CGRect, windowID: CGWindowID? = nil, media: CaptureMedia = .image, isScrolling: Bool = false, destination: CaptureImageDestination = .image) {
+    init(displayID: CGDirectDisplayID, rect: CGRect, screenFrame: CGRect, windowID: CGWindowID? = nil, media: CaptureMedia = .image, isScrolling: Bool = false, destination: CaptureImageDestination = .image, videoOptions: VideoCaptureOptions? = nil) {
         self.displayID = displayID; self.rect = rect; self.screenFrame = screenFrame; self.windowID = windowID; self.media = media
         self.isScrolling = media == .image && isScrolling
         self.destination = media == .image && !isScrolling ? destination : .image
+        self.videoOptions = media == .video ? videoOptions : nil
     }
-    init(displayID: CGDirectDisplayID, draft: CaptureSelectionDraft, screenFrame: CGRect, media: CaptureMedia, isScrolling: Bool = false, destination: CaptureImageDestination = .image) {
+    init(displayID: CGDirectDisplayID, draft: CaptureSelectionDraft, screenFrame: CGRect, media: CaptureMedia, isScrolling: Bool = false, destination: CaptureImageDestination = .image, videoOptions: VideoCaptureOptions? = nil) {
         self.init(displayID: displayID, rect: draft.rect, screenFrame: screenFrame,
-                  windowID: media == .video ? draft.windowID : nil, media: media, isScrolling: isScrolling, destination: destination)
+                  windowID: media == .video ? draft.windowID : nil, media: media, isScrolling: isScrolling, destination: destination, videoOptions: videoOptions)
     }
     var videoSource: CaptureSource { windowID != nil ? .window : rect == screenFrame ? .display : .region }
 }

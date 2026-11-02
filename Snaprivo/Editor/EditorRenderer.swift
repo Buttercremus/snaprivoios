@@ -85,7 +85,7 @@ private final class TextGeometryKey: NSObject, @unchecked Sendable {
         style = object.effectiveTextStyle
         var hasher = Hasher()
         hasher.combine(text); hasher.combine(kind); hasher.combine(fontSize); hasher.combine(width); hasher.combine(minimumHeight)
-        hasher.combine(style.family); hasher.combine(style.weight); hasher.combine(style.italic); hasher.combine(style.alignment)
+        hasher.combine(style.family); hasher.combine(style.weight); hasher.combine(style.italic); hasher.combine(style.alignment); hasher.combine(style.underline)
         cachedHash = hasher.finalize()
     }
     override var hash: Int { cachedHash }
@@ -286,7 +286,10 @@ enum EditorRenderer {
         case .center: paragraph.alignment = .center
         case .right: paragraph.alignment = .right
         }
-        return [.font: font(object), .foregroundColor: color(object), .paragraphStyle: paragraph]
+        var attributes: [NSAttributedString.Key: Any] = [.font: font(object), .foregroundColor: color(object), .paragraphStyle: paragraph]
+        // TextKit draws the line with the glyphs, in the text color, for canvas and export alike.
+        if object.effectiveTextStyle.isUnderlined { attributes[.underlineStyle] = NSUnderlineStyle.single.rawValue }
+        return attributes
     }
     /// Auto-width text first measures left-aligned, so alignment never uses the million-pixel sentinel.
     static func textContainerWidth(_ object: EditorObject) -> CGFloat {

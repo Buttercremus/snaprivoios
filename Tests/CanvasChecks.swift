@@ -11,6 +11,10 @@ private final class GeometryResults: @unchecked Sendable {
 struct CanvasChecks {
     @MainActor static func main() async throws {
         _ = NSApplication.shared
+        if CommandLine.arguments.contains("--marquee-only") {
+            try await MarqueeSelectionChecks.run()
+            return
+        }
         if CommandLine.arguments.contains("--annotation-tools-only") {
             try await DrawingWorkflowChecks.run()
         try await EditorArrangementChecks.run()
@@ -416,6 +420,7 @@ struct CanvasChecks {
         try await EditorArrangementChecks.run()
         try await AnnotationToolsChecks.run()
         try await ZoomCanvasChecks.run()
+        try await MarqueeSelectionChecks.run()
         try await CropCanvasChecks.run()
         try await RepeatedToolCanvasChecks.run()
         try await InstructionToolChecks.run()

@@ -4,9 +4,17 @@ import Observation
 import SnagForgeDomain
 import SwiftUI
 
-/// Both capture variants intentionally launch the same automatic window/region selector.
+/// Persisted raw values remain stable; the original window action is a second photo binding.
 enum CaptureAction: UInt32, CaseIterable, Codable, Sendable {
-    case display = 1, region, window, delayedRegion, repeatLast, text, code
+    case display = 1, region, window, delayedRegion, repeatLast, text, code, instantRegion
+    case scrolling, videoRegion, videoDisplay, videoWindow
+    static let primaryMenuActions: [Self] = [.region, .repeatLast, .instantRegion, .text, .code]
+    static let additionalMenuActions: [Self] = [.display, .delayedRegion, .scrolling, .videoRegion, .videoDisplay, .videoWindow]
+    static var menuActions: [Self] { primaryMenuActions + additionalMenuActions }
+    static var defaultBindings: [Self: CaptureShortcut] {
+        Dictionary(uniqueKeysWithValues: allCases.compactMap { action in action.defaultShortcut.map { (action, $0) } })
+    }
+    var isVideo: Bool { self == .videoRegion || self == .videoDisplay || self == .videoWindow }
     var title: String {
         switch self {
         case .display: String(localized: "Bildschirm aufnehmen")
@@ -16,17 +24,39 @@ enum CaptureAction: UInt32, CaseIterable, Codable, Sendable {
         case .repeatLast: String(localized: "Letzten Bereich erneut aufnehmen")
         case .text: String(localized: "Text direkt erfassen")
         case .code: String(localized: "QR-Code scannen")
+        case .instantRegion: String(localized: "Sofort aufnehmen (ohne Leiste)")
+        case .scrolling: String(localized: "Scroll-Aufnahme …")
+        case .videoRegion: String(localized: "Video: Bereich aufnehmen …")
+        case .videoDisplay: String(localized: "Video: Bildschirm aufnehmen …")
+        case .videoWindow: String(localized: "Video: Fenster aufnehmen …")
         }
     }
     var symbol: String {
-        switch self { case .display: "display"; case .region: "viewfinder"; case .window: "viewfinder"; case .delayedRegion: "timer"; case .repeatLast: "arrow.clockwise"; case .text: "text.viewfinder"; case .code: "qrcode.viewfinder" }
+        switch self { case .display, .videoDisplay: "display"; case .region, .window: "viewfinder"; case .delayedRegion: "timer"; case .repeatLast: "arrow.clockwise"; case .text: "text.viewfinder"; case .code: "qrcode.viewfinder"; case .instantRegion: "bolt"; case .scrolling: "arrow.down.square"; case .videoRegion: "video"; case .videoWindow: "macwindow" }
     }
-    var defaultShortcut: CaptureShortcut {
-        let key = switch self { case .display: kVK_ANSI_1; case .region: kVK_ANSI_2; case .window: kVK_ANSI_3; case .delayedRegion: kVK_ANSI_5; case .repeatLast: kVK_ANSI_6; case .text: kVK_ANSI_7; case .code: kVK_ANSI_8 }
+    var defaultShortcut: CaptureShortcut? {
+        let key: Int
+        switch self {
+        case .display: key = kVK_ANSI_1
+        case .region: key = kVK_ANSI_2
+        case .window: key = kVK_ANSI_3
+        case .delayedRegion: key = kVK_ANSI_5
+        case .repeatLast: key = kVK_ANSI_6
+        case .text: key = kVK_ANSI_7
+        case .code: key = kVK_ANSI_8
+        case .instantRegion: key = kVK_ANSI_4
+        case .scrolling, .videoRegion, .videoDisplay, .videoWindow: return nil
+        }
         return CaptureShortcut(keyCode: UInt32(key), modifiers: UInt32(controlKey | shiftKey))
     }
     func configuration(using previous: CaptureConfiguration) -> CaptureConfiguration {
-        CaptureConfiguration(media: .image, source: self == .display ? .display : .automatic,
+        let source: CaptureSource = switch self {
+        case .display, .videoDisplay: .display
+        case .videoWindow: .window
+        case .videoRegion, .scrolling: .region
+        default: .automatic
+        }
+        return CaptureConfiguration(media: isVideo ? .video : .image, source: source,
                              includesCursor: previous.includesCursor,
                              delaySeconds: self == .delayedRegion ? 3 : previous.delaySeconds)
     }
@@ -178,12 +208,18 @@ final class GlobalCaptureShortcuts {
     init(defaults: UserDefaults = .standard, registrar: (any CaptureHotKeyRegistering)? = nil) {
         self.defaults = defaults; self.registrar = registrar ?? CarbonCaptureHotKeys()
         isEnabled = defaults.object(forKey: "capture.globalShortcutsEnabled") as? Bool ?? true
-        bindings = Dictionary(uniqueKeysWithValues: CaptureAction.allCases.map { ($0, $0.defaultShortcut) })
+        bindings = CaptureAction.defaultBindings
         if let data = defaults.data(forKey: Self.storageKey) {
             do {
                 let stored = try JSONDecoder().decode(Stored.self, from: data)
-                let expected: Set<CaptureAction> = stored.version == 1 ? [.display, .region, .window, .delayedRegion] : stored.version == 2 ? [.display, .region, .window, .delayedRegion, .repeatLast, .text] : Set(CaptureAction.allCases)
-                guard (1...3).contains(stored.version),
+                let expected: Set<CaptureAction> = switch stored.version {
+                case 1: [.display, .region, .window, .delayedRegion]
+                case 2: [.display, .region, .window, .delayedRegion, .repeatLast, .text]
+                case 3: [.display, .region, .window, .delayedRegion, .repeatLast, .text, .code]
+                case 4: [.display, .region, .window, .delayedRegion, .repeatLast, .text, .code, .instantRegion]
+                default: Set(CaptureAction.allCases)
+                }
+                guard (1...5).contains(stored.version),
                       Set(stored.entries.map(\.action)) == expected,
                       stored.entries.count == expected.count else { throw CocoaError(.coderReadCorrupt) }
                 var decoded: [CaptureAction: CaptureShortcut] = [:]
@@ -195,8 +231,8 @@ final class GlobalCaptureShortcuts {
                 }
                 bindings = decoded
                 // Preserve deliberate removals and user keys while adding new actions.
-                for action in CaptureAction.allCases where !expected.contains(action) && !bindings.values.contains(action.defaultShortcut) {
-                    bindings[action] = action.defaultShortcut
+                for action in CaptureAction.allCases where !expected.contains(action) {
+                    if let shortcut = action.defaultShortcut, !bindings.values.contains(shortcut) { bindings[action] = shortcut }
                 }
             } catch { preferencesError = String(localized: "Gespeicherte Tastenkürzel konnten nicht gelesen werden. Es gelten die Standardkürzel, bis du sie neu festlegst.") }
         }
@@ -246,13 +282,13 @@ final class GlobalCaptureShortcuts {
     }
     func restoreDefaults() {
         recordingAction = nil; recordingError = nil
-        bindings = Dictionary(uniqueKeysWithValues: CaptureAction.allCases.map { ($0, $0.defaultShortcut) })
+        bindings = CaptureAction.defaultBindings
         persist(); rebuildRegistrations()
     }
     func retryRegistration() { rebuildRegistrations() }
     func stop() { recordingAction = nil; registrar.stop(); unavailable = [] }
     private func persist() {
-        let stored = Stored(version: 3, entries: CaptureAction.allCases.map { .init(action: $0, shortcut: bindings[$0]) })
+        let stored = Stored(version: 5, entries: CaptureAction.allCases.map { .init(action: $0, shortcut: bindings[$0]) })
         do { defaults.set(try JSONEncoder().encode(stored), forKey: Self.storageKey); preferencesError = nil }
         catch { preferencesError = String(localized: "Die Tastenkürzel konnten nicht gespeichert werden.") }
     }

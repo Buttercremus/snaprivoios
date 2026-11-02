@@ -175,17 +175,17 @@ private struct CaptureCommands: Commands {
     }
 }
 
-private struct MenuBarContent: View {
+struct MenuBarContent: View {
     let workspace: WorkspaceModel
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         CaptureMenuItems(workspace: workspace)
         Divider()
-        Button(String(localized: "Letzte Schnellvorschau anzeigen")) { QuickCapturePanelController.shared.restore() }
+        Button(String(localized: "Letzte Schnellvorschau anzeigen"), systemImage: "rectangle.stack") { QuickCapturePanelController.shared.restore() }
             .disabled(workspace.quickCapture == nil && !workspace.showsDirectCaptureResult)
-        Button(String(localized: "Alle Anheftungen entsperren")) { PinnedImageController.shared.unlockAll() }
-        Button(String(localized: "Alle Anheftungen schließen")) { PinnedImageController.shared.closeAll() }
+        Button(String(localized: "Alle Anheftungen entsperren"), systemImage: "lock.open") { PinnedImageController.shared.unlockAll() }
+        Button(String(localized: "Alle Anheftungen schließen"), systemImage: "pin.slash") { PinnedImageController.shared.closeAll() }
         Divider()
         Button(String(localized: "Bibliothek öffnen"), systemImage: "photo.on.rectangle") {
             workspace.section = .library
@@ -197,8 +197,30 @@ private struct MenuBarContent: View {
         }
         SettingsLink()
         SupportFeedbackButton()
-        Button(String(localized: "Snaprivo beenden"), role: .destructive) { NSApplication.shared.terminate(nil) }
+        Button(String(localized: "Snaprivo beenden"), systemImage: "power", role: .destructive) { NSApplication.shared.terminate(nil) }
             .keyboardShortcut("q")
+    }
+}
+
+/// SwiftUI supplies SF Symbols, but macOS 27 hides menu images by default.
+/// Opt in only for our capture status menu, including its preset submenus.
+@MainActor enum CaptureMenuAppearance {
+    static func showIcons(in menu: NSMenu) {
+        guard #available(macOS 27, *) else { return }
+        var root = menu
+        while let parent = root.supermenu { root = parent }
+        guard root.item(withTitle: String(localized: "Neue Aufnahme")) != nil,
+              root.item(withTitle: String(localized: "Bibliothek öffnen")) != nil else { return }
+        apply(to: menu)
+    }
+    @available(macOS 27, *) private static func apply(to menu: NSMenu) {
+        for item in menu.items {
+            if item.image != nil && item.preferredImageVisibility != .visible {
+                item.preferredImageVisibility = .visible
+                menu.itemChanged(item)
+            }
+            if let submenu = item.submenu { apply(to: submenu) }
+        }
     }
 }
 
@@ -240,16 +262,23 @@ final class SnagForgeDelegate: NSObject, NSApplicationDelegate {
     }
     private var awaitingSave = false
     func applicationWillTerminate(_ notification: Notification) {
+        NotificationCenter.default.removeObserver(self, name: NSMenu.didBeginTrackingNotification, object: nil)
         workspace?.captureShortcuts.stop()
         workspace?.storage.endAccess()
     }
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // AppKit posts menu-tracking notifications synchronously on its UI thread.
+        NotificationCenter.default.addObserver(self, selector: #selector(menuDidBeginTracking(_:)), name: NSMenu.didBeginTrackingNotification, object: nil)
         workspace?.preferences.applyAppearance()
         // Use the bundled icon even if Launch Services cached an older iconless build.
         if let url = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
            let icon = NSImage(contentsOf: url) {
             NSApp.applicationIconImage = icon
         }
+    }
+    @objc private func menuDidBeginTracking(_ notification: Notification) {
+        guard let menu = notification.object as? NSMenu else { return }
+        CaptureMenuAppearance.showIcons(in: menu)
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let workspace else { return .terminateNow }

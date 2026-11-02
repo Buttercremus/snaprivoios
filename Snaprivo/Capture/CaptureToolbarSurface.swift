@@ -24,6 +24,8 @@ class CaptureToolbarSurface: NSView {
     static let controlHeight: CGFloat = 36
     static let accent = NSColor(srgbRed: 0, green: 0.6, blue: 1, alpha: 1)
     let controls = NSView()
+    private var subduedBackdrop: NSVisualEffectView?
+    private var optionalGlass: NSGlassEffectView?
     override convenience init(frame: NSRect) { self.init(frame: frame, subdued: false) }
     init(frame: NSRect, subdued: Bool) {
         super.init(frame: frame)
@@ -31,6 +33,7 @@ class CaptureToolbarSurface: NSView {
         controls.frame = bounds; controls.autoresizingMask = [.width, .height]
         if subdued {
             let backdrop = NSVisualEffectView(frame: bounds)
+            subduedBackdrop = backdrop
             backdrop.autoresizingMask = [.width, .height]
             backdrop.material = .hudWindow; backdrop.blendingMode = .withinWindow; backdrop.state = .active
             backdrop.wantsLayer = true; backdrop.layer?.cornerRadius = 18; backdrop.layer?.masksToBounds = true
@@ -48,6 +51,20 @@ class CaptureToolbarSurface: NSView {
         }
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    /// The selection keeps its native control container when changing photo/video mode.
+    func setGlassPresentation(_ enabled: Bool) {
+        guard let subduedBackdrop else { return }
+        if enabled && optionalGlass == nil {
+            let glass = NSGlassEffectView(frame: bounds)
+            glass.autoresizingMask = [.width, .height]; glass.style = .regular; glass.cornerRadius = 28
+            // A dark native tint separates controls from bright text behind the selection.
+            glass.tintColor = NSColor(white: 0.06, alpha: 0.7)
+            glass.contentView = NSView(frame: bounds)
+            addSubview(glass, positioned: .below, relativeTo: controls); optionalGlass = glass
+        }
+        subduedBackdrop.isHidden = enabled; optionalGlass?.isHidden = !enabled
+    }
 
     static func style(_ button: NSButton, prominent: Bool = false) {
         button.bezelStyle = .glass; button.controlSize = .large
@@ -100,6 +117,7 @@ final class CaptureFlatButtonCell: NSButtonCell {
     var fill: NSColor?
     var foreground = NSColor.white.withAlphaComponent(0.82)
     var iconSize: CGFloat = 24
+    var symbolWeight: NSFont.Weight = .regular
     var contentScale: CGFloat = 1
     var cornerRadius: CGFloat = 16
 
@@ -141,7 +159,7 @@ final class CaptureFlatButtonCell: NSButtonCell {
         }
     }
     private func drawSymbol(_ image: NSImage, in rect: NSRect, color: NSColor) {
-        let configuration = NSImage.SymbolConfiguration(pointSize: iconSize * contentScale, weight: .regular)
+        let configuration = NSImage.SymbolConfiguration(pointSize: iconSize * contentScale, weight: symbolWeight)
             .applying(.preferringMonochrome())
         let symbol = image.withSymbolConfiguration(configuration) ?? image
         let size = symbol.size

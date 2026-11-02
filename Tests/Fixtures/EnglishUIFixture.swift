@@ -23,6 +23,19 @@ private actor UIExportHold {
     func detachOutput() throws { }
 }
 
+/// Paywall presentation only. Purchases are cancelled locally; StoreKit is never contacted.
+@MainActor private final class UIPaywallStore: ProStoreClient {
+    let available: Bool
+    init(available: Bool) { self.available = available }
+    func offer() async throws -> ProOffer? {
+        available ? ProOffer(name: "Synthetic Pro", price: "29,99 €", laterPrice: "39,99 €") : nil
+    }
+    func entitled() async throws -> Bool { false }
+    func purchase() async throws -> ProPurchaseOutcome { .cancelled }
+    func restore() async throws { }
+    func updates() -> AsyncStream<Void> { AsyncStream { $0.finish() } }
+}
+
 /// Runs production scenes with synthetic images and a disposable library.
 /// Capture controls retain production actions; video uses synthetic transports or explicit failures.
 @MainActor enum EnglishUIFixture {
@@ -32,6 +45,25 @@ private actor UIExportHold {
     static private var recordingToolbarPreview: VideoRecordingToolbar?
     static private var hoverPanel: SelectionPanel?
     static private var imageSwitchHold: UIExportHold?
+    static private var paywallWindow: NSWindow?
+
+    /// The production status-menu content, opened in the disposable QA window.
+    static func showStatusMenu(workspace: WorkspaceModel) {
+        guard let view = NSApp.keyWindow?.contentView else { return }
+        let menu = NSHostingMenu(rootView: MenuBarContent(workspace: workspace))
+        DispatchQueue.main.async {
+            menu.popUp(positioning: nil, at: NSPoint(x: 20, y: view.bounds.height - 20), in: view)
+        }
+    }
+
+    static func showPaywall(available: Bool) {
+        paywallWindow?.close()
+        let window = NSWindow(contentRect: .zero, styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.title = "Paywall QA · Synthetic Store"
+        window.contentView = NSHostingView(rootView: ProPaywallView(model: ProPurchaseModel(client: UIPaywallStore(available: available)), feature: .video))
+        window.center(); window.makeKeyAndOrderFront(nil); paywallWindow = window
+    }
 
     static func makeWorkspace() -> WorkspaceModel {
         let defaults = UserDefaults(suiteName: "com.snaprivo.englishuifixture.\(UUID())")!
@@ -92,10 +124,12 @@ private actor UIExportHold {
                         // Mirror source activation delay while retaining the production selection overlay.
                         try await Task.sleep(for: .milliseconds(350))
                         videoSession = VideoRecordingSession(selection: result, includesCursor: false,
-                            selectionOverlay: selector?.takeVideoOverlay(), delaySeconds: 3,
+                            selectionOverlay: selector?.takeVideoOverlay(), delaySeconds: result.videoOptions?.delaySeconds ?? 3,
+                            audio: result.videoOptions?.audio ?? .init(),
+                            microphoneAccess: .init(status: { .authorized }, request: { true }, hasInput: { true }),
                             files: VideoRecordingFiles(root: FileManager.default.temporaryDirectory.appendingPathComponent("Synthetic-Video-UI-\(UUID())")),
-                            makeEngine: { VideoRecordingEngine { _, _, _, url in
-                                try await SyntheticVideoFixture.write(to: url)
+                            makeEngine: { VideoRecordingEngine { _, _, audio, url in
+                                try await SyntheticVideoFixture.write(to: url, includesAudio: audio.systemAudio || audio.microphone)
                                 return PreparedVideoRecording(transport: UICompletedVideoTransport(), pixelSize: PixelSize(width: 320, height: 180)!)
                             } })
                         videoSession?.onFinished = { _ in }
@@ -142,10 +176,11 @@ private actor UIExportHold {
     }
     static func showVideoEditorFlow(workspace: WorkspaceModel) {
         if let videoSession { videoSession.show(); return }
-        let session = VideoRecordingSession(selection: sampleSelection(), includesCursor: false, files: workspace.videos.files,
+        let session = VideoRecordingSession(selection: sampleSelection(), includesCursor: false,
+            microphoneAccess: .init(status: { .authorized }, request: { true }, hasInput: { true }), files: workspace.videos.files,
             makeEngine: {
-                VideoRecordingEngine { _, _, _, url in
-                    try await SyntheticVideoFixture.write(to: url)
+                VideoRecordingEngine { _, _, audio, url in
+                    try await SyntheticVideoFixture.write(to: url, includesAudio: audio.systemAudio || audio.microphone)
                     return PreparedVideoRecording(transport: UICompletedVideoTransport(), pixelSize: PixelSize(width: 320, height: 180)!)
                 }
             })
@@ -156,7 +191,7 @@ private actor UIExportHold {
         }
         session.onFinished = { url in
             Task {
-                workspace.libraryShowsVideos = true; workspace.section = .library
+                workspace.libraryMedia = .videos; workspace.section = .library
                 await workspace.videos.showPreview(recording: url)
                 NSApp.activate(ignoringOtherApps: true)
                 NSApp.windows.first { $0.identifier?.rawValue == "workspace" }?.makeKeyAndOrderFront(nil)
@@ -176,7 +211,7 @@ private actor UIExportHold {
                 let movie = try await files.finalize(partial)
                 let item = try await files.list().items.first { $0.document.fileName == movie.lastPathComponent }!
                 _ = try await files.setTrim(item.id, trim: .init(start: 0.234567, end: 1.876543), expectedRevision: 0)
-                workspace.libraryShowsVideos = true; workspace.section = .library
+                workspace.libraryMedia = .videos; workspace.section = .library
                 await workspace.videos.showPreview(recording: movie, directlyEdit: true)
             } catch { workspace.importError = error.localizedDescription }
         }
@@ -194,7 +229,7 @@ private actor UIExportHold {
                 try await files.markFailed(failed, message: "Synthetic storage error")
                 let interrupted = try await files.prepare(availableBytes: 1_000_000_000)
                 try await files.markFailed(interrupted, message: nil)
-                await workspace.videos.refresh(); workspace.libraryShowsVideos = true; workspace.section = .library
+                await workspace.videos.refresh(); workspace.libraryMedia = .videos; workspace.section = .library
             } catch { workspace.importError = error.localizedDescription }
         }
     }
@@ -322,6 +357,9 @@ struct EnglishUIFixtureCommands: Commands {
             Button("Recording Toolbar (Preview Only)") { EnglishUIFixture.showRecordingToolbar() }
             Button("Synthetic Video to Internal Editor") { EnglishUIFixture.showVideoEditorFlow(workspace: workspace) }
             Button("Synthetic Video Editor") { EnglishUIFixture.showVideoEditor(workspace: workspace) }
+            Button("Synthetic Paywall Price") { EnglishUIFixture.showPaywall(available: true) }
+            Button("Synthetic Paywall Unavailable") { EnglishUIFixture.showPaywall(available: false) }
+            Button("Status Menu Preview") { EnglishUIFixture.showStatusMenu(workspace: workspace) }
         }
     }
 }

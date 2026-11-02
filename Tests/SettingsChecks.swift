@@ -61,13 +61,22 @@ import SnagForgeDomain
         checkGroupedShapesMigration()
         for action in CaptureAction.allCases {
             let config = action.configuration(using: restored.captureConfiguration)
-            precondition(config.includesCursor && config.media == .image && config.delaySeconds == (action == .delayedRegion ? 3 : 5))
-            precondition(config.source == (action == .display ? .display : .automatic))
+            let videos: Set<CaptureAction> = [.videoRegion, .videoDisplay, .videoWindow]
+            let source: CaptureSource = switch action {
+            case .display, .videoDisplay: .display
+            case .videoWindow: .window
+            case .videoRegion, .scrolling: .region
+            default: .automatic
+            }
+            precondition(action.isVideo == videos.contains(action))
+            precondition(config.includesCursor && config.media == (videos.contains(action) ? .video : .image)
+                         && config.delaySeconds == (action == .delayedRegion ? 3 : 5) && config.source == source)
         }
+        let defaultCount = 8
         let registrar = TestHotKeys(), shortcuts = GlobalCaptureShortcuts(defaults: defaults, registrar: registrar)
         var actions: [CaptureAction] = []
         shortcuts.start { actions.append($0) }
-        precondition(registrar.active.count == CaptureAction.allCases.count)
+        precondition(registrar.active.count == defaultCount)
         let original = shortcuts.bindings[.region]!
         let custom = CaptureShortcut(keyCode: UInt32(kVK_ANSI_R), modifiers: UInt32(controlKey | optionKey | shiftKey))
         shortcuts.beginRecording(.region)
@@ -92,11 +101,11 @@ import SnagForgeDomain
         let loaded = GlobalCaptureShortcuts(defaults: UserDefaults(suiteName: suite)!, registrar: TestHotKeys())
         precondition(loaded.bindings[.region] == custom && loaded.bindings[.window] == nil)
         shortcuts.setEnabled(false); precondition(registrar.active.isEmpty)
-        shortcuts.setEnabled(true); precondition(registrar.active.count == CaptureAction.allCases.count - 1)
+        shortcuts.setEnabled(true); precondition(registrar.active.count == defaultCount - 1)
         registrar.blocked = [custom]; shortcuts.retryRegistration()
         precondition(shortcuts.unavailable == [.region])
         registrar.blocked = []; shortcuts.retryRegistration(); precondition(shortcuts.unavailable.isEmpty)
-        shortcuts.restoreDefaults(); precondition(shortcuts.bindings.count == CaptureAction.allCases.count && shortcuts.bindings[.region] == original)
+        shortcuts.restoreDefaults(); precondition(shortcuts.bindings.count == defaultCount && shortcuts.bindings[.region] == original)
         // Native recorder: consume protected commands, Escape/Tab cancel, Delete clears.
         let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 240, height: 80), styleMask: .titled, backing: .buffered, defer: false)
         let recorder = ShortcutRecorderButton(action: .region, shortcuts: shortcuts)
@@ -108,13 +117,13 @@ import SnagForgeDomain
         recorder.beginRecording()
         precondition(recorder.handleRecordingEvent(key(kVK_ANSI_Q, .command)) && shortcuts.recordingAction == .region)
         precondition(shortcuts.bindings[.region] == original && shortcuts.recordingError != nil)
-        recorder.handleRecordingEvent(key(kVK_Escape)); precondition(shortcuts.recordingAction == nil && registrar.active.count == CaptureAction.allCases.count)
+        recorder.handleRecordingEvent(key(kVK_Escape)); precondition(shortcuts.recordingAction == nil && registrar.active.count == defaultCount)
         recorder.beginRecording(); precondition(!recorder.handleRecordingEvent(key(kVK_Tab)))
         precondition(shortcuts.recordingAction == nil)
         recorder.beginRecording(); recorder.handleRecordingEvent(key(kVK_Delete))
-        precondition(shortcuts.bindings[.region] == nil && registrar.active.count == CaptureAction.allCases.count - 1)
+        precondition(shortcuts.bindings[.region] == nil && registrar.active.count == defaultCount - 1)
         recorder.beginRecording(); window.contentView = NSView()
-        precondition(shortcuts.recordingAction == nil && registrar.active.count == CaptureAction.allCases.count - 1)
+        precondition(shortcuts.recordingAction == nil && registrar.active.count == defaultCount - 1)
         shortcuts.restoreDefaults(); shortcuts.stop()
         // Real public API: the second owner must fail, and succeed after release.
         let first = CarbonCaptureHotKeys(), second = CarbonCaptureHotKeys()
@@ -129,30 +138,85 @@ import SnagForgeDomain
         let legacySuite = "Snaprivo-LegacyShortcuts-\(UUID())", legacyDefaults = UserDefaults(suiteName: legacySuite)!
         defer { legacyDefaults.removePersistentDomain(forName: legacySuite) }
         let legacyEntries: [[String: Any]] = [
-            ["action": CaptureAction.display.rawValue, "shortcut": ["keyCode": CaptureAction.display.defaultShortcut.keyCode, "modifiers": CaptureAction.display.defaultShortcut.modifiers]],
-            ["action": CaptureAction.region.rawValue, "shortcut": ["keyCode": CaptureAction.repeatLast.defaultShortcut.keyCode, "modifiers": CaptureAction.repeatLast.defaultShortcut.modifiers]],
+            ["action": CaptureAction.display.rawValue, "shortcut": ["keyCode": CaptureAction.display.requiredDefault.keyCode, "modifiers": CaptureAction.display.requiredDefault.modifiers]],
+            ["action": CaptureAction.region.rawValue, "shortcut": ["keyCode": CaptureAction.repeatLast.requiredDefault.keyCode, "modifiers": CaptureAction.repeatLast.requiredDefault.modifiers]],
             ["action": CaptureAction.window.rawValue, "shortcut": NSNull()],
             ["action": CaptureAction.delayedRegion.rawValue, "shortcut": NSNull()]
         ]
         legacyDefaults.set(try JSONSerialization.data(withJSONObject: ["version": 1, "entries": legacyEntries]), forKey: "capture.shortcuts.v1")
         let migrated = GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: TestHotKeys())
         precondition(migrated.preferencesError == nil && migrated.bindings[.window] == nil && migrated.bindings[.delayedRegion] == nil)
-        precondition(migrated.bindings[.region] == CaptureAction.repeatLast.defaultShortcut && migrated.bindings[.repeatLast] == nil && migrated.bindings[.text] == CaptureAction.text.defaultShortcut)
+        precondition(migrated.bindings[.region] == CaptureAction.repeatLast.requiredDefault && migrated.bindings[.repeatLast] == nil && migrated.bindings[.text] == CaptureAction.text.requiredDefault)
         // Invalid stored data is reported and never silently rewritten during load.
-        let version2Entries: [[String: Any]] = CaptureAction.allCases.filter { $0 != .code }.map { action in
-            ["action": action.rawValue, "shortcut": action == .text ? NSNull() : ["keyCode": (action == .region ? CaptureAction.code.defaultShortcut : action.defaultShortcut).keyCode,
-                "modifiers": action.defaultShortcut.modifiers]]
+        let version2Entries: [[String: Any]] = [CaptureAction.display, .region, .window, .delayedRegion, .repeatLast, .text].map { action in
+            ["action": action.rawValue, "shortcut": action == .text ? NSNull() : ["keyCode": (action == .region ? CaptureAction.code.requiredDefault : action.requiredDefault).keyCode,
+                "modifiers": action.requiredDefault.modifiers]]
         }
         legacyDefaults.set(try JSONSerialization.data(withJSONObject: ["version": 2, "entries": version2Entries]), forKey: "capture.shortcuts.v1")
         let migrated2 = GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: TestHotKeys())
         precondition(migrated2.preferencesError == nil && migrated2.bindings[.text] == nil && migrated2.bindings[.code] == nil)
-        precondition(migrated2.bindings[.region] == CaptureAction.code.defaultShortcut)
+        precondition(migrated2.bindings[.region] == CaptureAction.code.requiredDefault)
+        // Version 3 gains the instant shortcut only where its default key is still free; saving writes version 5.
+        func version3(region: CaptureShortcut) throws -> GlobalCaptureShortcuts {
+            let entries: [[String: Any]] = [CaptureAction.display, .region, .window, .delayedRegion, .repeatLast, .text, .code].map { action in
+                let shortcut = action == .region ? region : action.requiredDefault
+                return ["action": action.rawValue, "shortcut": ["keyCode": shortcut.keyCode, "modifiers": shortcut.modifiers]]
+            }
+            legacyDefaults.set(try JSONSerialization.data(withJSONObject: ["version": 3, "entries": entries]), forKey: "capture.shortcuts.v1")
+            return GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: TestHotKeys())
+        }
+        let instant = CaptureAction.instantRegion.requiredDefault
+        precondition(!instant.isReserved && instant != CaptureAction.region.requiredDefault)
+        let gained = try version3(region: CaptureAction.region.requiredDefault)
+        precondition(gained.preferencesError == nil && gained.bindings[.instantRegion] == instant)
+        let occupied = try version3(region: instant)
+        precondition(occupied.preferencesError == nil && occupied.bindings[.region] == instant && occupied.bindings[.instantRegion] == nil)
+        occupied.restoreDefaults()
+        let saved = try JSONSerialization.jsonObject(with: legacyDefaults.data(forKey: "capture.shortcuts.v1")!) as! [String: Any]
+        precondition(saved["version"] as? Int == 5 && (saved["entries"] as? [Any])?.count == CaptureAction.allCases.count)
+        precondition(GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: TestHotKeys()).bindings[.instantRegion] == instant)
+        // Version 4 keeps custom and deliberately removed keys; the new starts stay unassigned.
+        let added: [CaptureAction] = [.scrolling, .videoRegion, .videoDisplay, .videoWindow]
+        precondition(added.allSatisfy { $0.defaultShortcut == nil })
+        precondition(Set(CaptureAction.menuActions + [.window]) == Set(CaptureAction.allCases)
+                     && Set(CaptureAction.menuActions).count == CaptureAction.menuActions.count,
+                     "Menu/settings starts drifted or have duplicate entries")
+        let version4Entries: [[String: Any]] = CaptureAction.allCases.filter { $0.rawValue <= 8 }.map { action in
+            let shortcut = action == .region ? custom : action.requiredDefault
+            return ["action": action.rawValue, "shortcut": action == .window ? NSNull() : ["keyCode": shortcut.keyCode, "modifiers": shortcut.modifiers]]
+        }
+        let version4 = try JSONSerialization.data(withJSONObject: ["version": 4, "entries": version4Entries])
+        legacyDefaults.set(version4, forKey: "capture.shortcuts.v1")
+        let newRegistrar = TestHotKeys(), upgraded = GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: newRegistrar)
+        precondition(upgraded.preferencesError == nil && upgraded.bindings[.region] == custom && upgraded.bindings[.window] == nil)
+        precondition(added.allSatisfy { upgraded.bindings[$0] == nil } && legacyDefaults.data(forKey: "capture.shortcuts.v1") == version4)
+        var newlyTriggered: [CaptureAction] = []
+        upgraded.start { newlyTriggered.append($0) }
+        newRegistrar.onAction?(.videoRegion); precondition(newlyTriggered.isEmpty, "An unassigned new action ran")
+        for (action, keyCode) in zip(added, [kVK_ANSI_S, kVK_ANSI_V, kVK_ANSI_D, kVK_ANSI_W]) {
+            let shortcut = CaptureShortcut(keyCode: UInt32(keyCode), modifiers: UInt32(controlKey | optionKey | shiftKey))
+            upgraded.beginRecording(action)
+            precondition(upgraded.setShortcut(shortcut, for: action) && newRegistrar.active[action] == shortcut)
+            newRegistrar.onAction?(action)
+        }
+        precondition(newlyTriggered == added, "New video/scroll hotkeys did not dispatch their own source action")
+        let videoDisplayKey = upgraded.bindings[.videoDisplay]
+        precondition(!upgraded.setShortcut(custom, for: .videoDisplay) && upgraded.bindings[.videoDisplay] == videoDisplayKey,
+                     "A new video shortcut stole an existing key")
+        let reopened = GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: TestHotKeys())
+        precondition(reopened.preferencesError == nil && reopened.bindings == upgraded.bindings)
+        precondition(upgraded.setShortcut(nil, for: .videoWindow))
+        let removedVideo = GlobalCaptureShortcuts(defaults: legacyDefaults, registrar: TestHotKeys())
+        precondition(removedVideo.bindings[.videoWindow] == nil && removedVideo.bindings[.videoRegion] == upgraded.bindings[.videoRegion])
+        let format5 = try JSONSerialization.jsonObject(with: legacyDefaults.data(forKey: "capture.shortcuts.v1")!) as! [String: Any]
+        precondition(format5["version"] as? Int == 5 && (format5["entries"] as? [Any])?.count == CaptureAction.allCases.count)
+        upgraded.stop()
         let broken = Data("broken".utf8); defaults.set(broken, forKey: "capture.shortcuts.v1")
         let corrupt = GlobalCaptureShortcuts(defaults: defaults, registrar: TestHotKeys())
-        precondition(corrupt.preferencesError != nil && corrupt.bindings.count == CaptureAction.allCases.count && defaults.data(forKey: "capture.shortcuts.v1") == broken)
+        precondition(corrupt.preferencesError != nil && corrupt.bindings.count == defaultCount && defaults.data(forKey: "capture.shortcuts.v1") == broken)
         try await checkCaptureCopy(defaults: defaults)
         try await StorageLocationChecks.run()
-        print("Settings checks passed: preference restart, toolbar reorder/restart/repair/reset, hide/show/reorder/all-hidden/restart, capture defaults, shortcut validation/duplicates/reserved keys, transactional registration failure, clear/reset/retry/restart, recorder cancellation, real exclusive Carbon registration and screenshot-only automatic PNG copy, including a blocked previous editor.")
+        print("Settings checks passed: preference restart, toolbar order/visibility, source configurations, shared menu starts, version 1–4 migration, unassigned video/scroll defaults, new hotkey dispatch/restart/removal, duplicate protection, transactional registration failure, recorder cancellation, real exclusive Carbon registration and screenshot-only automatic PNG copy.")
     }
     @MainActor static func checkToolbarOrder(defaults: UserDefaults, suite: String) {
         let preferences = AppPreferences(defaults: defaults)
@@ -309,4 +373,8 @@ import SnagForgeDomain
         try FileManager.default.removeItem(at: blocked)
         let saved = await workspace.flushBeforeQuitting(); precondition(saved)
     }
+}
+
+private extension CaptureAction {
+    var requiredDefault: CaptureShortcut { defaultShortcut! }
 }

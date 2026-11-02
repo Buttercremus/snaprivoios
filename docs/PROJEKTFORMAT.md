@@ -1,6 +1,6 @@
 # Bearbeitbare Projekte und Autosave
 
-Stand: 25. Oktober 2026 · Dokumentformat 19, internes Paketmanifest 1, portables Projekt-/Backupformat 1 · implementierter Stand. Bestehende Dokumente der Versionen 1–18 bleiben lesbar.
+Stand: 25. Oktober 2026 · Dokumentformat 20, internes Paketmanifest 1, portables Projekt-/Backupformat 1 · implementierter Stand. Bestehende Dokumente der Versionen 1–19 bleiben lesbar.
 
 ## Nutzerablauf
 
@@ -222,6 +222,10 @@ Eigene Stile speichern dieselbe optionale Art. Alte Stilbibliotheken bleiben Gau
 ## Individuelle Bilddrehung – Format 19
 
 `EditorObject.imageRotationDegrees` ist optional, endlich, von −180° bis 180° und ausschließlich für eingefügte Bilder (`.image`) zulässig. Fehlend bedeutet unveränderte Ausrichtung. Die Drehung erfolgt um die Mitte des vorhandenen Bildrechtecks; Quellasset und Rahmen bleiben unverändert. Renderer, Auswahl und Resize bilden dieselbe Rotation ab. Bei Abschluss kann die Leinwand in derselben History-Transaktion wachsen. Versionen 1–18 werden nur ohne dieses neue Feld migriert; ältere Apps müssen Format 19 ablehnen. OCR-/QR-Ergebnisse sind kein Bestandteil des Dokuments.
+
+## Unterstrichener Text – Format 20
+
+`EditorTextStyle.underline` ist optional und nur für Text und Callouts zulässig. Fehlend bedeutet nicht unterstrichen; der Schalter schreibt beim Abschalten wieder `nil`, damit unveränderter Text seine bisherige Kodierung behält. Canvas, Inline-Editor, Export und gespeicherte Stile verwenden dieselbe TextKit-Unterstreichung in Textfarbe. Versionen 1–19 werden nur ohne dieses Feld migriert; ältere Apps müssen Format 20 ablehnen.
 
 ## Anleitungen – Format 2 und lokaler Speicher, 26. Oktober 2026
 

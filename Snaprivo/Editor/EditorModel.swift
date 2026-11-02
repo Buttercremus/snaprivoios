@@ -85,6 +85,9 @@ final class EditorModel {
             if group.isSubset(of: selectedIDs) { selectedIDs.subtract(group) } else { selectedIDs.formUnion(group) }
         } else { selectedIDs = group }
     }
+    func selectObjects(_ ids: Set<UUID>, addingTo existing: Set<UUID> = []) {
+        selectedIDs = expandedSelection(ids).union(existing).intersection(history.objects.map(\.id))
+    }
     func selectObjectFromList(_ id: UUID) {
         guard !isSwitchingImage, !isCanvasGestureActive, cropDraft == nil,
               history.objects.contains(where: { $0.id == id }) else { return }

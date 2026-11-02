@@ -217,6 +217,9 @@ struct EditorQuickOptions: View {
                 Toggle(String(localized: "Kursiv"), isOn: Binding(get: { model.activeTextStyle.italic }, set: { italic in
                     var style = model.activeTextStyle; style.italic = italic; model.updateStyle(textStyle: style)
                 }))
+                Toggle(String(localized: "Unterstrichen"), isOn: Binding(get: { model.activeTextStyle.isUnderlined }, set: { underline in
+                    var style = model.activeTextStyle; style.isUnderlined = underline; model.updateStyle(textStyle: style)
+                }))
             }.toggleStyle(.button)
         case .drawingStyle:
             EditorDrawingStylePicker(model: model)

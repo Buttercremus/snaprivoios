@@ -45,6 +45,7 @@
 		A02600000000000000000002 /* Snaprivo/Editor/TextRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02600000000000000000001 /* Snaprivo/Editor/TextRecognitionService.swift */; };
 		A02600000000000000000004 /* Snaprivo/Features/TextRecognitionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02600000000000000000003 /* Snaprivo/Features/TextRecognitionView.swift */; };
 		A02700000000000000000002 /* Snaprivo/App/LibrarySearchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02700000000000000000001 /* Snaprivo/App/LibrarySearchModel.swift */; };
+		A05100000000000000000004 /* Snaprivo/App/LibraryEntries.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05100000000000000000003 /* Snaprivo/App/LibraryEntries.swift */; };
 		A02700000000000000000004 /* Snaprivo/Features/LibraryOrganizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02700000000000000000003 /* Snaprivo/Features/LibraryOrganizationView.swift */; };
 		A02800000000000000000002 /* Snaprivo/App/GuideModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000001 /* Snaprivo/App/GuideModel.swift */; };
 		A02800000000000000000004 /* Snaprivo/Editor/GuideExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A02800000000000000000003 /* Snaprivo/Editor/GuideExporter.swift */; };
@@ -53,6 +54,7 @@
 		A03000000000000000000002 /* Snaprivo/Capture/VideoRecordingFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000001 /* Snaprivo/Capture/VideoRecordingFiles.swift */; };
 		A03000000000000000000004 /* Snaprivo/App/VideoLibraryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000003 /* Snaprivo/App/VideoLibraryModel.swift */; };
 		A03000000000000000000006 /* Snaprivo/Features/VideoLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03000000000000000000005 /* Snaprivo/Features/VideoLibraryView.swift */; };
+		A05100000000000000000002 /* Snaprivo/Features/CombinedLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A05100000000000000000001 /* Snaprivo/Features/CombinedLibraryView.swift */; };
 		A03100000000000000000002 /* Snaprivo/App/VideoEditorModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03100000000000000000001 /* Snaprivo/App/VideoEditorModel.swift */; };
 		A03100000000000000000004 /* Snaprivo/Features/VideoEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03100000000000000000003 /* Snaprivo/Features/VideoEditorView.swift */; };
 		A03500000000000000000002 /* Snaprivo/Features/EditorQuickOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03500000000000000000001 /* Snaprivo/Features/EditorQuickOptions.swift */; };
@@ -181,6 +183,7 @@
 		A02600000000000000000001 /* Snaprivo/Editor/TextRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/TextRecognitionService.swift; sourceTree = SOURCE_ROOT; };
 		A02600000000000000000003 /* Snaprivo/Features/TextRecognitionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/TextRecognitionView.swift; sourceTree = SOURCE_ROOT; };
 		A02700000000000000000001 /* Snaprivo/App/LibrarySearchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/LibrarySearchModel.swift; sourceTree = SOURCE_ROOT; };
+		A05100000000000000000003 /* Snaprivo/App/LibraryEntries.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/LibraryEntries.swift; sourceTree = SOURCE_ROOT; };
 		A02700000000000000000003 /* Snaprivo/Features/LibraryOrganizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/LibraryOrganizationView.swift; sourceTree = SOURCE_ROOT; };
 		A02800000000000000000001 /* Snaprivo/App/GuideModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/GuideModel.swift; sourceTree = SOURCE_ROOT; };
 		A02800000000000000000003 /* Snaprivo/Editor/GuideExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Editor/GuideExporter.swift; sourceTree = SOURCE_ROOT; };
@@ -189,6 +192,7 @@
 		A03000000000000000000001 /* Snaprivo/Capture/VideoRecordingFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/VideoRecordingFiles.swift; sourceTree = SOURCE_ROOT; };
 		A03000000000000000000003 /* Snaprivo/App/VideoLibraryModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/VideoLibraryModel.swift; sourceTree = SOURCE_ROOT; };
 		A03000000000000000000005 /* Snaprivo/Features/VideoLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoLibraryView.swift; sourceTree = SOURCE_ROOT; };
+		A05100000000000000000001 /* Snaprivo/Features/CombinedLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/CombinedLibraryView.swift; sourceTree = SOURCE_ROOT; };
 		A03100000000000000000001 /* Snaprivo/App/VideoEditorModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/VideoEditorModel.swift; sourceTree = SOURCE_ROOT; };
 		A03100000000000000000003 /* Snaprivo/Features/VideoEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/VideoEditorView.swift; sourceTree = SOURCE_ROOT; };
 		A03500000000000000000001 /* Snaprivo/Features/EditorQuickOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/EditorQuickOptions.swift; sourceTree = SOURCE_ROOT; };
@@ -297,6 +301,7 @@
 				A03100000000000000000003 /* Snaprivo/Features/VideoEditorView.swift */,
 				A03100000000000000000001 /* Snaprivo/App/VideoEditorModel.swift */,
 				A03000000000000000000005 /* Snaprivo/Features/VideoLibraryView.swift */,
+				A05100000000000000000001 /* Snaprivo/Features/CombinedLibraryView.swift */,
 				A03000000000000000000003 /* Snaprivo/App/VideoLibraryModel.swift */,
 				A03000000000000000000001 /* Snaprivo/Capture/VideoRecordingFiles.swift */,
 				A04100000000000000000001 /* VideoComposition.swift */,
@@ -407,6 +412,7 @@
 				52F136F4F421DFAB3A22599A /* Snaprivo/App/GuideAssistantService.swift */,
 				9653A36067BDC18DF1E5BCC0 /* Snaprivo/App/GuideAssistantModel.swift */,
 				A02700000000000000000001 /* Snaprivo/App/LibrarySearchModel.swift */,
+				A05100000000000000000003 /* Snaprivo/App/LibraryEntries.swift */,
 				EF89746B79F853D2D4BAFD84 /* Snaprivo/App/SnagForgeApp.swift */,
 				72DAB7F309B0536D24A03688 /* Snaprivo/App/WorkspaceModel.swift */,
 				5AC74D895AFF4BB6ABCB4132 /* Snaprivo/App/CaptureActions.swift */,
@@ -594,6 +600,7 @@
 				A03100000000000000000004 /* Snaprivo/Features/VideoEditorView.swift in Sources */,
 				A03100000000000000000002 /* Snaprivo/App/VideoEditorModel.swift in Sources */,
 				A03000000000000000000006 /* Snaprivo/Features/VideoLibraryView.swift in Sources */,
+				A05100000000000000000002 /* Snaprivo/Features/CombinedLibraryView.swift in Sources */,
 				A03000000000000000000004 /* Snaprivo/App/VideoLibraryModel.swift in Sources */,
 				A03000000000000000000002 /* Snaprivo/Capture/VideoRecordingFiles.swift in Sources */,
 				A04100000000000000000002 /* VideoComposition.swift in Sources */,
@@ -616,6 +623,7 @@
 				8D59FF5D583909403993BBF0 /* Snaprivo/App/CaptureShortcuts.swift in Sources */,
 				9E652F32962EBB8CDC3E58D9 /* Snaprivo/App/AppPreferences.swift in Sources */,
 				A02700000000000000000002 /* Snaprivo/App/LibrarySearchModel.swift in Sources */,
+				A05100000000000000000004 /* Snaprivo/App/LibraryEntries.swift in Sources */,
 				A89218FB7F924D39A8430762 /* Snaprivo/Features/EditorShapeOptions.swift in Sources */,
 				A03600000000000000000002 /* Snaprivo/Capture/CaptureToolbarSurface.swift in Sources */,
 				A03500000000000000000002 /* Snaprivo/Features/EditorQuickOptions.swift in Sources */,
@@ -764,6 +772,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 24C8L59PV7;
 				ENABLE_APP_SANDBOX = YES;

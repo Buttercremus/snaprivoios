@@ -117,7 +117,7 @@ struct VideoLibraryView: View {
     }
 }
 
-private struct VideoLibraryCard: View {
+struct VideoLibraryCard: View {
     let item: VideoRecordingFiles.Item
     private var stateTitle: String {
         switch item.document.state {
@@ -145,7 +145,7 @@ private struct VideoLibraryCard: View {
                 Text(item.document.failure ?? String(localized: "Nicht fertiggestellt. Es wird kein abspielbares Video angeboten."))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(3)
             }
-        }.padding(12).frame(maxWidth: .infinity, alignment: .leading)
+        }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
             .background(.background, in: .rect(cornerRadius: 16))
             .overlay { RoundedRectangle(cornerRadius: 16).stroke(.quaternary) }
             .accessibilityElement(children: .combine).accessibilityLabel(item.document.title + ", " + stateTitle)

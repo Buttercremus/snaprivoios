@@ -6,21 +6,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 import SnagForgeDomain
 
-struct VideoAudioOptions: Equatable, Sendable {
-    var systemAudio = false
-    var microphone = false
-    var requiresAudio: Bool { systemAudio || microphone }
-
-    var summary: String {
-        switch (systemAudio, microphone) {
-        case (false, false): String(localized: "ohne Ton")
-        case (true, false): String(localized: "Systemton · Mikrofon aus")
-        case (false, true): String(localized: "Mikrofon · Systemton aus")
-        case (true, true): String(localized: "Systemton und Mikrofon")
-        }
-    }
-}
-
 enum VideoMicrophoneError: LocalizedError {
     case denied, restricted, unavailable
     var errorDescription: String? {

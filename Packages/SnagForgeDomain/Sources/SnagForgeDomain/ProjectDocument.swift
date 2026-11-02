@@ -2,7 +2,7 @@ import Foundation
 
 /// Source pixels and annotations always use the immutable original's top-left coordinates.
 public struct ProjectDocument: Codable, Equatable, Sendable, Identifiable {
-    public static let currentVersion = 19
+    public static let currentVersion = 20
     public let schemaVersion: Int
     public let id: UUID
     public var favorite: Bool?
@@ -101,6 +101,9 @@ public struct ProjectDocument: Codable, Equatable, Sendable, Identifiable {
             if let family = object.textStyle?.family {
                 guard !family.isEmpty, family.utf8.count <= 256 else { throw ProjectError.invalidDocument }
             }
+            if object.textStyle?.underline != nil {
+                guard object.kind == .text || object.kind == .callout else { throw ProjectError.invalidDocument }
+            }
             if let tip = object.calloutTip {
                 guard [tip.x, tip.y].allSatisfy({ $0.isFinite && abs($0) <= 1_000_000 }) else { throw ProjectError.invalidDocument }
             }
@@ -143,6 +146,7 @@ public struct ProjectDocument: Codable, Equatable, Sendable, Identifiable {
         }
         let value = try decoder.decode(Self.self, from: data)
         if version < currentVersion {
+            guard version >= 20 || value.objects.allSatisfy({ $0.textStyle?.underline == nil }) else { throw ProjectError.invalidDocument }
             guard version >= 19 || value.objects.allSatisfy({ $0.imageRotationDegrees == nil }) else { throw ProjectError.invalidDocument }
             guard version >= 18 || value.objects.allSatisfy({ $0.blurStyle == nil }) else { throw ProjectError.invalidDocument }
             guard version >= 16 || value.presentation == nil else { throw ProjectError.invalidDocument }

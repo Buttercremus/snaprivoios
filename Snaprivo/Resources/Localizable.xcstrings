@@ -1,592 +1,19 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ · Loslassen: Aufnehmen · Mit ⌥ loslassen: vorher prüfen · Esc: Abbrechen" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · Loslassen: Aufnehmen · Mit ⌥ loslassen: vorher prüfen · Esc: Abbrechen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · Release: Capture · Release with ⌥: Review first · Esc: Cancel"
-          }
-        }
-      }
-    },
-    "Genaue Größe in Pixeln eingeben" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Genaue Größe in Pixeln eingeben"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter an exact size in pixels"
-          }
-        }
-      }
-    },
-    "Loslassen nach dem Aufziehen oder ein Klick auf ein Fenster nimmt direkt auf. Hältst du beim Loslassen ⌥ gedrückt, erscheint die Leiste zum Anpassen. Video und Scroll-Aufnahme behalten die Leiste." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loslassen nach dem Aufziehen oder ein Klick auf ein Fenster nimmt direkt auf. Hältst du beim Loslassen ⌥ gedrückt, erscheint die Leiste zum Anpassen. Video und Scroll-Aufnahme behalten die Leiste."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Releasing a dragged area or clicking a window captures right away. Hold ⌥ while releasing to get the bar for adjustments. Video and scrolling captures keep the bar."
-          }
-        }
-      }
-    },
-    "Loslassen oder Fensterklick nimmt direkt auf. ⌥ beim Loslassen zeigt die Leiste." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Loslassen oder Fensterklick nimmt direkt auf. ⌥ beim Loslassen zeigt die Leiste."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Releasing or clicking a window captures right away. Hold ⌥ while releasing to show the bar."
-          }
-        }
-      }
-    },
-    "Ohne Bestätigungsleiste sofort aufnehmen" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ohne Bestätigungsleiste sofort aufnehmen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capture Immediately Without the Confirmation Bar"
-          }
-        }
-      }
-    },
-    "Nach dem Übernehmen zeigt die Vorschau die Abschnittsmitte." : {
+    "Objekte anklicken oder auf freier Fläche einen Auswahlrahmen ziehen. Umschalt ergänzt die Auswahl." : {
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nach dem Übernehmen zeigt die Vorschau die Abschnittsmitte."
+            "value" : "Objekte anklicken oder auf freier Fläche einen Auswahlrahmen ziehen. Umschalt ergänzt die Auswahl."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "After applying, the preview shows the middle of the section."
-          }
-        }
-      }
-    },
-    "Behalte im Schnittbereich mindestens ein Videobild außerhalb der entfernten Abschnitte." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Behalte im Schnittbereich mindestens ein Videobild außerhalb der entfernten Abschnitte."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep at least one video frame outside the removed sections in your trim range."
-          }
-        }
-      }
-    },
-    "Behalte mindestens ein Videobild. Zoomabschnitte dürfen sich nicht überschneiden." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Behalte mindestens ein Videobild. Zoomabschnitte dürfen sich nicht überschneiden."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep at least one video frame. Zoom sections must not overlap."
-          }
-        }
-      }
-    },
-    "Vertikal" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vertikal"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vertical"
-          }
-        }
-      }
-    },
-    "Horizontal" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Horizontal"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Horizontal"
-          }
-        }
-      }
-    },
-    "Abschnitt entfernen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abschnitt entfernen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove section"
-          }
-        }
-      }
-    },
-    "Zeitangaben und Zoompositionen beziehen sich auf das Original." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zeitangaben und Zoompositionen beziehen sich auf das Original."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Times and zoom positions refer to the original."
-          }
-        }
-      }
-    },
-    "Zoom entfernen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zoom entfernen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove zoom"
-          }
-        }
-      }
-    },
-    "Zoom bearbeiten" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zoom bearbeiten"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit zoom"
-          }
-        }
-      }
-    },
-    "Zoom hinzufügen …" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zoom hinzufügen …"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Add zoom…"
-          }
-        }
-      }
-    },
-    "Zoomabschnitte" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zoomabschnitte"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zoom sections"
-          }
-        }
-      }
-    },
-    "Abschnitt wieder einsetzen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abschnitt wieder einsetzen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore section"
-          }
-        }
-      }
-    },
-    "Bereich entfernen …" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bereich entfernen …"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove section…"
-          }
-        }
-      }
-    },
-    "Abschnitte" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Abschnitte"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sections"
-          }
-        }
-      }
-    },
-    "Ausgabedauer: %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ausgabedauer: %@"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Output duration: %@"
-          }
-        }
-      }
-    },
-    "Lautstärke" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lautstärke"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volume"
-          }
-        }
-      }
-    },
-    "Tempo" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tempo"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speed"
-          }
-        }
-      }
-    },
-    "Tempo und Ton" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tempo und Ton"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speed and audio"
-          }
-        }
-      }
-    },
-    "Zeitleiste für genauere Schnitte vergrößern." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zeitleiste für genauere Schnitte vergrößern."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enlarge the timeline for more precise cuts."
-          }
-        }
-      }
-    },
-    "Gesamt" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gesamt"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fit"
-          }
-        }
-      }
-    },
-    "Zeitansicht" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zeitansicht"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Timeline view"
-          }
-        }
-      }
-    },
-    "Video fertig" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Video fertig"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Video ready"
-          }
-        }
-      }
-    },
-    "Bearbeiten" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bearbeiten"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit"
-          }
-        }
-      }
-    },
-    "In der Videobibliothek gesichert." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In der Videobibliothek gesichert."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Saved in your video library."
-          }
-        }
-      }
-    },
-    "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek." : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Otherwise, show a compact preview with playback, export and editing. The video stays in your library."
-          }
-        }
-      }
-    },
-    "Direkt im Videoeditor öffnen" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Direkt im Videoeditor öffnen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open directly in the video editor"
-          }
-        }
-      }
-    },
-    "Nach der Videoaufnahme" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nach der Videoaufnahme"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "After recording a video"
-          }
-        }
-      }
-    },
-    "Wartet auf Audiodaten" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wartet auf Audiodaten"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Waiting for audio data"
-          }
-        }
-      }
-    },
-    "Mikrofonpegel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mikrofonpegel"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Microphone level"
-          }
-        }
-      }
-    },
-    "Systemtonpegel" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Systemtonpegel"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "System audio level"
+            "value" : "Click objects or drag a selection rectangle on empty space. Shift adds to the selection."
           }
         }
       }
@@ -740,6 +167,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ · %lld × %lld pixels\nCheck the seams in the preview."
+          }
+        }
+      }
+    },
+    "%@ · Loslassen: Aufnehmen · Mit ⌥ loslassen: vorher prüfen · Esc: Abbrechen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Loslassen: Aufnehmen · Mit ⌥ loslassen: vorher prüfen · Esc: Abbrechen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Release: Capture · Release with ⌥: Review first · Esc: Cancel"
           }
         }
       }
@@ -1591,6 +1034,23 @@
         }
       }
     },
+    "%lld Sekunden" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Sekunden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld seconds"
+          }
+        }
+      }
+    },
     "%lld Videos" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2198,6 +1658,23 @@
         }
       }
     },
+    "Abschnitt entfernen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abschnitt entfernen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove section"
+          }
+        }
+      }
+    },
     "Abschnitt hinzufügen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2228,6 +1705,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Checking and stitching section…"
+          }
+        }
+      }
+    },
+    "Abschnitt wieder einsetzen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abschnitt wieder einsetzen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore section"
+          }
+        }
+      }
+    },
+    "Abschnitte" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abschnitte"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sections"
           }
         }
       }
@@ -2413,6 +1924,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Current image"
+          }
+        }
+      }
+    },
+    "Alle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alle"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All"
           }
         }
       }
@@ -3980,6 +3508,23 @@
         }
       }
     },
+    "Aufnehmen, schneiden und mit Zooms gestalten." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnehmen, schneiden und mit Zooms gestalten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record, edit and add focused zooms."
+          }
+        }
+      }
+    },
     "Aus Bibliothek hinzufügen …" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4043,6 +3588,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Output"
+          }
+        }
+      }
+    },
+    "Ausgabedauer: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgabedauer: %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Output duration: %@"
           }
         }
       }
@@ -4753,6 +4315,23 @@
         }
       }
     },
+    "Bearbeiten" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bearbeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit"
+          }
+        }
+      }
+    },
     "Bearbeitetes Bild als PNG exportieren (⇧⌘E)" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4923,6 +4502,40 @@
         }
       }
     },
+    "Behalte im Schnittbereich mindestens ein Videobild außerhalb der entfernten Abschnitte." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Behalte im Schnittbereich mindestens ein Videobild außerhalb der entfernten Abschnitte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep at least one video frame outside the removed sections in your trim range."
+          }
+        }
+      }
+    },
+    "Behalte mindestens ein Videobild. Zoomabschnitte dürfen sich nicht überschneiden." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Behalte mindestens ein Videobild. Zoomabschnitte dürfen sich nicht überschneiden."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep at least one video frame. Zoom sections must not overlap."
+          }
+        }
+      }
+    },
     "Bei der ersten Aufnahme bittet macOS um Bildschirmzugriff. Snaprivo verarbeitet Aufnahmen lokal." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4941,6 +4554,7 @@
       }
     },
     "Bei Screenshots vor der Auswahl, bei Video direkt nach dem Klick auf „Video“. Während des Vorlaufs kannst du abbrechen." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4969,6 +4583,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "For screenshots, before selection; for video, after “Start video”. You can change the countdown for this recording in the video controls."
+          }
+        }
+      }
+    },
+    "Bei Screenshots vor der Auswahl. Für Videos lässt sich der Vorlauf vor jedem Start noch anpassen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei Screenshots vor der Auswahl. Für Videos lässt sich der Vorlauf vor jedem Start noch anpassen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Before selection for screenshots. For videos, you can adjust the countdown before each recording."
           }
         }
       }
@@ -5188,6 +4819,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Cover a region with an opaque mask · Editable projects keep the original."
+          }
+        }
+      }
+    },
+    "Bereich entfernen …" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bereich entfernen …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove section…"
           }
         }
       }
@@ -6320,6 +5968,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Images and editable projects stay locally on your Mac. Snaprivo does not transfer image content and currently has no analytics or cloud services."
+          }
+        }
+      }
+    },
+    "Bilder und Videos durchsuchen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilder und Videos durchsuchen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search images and videos"
+          }
+        }
+      }
+    },
+    "Bilder und Videos erscheinen hier gemeinsam, die neuesten zuerst." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilder und Videos erscheinen hier gemeinsam, die neuesten zuerst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images and videos appear here together, newest first."
           }
         }
       }
@@ -8014,6 +7696,23 @@
         }
       }
     },
+    "Der Preis ist gerade nicht verfügbar." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Preis ist gerade nicht verfügbar."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The price is currently unavailable."
+          }
+        }
+      }
+    },
     "Der Stil konnte nicht gespeichert werden. Vorhandene Stile bleiben erhalten." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -8771,6 +8470,7 @@
       }
     },
     "Die Tonoptionen gelten für neue Videos. Mikrofonzugriff fragt macOS erst beim Aufnahmestart an." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9133,6 +8833,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "This tool is included in Snaprivo Pro."
+          }
+        }
+      }
+    },
+    "Direkt im Videoeditor öffnen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direkt im Videoeditor öffnen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open directly in the video editor"
           }
         }
       }
@@ -9894,6 +9611,23 @@
         }
       }
     },
+    "Einmal kaufen. Dauerhaft nutzen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal kaufen. Dauerhaft nutzen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buy once. Keep using Pro."
+          }
+        }
+      }
+    },
     "Einmal kaufen. Pro dauerhaft freischalten." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -9907,6 +9641,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Buy once. Unlock Pro permanently."
+          }
+        }
+      }
+    },
+    "einmalig" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "einmalig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "one-time purchase"
           }
         }
       }
@@ -11364,6 +11115,23 @@
         }
       }
     },
+    "Ganzes Fenster aufnehmen und beim Verschieben folgen. Rahmen ändern: fester Bereich. Enter: Video starten. Esc: Abbrechen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganzes Fenster aufnehmen und beim Verschieben folgen. Rahmen ändern: fester Bereich. Enter: Video starten. Esc: Abbrechen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record the whole window and follow it when moved. Adjust the frame for a fixed region. Enter: Start video. Esc: Cancel."
+          }
+        }
+      }
+    },
     "Ganzes Original" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -11449,6 +11217,22 @@
         }
       }
     },
+    "Genaue Größe in Pixeln eingeben" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genaue Größe in Pixeln eingeben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter an exact size in pixels"
+          }
+        }
+      }
+    },
     "Generierung stoppen" : {
       "localizations" : {
         "de" : {
@@ -11461,6 +11245,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Stop generating"
+          }
+        }
+      }
+    },
+    "Gesamt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesamt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fit"
           }
         }
       }
@@ -11903,6 +11704,23 @@
         }
       }
     },
+    "Halte fest, was wichtig ist. Erkläre es mit Bild, Video und klaren Schritten." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halte fest, was wichtig ist. Erkläre es mit Bild, Video und klaren Schritten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture what matters. Explain it with images, video and clear steps."
+          }
+        }
+      }
+    },
     "Handgezeichnet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12089,6 +11907,23 @@
         }
       }
     },
+    "Hintergründe, Tags und Sammlungen für deine Arbeit." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hintergründe, Tags und Sammlungen für deine Arbeit."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Backgrounds, tags and collections for your work."
+          }
+        }
+      }
+    },
     "Hintergrundfarbe" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12170,6 +12005,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Height (%)"
+          }
+        }
+      }
+    },
+    "Horizontal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizontal"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizontal"
           }
         }
       }
@@ -12444,6 +12296,23 @@
         }
       }
     },
+    "In der Videobibliothek gesichert." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Videobibliothek gesichert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved in your video library."
+          }
+        }
+      }
+    },
     "Indexierung abgebrochen. Bereits erkannte Bilder bleiben durchsuchbar." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12631,6 +12500,23 @@
         }
       }
     },
+    "Kein Abo. Kein eigenes Konto. Pro bleibt dauerhaft freigeschaltet." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Abo. Kein eigenes Konto. Pro bleibt dauerhaft freigeschaltet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No subscription. No separate account. Keep Pro permanently."
+          }
+        }
+      }
+    },
     "Kein aufnehmbares Fenster · Esc: Abbrechen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -12778,6 +12664,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No matching guides or steps"
+          }
+        }
+      }
+    },
+    "Keine passenden Aufnahmen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine passenden Aufnahmen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No matching captures"
           }
         }
       }
@@ -13288,6 +13191,23 @@
         }
       }
     },
+    "Lange Seiten in einer Aufnahme festhalten." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lange Seiten in einer Aufnahme festhalten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture long pages in a single image."
+          }
+        }
+      }
+    },
     "Lange Webseiten und Inhalte in einer Aufnahme festhalten." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -13318,6 +13238,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scroll down slowly · Then click Done."
+          }
+        }
+      }
+    },
+    "Lautstärke" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lautstärke"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volume"
           }
         }
       }
@@ -13727,6 +13664,38 @@
         }
       }
     },
+    "Loslassen nach dem Aufziehen oder ein Klick auf ein Fenster nimmt direkt auf. Hältst du beim Loslassen ⌥ gedrückt, erscheint die Leiste zum Anpassen. Video und Scroll-Aufnahme behalten die Leiste." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loslassen nach dem Aufziehen oder ein Klick auf ein Fenster nimmt direkt auf. Hältst du beim Loslassen ⌥ gedrückt, erscheint die Leiste zum Anpassen. Video und Scroll-Aufnahme behalten die Leiste."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Releasing a dragged area or clicking a window captures right away. Hold ⌥ while releasing to get the bar for adjustments. Video and scrolling captures keep the bar."
+          }
+        }
+      }
+    },
+    "Loslassen oder Fensterklick nimmt direkt auf. ⌥ beim Loslassen zeigt die Leiste." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loslassen oder Fensterklick nimmt direkt auf. ⌥ beim Loslassen zeigt die Leiste."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Releasing or clicking a window captures right away. Hold ⌥ while releasing to show the bar."
+          }
+        }
+      }
+    },
     "Lupe" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14098,6 +14067,23 @@
         }
       }
     },
+    "Mehr aus jeder Aufnahme." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mehr aus jeder Aufnahme."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More from every capture."
+          }
+        }
+      }
+    },
     "Mehrere Bilder zu bearbeitbaren Schritten verbinden und als PDF oder Markdown ausgeben." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14217,6 +14203,23 @@
         }
       }
     },
+    "Mikrofon an" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mikrofon an"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microphone on"
+          }
+        }
+      }
+    },
     "Mikrofon aufnehmen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14247,6 +14250,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Open Microphone Settings"
+          }
+        }
+      }
+    },
+    "Mikrofonpegel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mikrofonpegel"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Microphone level"
           }
         }
       }
@@ -14314,6 +14334,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Try an Example"
+          }
+        }
+      }
+    },
+    "Mit Callouts, Markierungen und eigenen Stilen erklären." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mit Callouts, Markierungen und eigenen Stilen erklären."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Explain with callouts, highlights and your own styles."
           }
         }
       }
@@ -14588,6 +14625,23 @@
         }
       }
     },
+    "Nach dem Übernehmen zeigt die Vorschau die Abschnittsmitte." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach dem Übernehmen zeigt die Vorschau die Abschnittsmitte."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After applying, the preview shows the middle of the section."
+          }
+        }
+      }
+    },
     "Nach der Einführung: %@ einmalig. Für deinen Kauf fallen später keine weiteren Zahlungen an." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -14601,6 +14655,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "After launch: %@ one-time purchase. Your purchase will not incur any further payments."
+          }
+        }
+      }
+    },
+    "Nach der Videoaufnahme" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach der Videoaufnahme"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After recording a video"
           }
         }
       }
@@ -15599,6 +15670,39 @@
         }
       }
     },
+    "Ohne Bestätigungsleiste sofort aufnehmen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Bestätigungsleiste sofort aufnehmen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture Immediately Without the Confirmation Bar"
+          }
+        }
+      }
+    },
+    "Ohne Mikrofon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Mikrofon"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No microphone"
+          }
+        }
+      }
+    },
     "Ohne Rahmen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -15612,6 +15716,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No frame"
+          }
+        }
+      }
+    },
+    "Ohne Systemton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Systemton"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No system audio"
           }
         }
       }
@@ -15790,8 +15911,18 @@
       "comment" : "The original aspect ratio.",
       "isCommentAutoGenerated" : true,
       "localizations" : {
-        "de" : { "stringUnit" : { "state" : "translated", "value" : "Original" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Original" } }
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Original"
+          }
+        }
       }
     },
     "Original extern öffnen" : {
@@ -16551,6 +16682,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Precise"
+          }
+        }
+      }
+    },
+    "Preis laden" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preis laden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load price"
           }
         }
       }
@@ -18102,6 +18250,23 @@
         }
       }
     },
+    "Schritte erklären und als PDF oder Markdown teilen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schritte erklären und als PDF oder Markdown teilen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Explain each step and share as PDF or Markdown."
+          }
+        }
+      }
+    },
     "Schritte sortieren, beschreiben und als PDF oder Markdown weitergeben." : {
       "localizations" : {
         "de" : {
@@ -18996,6 +19161,40 @@
         }
       }
     },
+    "Sofort aufnehmen (ohne Leiste)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sofort aufnehmen (ohne Leiste)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture Instantly (No Bar)"
+          }
+        }
+      }
+    },
+    "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sonst erscheint zuerst die kompakte Vorschau mit Abspielen, Export und Bearbeiten. Das Video bleibt in der Bibliothek."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otherwise, show a compact preview with playback, export and editing. The video stays in your library."
+          }
+        }
+      }
+    },
     "Sortieren" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -19348,6 +19547,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Restore Default Shortcuts"
+          }
+        }
+      }
+    },
+    "Standardmikrofon nur für diese Aufnahme ein- oder ausschalten. Zugriff erst beim Start." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Standardmikrofon nur für diese Aufnahme ein- oder ausschalten. Zugriff erst beim Start."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn the default microphone on or off for this recording only. Access is requested when recording starts."
           }
         }
       }
@@ -20048,6 +20264,23 @@
         }
       }
     },
+    "Systemton an" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systemton an"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System audio on"
+          }
+        }
+      }
+    },
     "Systemton aufnehmen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20065,6 +20298,23 @@
         }
       }
     },
+    "Systemton nur für diese Aufnahme ein- oder ausschalten" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systemton nur für diese Aufnahme ein- oder ausschalten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn system audio on or off for this recording only"
+          }
+        }
+      }
+    },
     "Systemton und Mikrofon" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20078,6 +20328,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "System audio and microphone"
+          }
+        }
+      }
+    },
+    "Systemtonpegel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systemtonpegel"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "System audio level"
           }
         }
       }
@@ -20269,6 +20536,40 @@
         }
       }
     },
+    "Tempo" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempo"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed"
+          }
+        }
+      }
+    },
+    "Tempo und Ton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempo und Ton"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speed and audio"
+          }
+        }
+      }
+    },
     "Text" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -20420,6 +20721,7 @@
       }
     },
     "Text erkennen und kopieren" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -20482,6 +20784,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Copy Text"
+          }
+        }
+      }
+    },
+    "Text kopieren und Bildinhalte durchsuchen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Text kopieren und Bildinhalte durchsuchen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy text and search image content."
           }
         }
       }
@@ -21386,6 +21705,23 @@
         }
       }
     },
+    "Unterstrichen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unterstrichen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Underline"
+          }
+        }
+      }
+    },
     "Unterstützt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21589,6 +21925,23 @@
         }
       }
     },
+    "Vertikal" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vertikal"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vertical"
+          }
+        }
+      }
+    },
     "Vertikal mittig ausrichten" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -21670,6 +22023,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Use ⌘, ⌥ or ⌃ together with a key."
+          }
+        }
+      }
+    },
+    "Verwendet das Standardmikrofon von macOS. Zugriff wird erst beim Aufnahmestart angefragt." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verwendet das Standardmikrofon von macOS. Zugriff wird erst beim Aufnahmestart angefragt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uses the default macOS microphone. Access is requested only when recording starts."
           }
         }
       }
@@ -21760,6 +22130,7 @@
       }
     },
     "Video aufnehmen (Enter)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -21822,6 +22193,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Permanently Delete Video?"
+          }
+        }
+      }
+    },
+    "Video fertig" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video fertig"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video ready"
           }
         }
       }
@@ -22251,6 +22639,40 @@
         }
       }
     },
+    "Videooptionen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videooptionen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video options"
+          }
+        }
+      }
+    },
+    "Videooptionen anzeigen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Videooptionen anzeigen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show video options"
+          }
+        }
+      }
+    },
     "Videos" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -22422,6 +22844,7 @@
       }
     },
     "Videoton" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -22467,6 +22890,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Solid"
+          }
+        }
+      }
+    },
+    "Vor jeder Videoaufnahme kannst du Systemton, Mikrofon und Vorlauf prüfen. Änderungen dort gelten nur für diese Aufnahme." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vor jeder Videoaufnahme kannst du Systemton, Mikrofon und Vorlauf prüfen. Änderungen dort gelten nur für diese Aufnahme."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check system audio, microphone and countdown before each video. Changes there apply to that recording only."
+          }
+        }
+      }
+    },
+    "Vorgaben für neue Videos" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorgaben für neue Videos"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Defaults for new videos"
           }
         }
       }
@@ -22635,6 +23092,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Countdown before video"
+          }
+        }
+      }
+    },
+    "Vorlauf: %lld Sekunden · Genaue Größe · Neu auswählen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorlauf: %lld Sekunden · Genaue Größe · Neu auswählen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Countdown: %lld seconds · Exact size · Select again"
           }
         }
       }
@@ -23206,6 +23680,23 @@
         }
       }
     },
+    "Wartet auf Audiodaten" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wartet auf Audiodaten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Waiting for audio data"
+          }
+        }
+      }
+    },
     "Wartezeit nach „Video starten“. Während des Countdowns kannst du abbrechen." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -23626,6 +24117,57 @@
         }
       }
     },
+    "Zeitangaben und Zoompositionen beziehen sich auf das Original." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeitangaben und Zoompositionen beziehen sich auf das Original."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Times and zoom positions refer to the original."
+          }
+        }
+      }
+    },
+    "Zeitansicht" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeitansicht"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timeline view"
+          }
+        }
+      }
+    },
+    "Zeitleiste für genauere Schnitte vergrößern." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zeitleiste für genauere Schnitte vergrößern."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enlarge the timeline for more precise cuts."
+          }
+        }
+      }
+    },
     "Zellgröße" : {
       "localizations" : {
         "de" : {
@@ -23777,6 +24319,57 @@
         }
       }
     },
+    "Zoom bearbeiten" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom bearbeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit zoom"
+          }
+        }
+      }
+    },
+    "Zoom entfernen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom entfernen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove zoom"
+          }
+        }
+      }
+    },
+    "Zoom hinzufügen …" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom hinzufügen …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add zoom…"
+          }
+        }
+      }
+    },
     "Zoom: %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -23790,6 +24383,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Zoom: %@"
+          }
+        }
+      }
+    },
+    "Zoomabschnitte" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoomabschnitte"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zoom sections"
           }
         }
       }
@@ -23908,6 +24518,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Back"
+          }
+        }
+      }
+    },
+    "Zurück zu Foto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück zu Foto"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return to Photo"
           }
         }
       }
@@ -24060,6 +24687,91 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "The clipboard changed. Please copy again."
+          }
+        }
+      }
+    },
+    "Bildformate" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildformate"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image formats"
+          }
+        }
+      }
+    },
+    "„Bildausgabe“ bietet PNG, JPEG und Bild-PDF. Die direkte PNG-Aktion und die Zwischenablage verwenden PNG. Das Original bleibt im Projekt erhalten." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "„Bildausgabe“ bietet PNG, JPEG und Bild-PDF. Die direkte PNG-Aktion und die Zwischenablage verwenden PNG. Das Original bleibt im Projekt erhalten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image Output offers PNG, JPEG and image PDF. The direct PNG action and clipboard use PNG. The original remains in the project."
+          }
+        }
+      }
+    },
+    "Foto, Text und Scrollen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Foto, Text und Scrollen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Screenshots, text and scrolling"
+          }
+        }
+      }
+    },
+    "Video- und Scroll-Kürzel sind zunächst nicht belegt. Lege deine Kombination fest; sie erscheint auch im Aufnahme-Menü." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video- und Scroll-Kürzel sind zunächst nicht belegt. Lege deine Kombination fest; sie erscheint auch im Aufnahme-Menü."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video and scrolling shortcuts start unassigned. Choose your combination; it also appears in the Capture menu."
+          }
+        }
+      }
+    },
+    "Alternative Aufnahmebelegung" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alternative Aufnahmebelegung"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alternative capture binding"
           }
         }
       }

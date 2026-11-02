@@ -29,6 +29,7 @@ struct EditorCanvas: NSViewRepresentable {
         let view = container.canvas
         container.synchronizeTransform()
         view.synchronizeViewport()
+        view.synchronizeMarqueeSelection()
         view.synchronizeTextEditor()
         view.synchronizeFocus()
         container.synchronizeColorPicking(colorPicking)
@@ -321,7 +322,21 @@ final class CanvasView: NSView, NSTextViewDelegate {
     var lastFocusRequest = 0
     var presentationImageRect: CGRect?
     var presentationViewportBounds: CGRect?
-    private var sourceImageClick: CGPoint?
+    private struct MarqueeGesture {
+        let anchor: CGPoint
+        let baseSelection: Set<UUID>
+        let extendsSelection: Bool
+        let selectsSourceOnClick: Bool
+        var point: CGPoint
+        var hasDragged = false
+        var hitIDs: Set<UUID> = []
+        var rect: CGRect {
+            CGRect(x: min(anchor.x, point.x), y: min(anchor.y, point.y),
+                   width: abs(point.x - anchor.x), height: abs(point.y - anchor.y))
+        }
+    }
+    private var marqueeGesture: MarqueeGesture?
+    var marqueeRect: CGRect? { marqueeGesture.flatMap { $0.hasDragged ? $0.rect : nil } }
     private var start: CGPoint?
     private var original: [EditorObject] = []
     private var draggedID: UUID?
@@ -521,6 +536,27 @@ final class CanvasView: NSView, NSTextViewDelegate {
         if model.editingTextObject != nil || window.makeFirstResponder(self) {
             lastFocusRequest = model.focusRequest
         }
+    }
+    func synchronizeMarqueeSelection() {
+        if model.tool != .selection || model.cropDraft != nil || model.isSwitchingImage { cancelMarqueeSelection() }
+    }
+    private func cancelMarqueeSelection() {
+        guard marqueeGesture != nil else { return }
+        marqueeGesture = nil; model.isCanvasGestureActive = false; needsDisplay = true
+    }
+    private func updateMarqueeSelection(with event: NSEvent) {
+        guard var gesture = marqueeGesture else { return }
+        gesture.point = pixelPoint(event)
+        gesture.hasDragged = gesture.hasDragged || distance(gesture.anchor, gesture.point) >= 3
+        if gesture.hasDragged {
+            let area = gesture.rect.intersection(model.sourceRect)
+            let hits = Set(model.history.objects.filter {
+                !area.isNull && !area.isEmpty && area.intersects(EditorRenderer.paintedBounds($0))
+            }.map(\.id))
+            gesture.hitIDs = hits
+            model.isCanvasGestureActive = true
+        }
+        marqueeGesture = gesture; needsDisplay = true
     }
     private func viewportPoint(_ event: NSEvent) -> CGPoint {
         if presentationViewportBounds != nil, let superview { return superview.convert(event.locationInWindow, from: nil) }
@@ -841,6 +877,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
     override func mouseMoved(with event: NSEvent) { cursorUpdate(with: event) }
     func canvasCursor(at point: CGPoint, modifiers: NSEvent.ModifierFlags = []) -> NSCursor {
         guard !model.isSwitchingImage else { return .arrow }
+        if marqueeGesture != nil { return .arrow }
         if quickToolbar?.frame.contains(convert(point, to: quickOptionsContainer)) == true { return .arrow }
         if isSpaceHeld || panGesture != nil {
             return panGesture == nil ? .openHand : .closedHand
@@ -923,7 +960,13 @@ final class CanvasView: NSView, NSTextViewDelegate {
         } else { drawContent(in: context, drawingRect: drawingRect) }
         let selected = model.editingTextObject ?? model.objects.first { $0.id == model.selection }
         if !isPickingColor {
-            if model.selectedIDs.count > 1 {
+            if let gesture = marqueeGesture, gesture.hasDragged {
+                let selectedIDs = model.expandedSelection(gesture.hitIDs).union(gesture.baseSelection)
+                context.setStrokeColor(NSColor.controlAccentColor.cgColor); context.setLineWidth(1.5 / scale)
+                for object in model.objects where selectedIDs.contains(object.id) {
+                    context.stroke(EditorRenderer.bounds(object).insetBy(dx: -4 / scaleX, dy: -4 / scaleY))
+                }
+            } else if model.selectedIDs.count > 1 {
                 context.setStrokeColor(NSColor.controlAccentColor.cgColor); context.setLineWidth(1.5 / scale)
                 for object in model.objects where model.selectedIDs.contains(object.id) {
                     context.stroke(EditorRenderer.bounds(object).insetBy(dx: -4 / scaleX, dy: -4 / scaleY))
@@ -951,6 +994,15 @@ final class CanvasView: NSView, NSTextViewDelegate {
         }
         if let crop = model.cropDraft { drawCrop(crop, in: context) }
         context.restoreGState()
+        if let rect = marqueeRect {
+            // Draw in view points so the frame stays thin at every zoom and output aspect ratio.
+            let origin = viewPoint(rect.origin), end = viewPoint(CGPoint(x: rect.maxX, y: rect.maxY))
+            let frame = CGRect(x: origin.x, y: origin.y, width: end.x - origin.x, height: end.y - origin.y)
+            context.setFillColor(NSColor.selectedContentBackgroundColor.withAlphaComponent(0.15).cgColor)
+            context.fill(frame)
+            context.setStrokeColor(NSColor.controlAccentColor.cgColor); context.setLineWidth(1)
+            context.stroke(frame)
+        }
     }
     private func drawContent(in context: CGContext, drawingRect: CGRect) {
         context.saveGState()
@@ -1121,7 +1173,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
     }
     override func mouseDown(with event: NSEvent) {
         guard !model.isSwitchingImage else { return }
-        clickedObjectID = nil; sourceImageClick = nil; pendingTextEdit = nil
+        clickedObjectID = nil; pendingTextEdit = nil; cancelMarqueeSelection()
         synchronizeViewport()
         defer {
             // An object press is only a pending drag. Toggling the shared busy
@@ -1200,17 +1252,27 @@ final class CanvasView: NSView, NSTextViewDelegate {
             draggingArrowBend = true; draggedID = object.id; start = point; original = model.history.objects
             return
         }
-        guard imageRect.contains(convert(event.locationInWindow, from: nil)) else {
-            model.selection = nil
-            if !previousSelectedIDs.isEmpty { needsDisplay = true }
-            return
-        }
         if editsObjects, let object = model.selectedObject, object.kind == .text,
            let edge = textWidthHandles(object).firstIndex(where: {
                visible($0) && SelectionGrips.hitRect(at: viewPoint($0), shape: .vertical).contains(viewPoint(point))
            }) {
             textResizeFromLeft = edge == 0
             draggedID = object.id; start = point; original = model.history.objects
+            return
+        }
+        if model.tool == .selection, object == nil {
+            // Keep the current selection until release; Escape can discard the frame without an edit.
+            let extendsSelection = event.modifierFlags.contains(.shift)
+            marqueeGesture = MarqueeGesture(anchor: point, baseSelection: extendsSelection ? previousSelectedIDs : [],
+                extendsSelection: extendsSelection,
+                selectsSourceOnClick: !extendsSelection && imageRect.contains(convert(event.locationInWindow, from: nil)) && model.originalRect.contains(point),
+                point: point)
+            closeQuickOptions()
+            return
+        }
+        guard imageRect.contains(convert(event.locationInWindow, from: nil)) else {
+            model.selection = nil
+            if !previousSelectedIDs.isEmpty { needsDisplay = true }
             return
         }
         if model.tool == .steps, object == nil {
@@ -1251,11 +1313,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
             if let object { arrowEndpoint = endpoint(at: point, of: object) }
             if arrowEndpoint == nil { clickedObjectID = object?.id }
         }
-        // The empty selection background has no gesture to track or redraw.
         guard draggedID != nil || model.drawingKind != nil else {
-            if model.tool == .selection, !event.modifierFlags.contains(.shift), model.originalRect.contains(point) {
-                sourceImageClick = convert(event.locationInWindow, from: nil)
-            }
             if model.selectedIDs != previousSelectedIDs { needsDisplay = true }
             return
         }
@@ -1272,6 +1330,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
     }
     override func mouseDragged(with event: NSEvent) {
         guard !model.isSwitchingImage else { return }
+        if marqueeGesture != nil { updateMarqueeSelection(with: event); return }
         if cropGesture != nil { updateCrop(with: event); return }
         if let panGesture {
             let point = viewportPoint(event)
@@ -1477,10 +1536,14 @@ final class CanvasView: NSView, NSTextViewDelegate {
     override func mouseUp(with event: NSEvent) {
         guard !model.isSwitchingImage else { return }
         defer { model.isCanvasGestureActive = false }
-        if let press = sourceImageClick {
-            sourceImageClick = nil
-            let release = convert(event.locationInWindow, from: nil)
-            if hypot(release.x - press.x, release.y - press.y) <= 3 { model.selectSourceImage() }
+        if marqueeGesture != nil {
+            updateMarqueeSelection(with: event)
+            guard let gesture = marqueeGesture else { return }
+            marqueeGesture = nil; model.isCanvasGestureActive = false
+            if gesture.hasDragged { model.selectObjects(gesture.hitIDs, addingTo: gesture.baseSelection) }
+            else if gesture.selectsSourceOnClick { model.selectSourceImage() }
+            else if !gesture.extendsSelection { model.selection = nil }
+            needsDisplay = true; window?.invalidateCursorRects(for: self)
             return
         }
         if cropGesture != nil {
@@ -1611,6 +1674,15 @@ final class CanvasView: NSView, NSTextViewDelegate {
             if editor.alignment != paragraph.alignment { editor.alignment = paragraph.alignment }
         }
         editor.typingAttributes = attributes
+        // Plain text applies typing attributes to new input only; underline is uniform for the object.
+        if let storage = editor.textStorage, storage.length > 0 {
+            let full = NSRange(location: 0, length: storage.length)
+            if let underline = attributes[.underlineStyle] {
+                if storage.attribute(.underlineStyle, at: 0, effectiveRange: nil) == nil { storage.addAttribute(.underlineStyle, value: underline, range: full) }
+            } else if storage.attribute(.underlineStyle, at: 0, effectiveRange: nil) != nil {
+                storage.removeAttribute(.underlineStyle, range: full)
+            }
+        }
         let rect = EditorRenderer.textRect(object)
         editor.textContainer?.containerSize = CGSize(width: EditorRenderer.textContainerWidth(object), height: 1_000_000)
         let clipRect = imageRect.intersection(bounds)
@@ -1652,6 +1724,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
         } else if event.keyCode == 49, !event.modifierFlags.contains(.command), !model.isCanvasGestureActive {
             isSpaceHeld = true; window?.invalidateCursorRects(for: self)
         } else if event.keyCode == 53 {
+            if marqueeGesture != nil { cancelMarqueeSelection(); return }
             if quickToolbar != nil { closeQuickOptions(); return }
             if let panGesture { model.viewport = panGesture.viewport }
             panGesture = nil; isSpaceHeld = false; model.isCanvasGestureActive = false
@@ -1674,6 +1747,7 @@ final class CanvasView: NSView, NSTextViewDelegate {
         else { super.keyUp(with: event) }
     }
     override func resignFirstResponder() -> Bool {
+        cancelMarqueeSelection()
         isSpaceHeld = false; window?.invalidateCursorRects(for: self)
         return super.resignFirstResponder()
     }

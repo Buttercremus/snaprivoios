@@ -946,6 +946,9 @@ private struct EditorTypographyControls: View {
                 Toggle(String(localized: "Kursiv"), isOn: Binding(get: { model.activeTextStyle.italic }, set: { value in
                     change { $0.italic = value }
                 })).accessibilityIdentifier("editor.text.italic")
+                Toggle(String(localized: "Unterstrichen"), isOn: Binding(get: { model.activeTextStyle.isUnderlined }, set: { value in
+                    change { $0.isUnderlined = value }
+                })).accessibilityIdentifier("editor.text.underline")
             }.toggleStyle(.button)
             Picker(String(localized: "Ausrichtung"), selection: Binding(get: { model.activeTextStyle.alignment }, set: { value in
                 change { $0.alignment = value }

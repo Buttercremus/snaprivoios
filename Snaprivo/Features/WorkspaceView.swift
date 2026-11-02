@@ -90,17 +90,18 @@ struct WorkspaceView: View {
                 } else {
                     ZStack {
                         VStack(spacing: 0) {
-                            Picker(String(localized: "Bibliotheksinhalt"), selection: Binding(get: { workspace.libraryShowsVideos }, set: { videos in
+                            Picker(String(localized: "Bibliotheksinhalt"), selection: Binding(get: { workspace.libraryMedia }, set: { media in
                                 var transaction = Transaction(animation: navigationAnimation)
                                 transaction[MediaTransition.self] = true
-                                withTransaction(transaction) { workspace.libraryShowsVideos = videos }
+                                withTransaction(transaction) { workspace.libraryMedia = media }
                             })) {
-                                Text(String(localized: "Bilder")).tag(false)
-                                Text(String(localized: "Videos")).tag(true)
-                            }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: 320).padding(.top, 12).padding(.horizontal)
+                                Text(String(localized: "Alle")).tag(LibraryMedia.all)
+                                Text(String(localized: "Bilder")).tag(LibraryMedia.images)
+                                Text(String(localized: "Videos")).tag(LibraryMedia.videos)
+                            }.pickerStyle(.segmented).labelsHidden().frame(maxWidth: 360).padding(.top, 12).padding(.horizontal)
                                 .accessibilityIdentifier("library.media")
                             ZStack {
-                                if workspace.libraryShowsVideos {
+                                if workspace.libraryMedia == .videos {
                                     ZStack {
                                         VideoLibraryView(model: workspace.videos, allBackup: { workspace.chooseTransfer(.completeBackup) }, allRestore: { workspace.chooseTransfer(.restoreComplete) })
                                             .transaction { if $0[MediaTransition.self] { $0.animation = nil } }
@@ -122,7 +123,8 @@ struct WorkspaceView: View {
                                             }.padding().accessibilityIdentifier("capture.firstRun")
                                             Divider()
                                         }
-                                        LibraryView(workspace: workspace)
+                                        if workspace.libraryMedia == .all { CombinedLibraryView(workspace: workspace) }
+                                        else { LibraryView(workspace: workspace) }
                                     }
                                     .transaction { if $0[MediaTransition.self] { $0.animation = nil } }
                                     }.transition(.opacity)

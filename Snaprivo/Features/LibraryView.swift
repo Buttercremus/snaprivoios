@@ -356,7 +356,7 @@ struct LibraryView: View {
     }
 }
 
-private struct LibraryCard: View {
+struct LibraryCard: View {
     let item: ProjectLibraryItem
     @State private var thumbnail: NSImage?
     var body: some View {

@@ -45,7 +45,7 @@ private func rotationImage() throws -> EditorObject {
     image.imageRotationDegrees = nil
     json["objects"] = try JSONSerialization.jsonObject(with: JSONEncoder().encode([image]))
     let migrated = try ProjectDocument.decode(JSONSerialization.data(withJSONObject: json))
-    #expect(migrated.schemaVersion == 19 && migrated.objects == [image])
+    #expect(migrated.schemaVersion == ProjectDocument.currentVersion && migrated.objects == [image])
 }
 
 @Test func imageRotationAndExpandedCanvasShareOneUndoTransaction() throws {
