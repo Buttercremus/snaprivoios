@@ -87,3 +87,43 @@ Die Vorschau behält während eines Aufbaus den gewünschten Quellzeitpunkt und 
 - Sichtbare Bedienprüfung des erweiterten Editors ist noch offen. Die bisherigen realen Capture-/Hardware-/VoiceOver-Grenzen gelten weiterhin.
 
 Logs: `/tmp/Snaprivo-bestof-playback-{domain,build,sandbox,full-sandbox,library,validation,localization}.log`. Öffentliche API-Grundlage: [AVMutableComposition](https://developer.apple.com/documentation/avfoundation/avmutablecomposition), [Time pitch algorithms](https://developer.apple.com/documentation/avfoundation/time-pitch-algorithm-settings).
+
+## A05 Bedienprüfung des erweiterten Editors
+
+Abschluss am 2. November 2026 nach Unterbrechung der vorherigen Bearbeitung. Der Zwischenstand wurde vorher unverändert als Branch `backup/codex-a05-a06-2026-11-02` gesichert.
+
+`./scripts/test-video-editor-ui.sh` öffnet den echten `VideoReviewView` mit einem synthetischen 2-s-Clip (Oberflächenmotiv, leiser Ton) in einem nicht aktivierten Fenster außerhalb des Bildschirms und bedient ihn über seine eigenen Bedienelemente: Zeitansicht 8× und zurück über das Auswahlmenü (geöffnet über Bedienungshilfen, gewählt mit Pfeiltasten und Eingabe), Abschnitt 0,6–1,0 s über das Popover mit eingetippten Zeiten entfernen, Tempo 2× und Lautstärke 50 %, Zoomabschnitt 0,1–0,5 s mit 2× Vergrößerung, „Änderungen sichern“, Rückgängig und Wiederholen. Jeder Schritt prüft den Modellzustand, die Aktivierung von Abspielen/Sichern/Zurücksetzen über Bedienungshilfen und am Ende die gespeicherte Datei (Format 5) sowie unveränderte Originalbytes. Die zehn Zustände werden als Bilder unter `build/VideoEditorUI/Screens/` abgelegt und wurden gesichtet: keine abgeschnittenen Bedienelemente, gleichbleibende Fenstergröße 1040 × 760, entfernter Bereich farbig in der Zeitleiste, Ausgabedauer 0:00,8 nach Schnitt und 2×, Zoomabschnitt in der Liste, „Ungesicherte Änderungen“ → „Gesichert“.
+
+- Gefunden und behoben (Videoeditor): Nach dem Sichern sprang die Abspielposition an den Anfang; sie bleibt jetzt an der geprüften Stelle (zusätzlich in `VideoPlaybackChecks`). Die vergrößerte Zeitansicht zentriert den Abspielkopf jetzt über eine berechnete Scrollposition statt über eine nicht greifende Element-ID; Ansicht 8× zeigte im Test 0:01,7 mittig (zusätzlich `VideoTimelineChecks` für Anfang, Mitte, Ende und Gesamt). Das Bereichspopover öffnet zur Seite statt über die Liste.
+- Gefunden und behoben (Prüfmittel): Der synthetische Clip mit Ton blockierte den AVAssetWriter, weil eine fertige Spur nicht sofort abgeschlossen wurde; beide Spuren werden jetzt abwechselnd gefüllt und einzeln beendet.
+- Darstellungsgrenzen der Fensterbilder: Videoebenen erscheinen schwarz, Liquid-Glass-Hintergründe fehlen und deaktivierte Glass-Buttons sind dort nicht unterscheidbar. Pixel von Vorschau, MP4 und GIF prüfen weiterhin die Wiedergabetests; Zustände der Buttons werden über Bedienungshilfen geprüft, nicht anhand der Bilder.
+- Beobachtung: Im unfokussierten Testfenster liefert SwiftUI für den scrollenden Optionsbereich rechts (Tempo, Ton, Abschnitte, Zoom, Gestaltung) keine Bedienungshilfen-Elemente. Die Prüfung bedient diese Elemente deshalb mit echten Mausereignissen an den von SwiftUI bereitgestellten Tastaturpositionen und bestätigt jede Wirkung am Modell. Ob VoiceOver diese Elemente im echten, fokussierten Editor erreicht, ist damit nicht belegt und Teil der VoiceOver-Abnahme.
+- Beobachtung: Zoomabschnitte stehen in der Liste, werden aber anders als entfernte Bereiche nicht in der Zeitleiste markiert. Das entspricht dem beschriebenen Umfang; eine Markierung wäre eine spätere Ergänzung.
+
+Weitere Prüfungen nach dem Abschluss: App-Build mit beiden Erweiterungen, `./scripts/test-video-editing.sh --sandbox` (vollständige Video-Regression einschließlich Neustart) und `--playback`, Lokalisierung (1403 App-, 7 InfoPlist-, 19 Domain-Texte).
+
+## A06 Finder-Vorschau und Miniaturen
+
+Zwei in der App eingebettete und signierte Quick-Look-Erweiterungen unterstützen `.snaprivo`-Bildprojekte. Sie laufen mit App Sandbox, ausschließlich lesendem Zugriff auf die ausgewählte Datei und ohne Netzwerk-/Aufnahmerechte. Beide verwenden denselben vorhandenen `EditorRenderer` wie die App für Objekte, Abdeckungen, Zuschnitt, Bildgröße, Zeichenfläche, Transformation und Gestaltung. Fehler liefern keine Vorschau statt ungeschützter Originalpixel. Es gibt keine neue Paketabhängigkeit.
+
+Ein eigener Actor serialisiert Lesen und Rendern außerhalb des MainActor. Grenzen: 64.000.000 Dateibytes, 8.000.000 Metadatenbytes vor Dokumentdekodierung, insgesamt 16.000.000 Pixel aus Original und eindeutigen Bild-/Hintergrundassets, 256 Objekte, 100.000 UTF-16-Texteinheiten und 2048 Pixel Vorschaukante. Symlinks und andere nicht reguläre Dateien werden abgelehnt. Versions-, Digest-, Geometrie- und Asset-Prüfungen des Projektformats gelten weiter. Überschreitungen lassen die Finder-Vorschau ausfallen; sie verändern kein Projekt. Rückmeldungen werden genau einmal zugestellt. Die Zeichen-Callbacks sind ausdrücklich `@Sendable`, weil der Systemdienst sie auf einem Hintergrundthread ausführt.
+
+- `./scripts/build.sh -derivedDataPath build/BestOfApps/Xcode`: App und beide Extension-Targets bestanden; eingebettete Ressourcen, Bundle-IDs, Sandbox-Entitlements und tiefe Signaturprüfung bestätigt.
+- `./scripts/test-quicklook.sh --sandbox --system`: bestanden. Synthetisches Projekt mit rotem Original und schwarzer Abdeckung; gerenderte Pixel, Zuschnitt/Gestaltung, Retina-/Fit-Geometrie, unveränderte Projektbytes, beschädigte Metadaten/unbekannte Versionen, Mengen-/Dekodiergrenzen, Symlink/Verzeichnis, Abbruch und einmalige Completion geprüft. Der echte System-Miniaturdienst liefert ebenfalls rote Randpixel und eine schwarze Mitte; ein allgemeines Dateiicon würde diese Prüfung nicht bestehen.
+- Tatsächlicher Finder auf diesem Mac: ausschließlich synthetische `.snaprivo`-Datei ausgewählt, Leertaste gedrückt und die sichtbare Quick-Look-Vorschau samt schwarzer Abdeckung bestätigt. Ein vorheriger Versuch mit `qlmanage -p -x` scheiterte im macOS-CLI-Host vor dem Aufruf des Providers; die funktionierende Finder-Abnahme ist der maßgebliche Vorschau-Nachweis.
+
+Logs: `/tmp/Snaprivo-bestof-quicklook-{build,tests,system}.log`. Generierte Projekte und Bilder liegen ausschließlich unter dem ignorierten `build/`. Finder-Vorschauen für Videos oder Anleitungen sind nicht Teil dieser Erweiterungen. Breite Speicherlast-/Hardware-/VoiceOver-/Store-Abnahmen bleiben separat. A07–A09 werden auf Nutzerwunsch vom 2.11.2026 später begonnen.
+
+Nachprüfung am 2. November 2026 nach Unterbrechung: `./scripts/test-quicklook.sh --sandbox --system` erneut bestanden, einschließlich echtem System-Miniaturdienst. Der aktuelle Build bettet beide Erweiterungen unter `Contents/PlugIns` ein; `codesign --verify --deep --strict` bestanden; beide laufen mit App Sandbox und ausschließlich lesendem Zugriff auf die gewählte Datei (`get-task-allow` nur im Debug-Build). Die Finder-Leertastenvorschau wurde nicht erneut bedient; maßgeblich bleibt die oben beschriebene Prüfung. Quick-Look-Erweiterungen laufen unter engen Speichergrenzen; ein Projekt nahe 16 MP wurde nicht unter Speicherlast geprüft.
+
+## Verbleibende Abnahmegrenzen
+
+Stand nach Abschluss von A01–A06. Diese Punkte ersetzen die synthetischen Prüfungen nicht und bleiben separat:
+
+- **VoiceOver:** vollständiger Durchgang durch Videoeditor und Schnellvorschau, vorrangig der scrollende Optionsbereich (siehe A05), sowie Finder-Vorschau.
+- **Reale Aufnahme und Hardware:** neue Bildschirmaufnahmen mit Systemton/Mikrofon, Pegel, Bild-/Tonsynchronität über längere Zeit, mehrere Displays, unterschiedliche Bildraten.
+- **Echte Maus- und Trackpadbedienung:** Ziehen der Griffe und Scrollen der vergrößerten Zeitleiste in der laufenden App; synthetische native Ereignisse sind geprüft.
+- **Export-Dialoge:** MP4/GIF über die nativen Sichern-Dialoge aus dem Editor; die Ausgabedateien selbst sind geprüft.
+- **Quick Look unter Last:** große Projekte nahe den Grenzen, viele Dateien gleichzeitig in Finder-Ordnern, Speicherlimits der Erweiterungen.
+- **Store-Build:** Signierung mit Team und Provisioning, Archiv, Erweiterungen im verteilten Build; keine Veröffentlichung erfolgt.
+- **A07–A09:** auf Nutzerwunsch vom 2.11.2026 nicht begonnen und später zu ergänzen.

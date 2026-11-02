@@ -284,6 +284,11 @@ private struct CaptureSettings: View {
                 })).accessibilityIdentifier("settings.capture.cursor")
                 Text(String(localized: "Neue Aufnahme erkennt Fenster automatisch. Ziehen wählt einen freien Bereich; vor dem Bestätigen lässt sich der Rahmen korrigieren."))
                     .font(.callout).foregroundStyle(.secondary)
+                Toggle(String(localized: "Ohne Bestätigungsleiste sofort aufnehmen"), isOn: Binding(get: { workspace.preferences.capturesImmediately },
+                                                                                          set: { workspace.preferences.capturesImmediately = $0 }))
+                    .accessibilityIdentifier("settings.capture.immediately")
+                Text(String(localized: "Loslassen nach dem Aufziehen oder ein Klick auf ein Fenster nimmt direkt auf. Hältst du beim Loslassen ⌥ gedrückt, erscheint die Leiste zum Anpassen. Video und Scroll-Aufnahme behalten die Leiste."))
+                    .font(.callout).foregroundStyle(.secondary)
             }
             Section(String(localized: "Videoton")) {
                 Toggle(String(localized: "Mausklicks im Video hervorheben"), isOn: Binding(

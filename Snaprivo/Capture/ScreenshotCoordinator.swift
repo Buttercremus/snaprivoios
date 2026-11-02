@@ -60,7 +60,7 @@ final class ScreenshotCoordinator {
         if needsPermission { _ = checkPermission(requestIfNeeded: false) }
     }
 
-    func start(configuration: CaptureConfiguration, requestPermission: Bool = false, scrolling: Bool = false, videoMouseClicks: Bool = false, videoAudio: VideoAudioOptions = .init(), imageOnly: Bool = false, destination: CaptureImageDestination = .image, activatesOnImageCapture: Bool = true,
+    func start(configuration: CaptureConfiguration, requestPermission: Bool = false, scrolling: Bool = false, videoMouseClicks: Bool = false, videoAudio: VideoAudioOptions = .init(), imageOnly: Bool = false, destination: CaptureImageDestination = .image, activatesOnImageCapture: Bool = true, confirmsImmediately: Bool = false,
                onFailure: @escaping @MainActor () -> Void = {},
                authorizeRecognition: @escaping @MainActor () -> Bool = { false },
                onRecognitionCapture: @escaping @MainActor (CGImage, Bool) -> Void = { _, _ in },
@@ -113,7 +113,8 @@ final class ScreenshotCoordinator {
                 let selectionUI = ScreenshotSelector()
                 selector = selectionUI
                 status = String(localized: "Fenster oder Bereich auswählen …")
-                guard let selected = try await selectionUI.select(source: scrolling ? .region : configuration.source, windows: windows, desktop: desktop, media: configuration.media, allowsVideoAction: !scrolling && !imageOnly, scrolling: scrolling && !imageOnly, allowsScrolling: !imageOnly, destination: destination) else { return }
+                guard let selected = try await selectionUI.select(source: scrolling ? .region : configuration.source, windows: windows, desktop: desktop, media: configuration.media, allowsVideoAction: !scrolling && !imageOnly, scrolling: scrolling && !imageOnly, allowsScrolling: !imageOnly, destination: destination,
+                    confirmsImmediately: confirmsImmediately && !scrolling) else { return }
                 try Task.checkCancellation()
                 guard !imageOnly || (selected.media == .image && !selected.isScrolling) else { throw ScreenshotError.invalidRegion }
                 if selected.destination != .image { guard authorizeRecognition() else { return } }

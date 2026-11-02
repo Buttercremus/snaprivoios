@@ -24,6 +24,7 @@ import SnagForgeDomain
         model.seek(0.5)
         check(model.position == 0.5 && !model.isPreviewReady, "Pending edit snapped a source seek through the old composition")
         check(await model.apply() && model.document.playback == edit)
+        check(model.position == 0.5, "Saving moved the source playhead away from the reviewed edit")
         check(await model.undo() && model.playback.isIdentity && model.start == 0)
         check(await model.redo() && model.playback == edit)
         await model.updatePreviewComposition()

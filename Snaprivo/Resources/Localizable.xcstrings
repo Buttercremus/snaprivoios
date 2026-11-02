@@ -1,6 +1,86 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ · Loslassen: Aufnehmen · Mit ⌥ loslassen: vorher prüfen · Esc: Abbrechen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Loslassen: Aufnehmen · Mit ⌥ loslassen: vorher prüfen · Esc: Abbrechen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · Release: Capture · Release with ⌥: Review first · Esc: Cancel"
+          }
+        }
+      }
+    },
+    "Genaue Größe in Pixeln eingeben" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genaue Größe in Pixeln eingeben"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter an exact size in pixels"
+          }
+        }
+      }
+    },
+    "Loslassen nach dem Aufziehen oder ein Klick auf ein Fenster nimmt direkt auf. Hältst du beim Loslassen ⌥ gedrückt, erscheint die Leiste zum Anpassen. Video und Scroll-Aufnahme behalten die Leiste." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loslassen nach dem Aufziehen oder ein Klick auf ein Fenster nimmt direkt auf. Hältst du beim Loslassen ⌥ gedrückt, erscheint die Leiste zum Anpassen. Video und Scroll-Aufnahme behalten die Leiste."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Releasing a dragged area or clicking a window captures right away. Hold ⌥ while releasing to get the bar for adjustments. Video and scrolling captures keep the bar."
+          }
+        }
+      }
+    },
+    "Loslassen oder Fensterklick nimmt direkt auf. ⌥ beim Loslassen zeigt die Leiste." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loslassen oder Fensterklick nimmt direkt auf. ⌥ beim Loslassen zeigt die Leiste."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Releasing or clicking a window captures right away. Hold ⌥ while releasing to show the bar."
+          }
+        }
+      }
+    },
+    "Ohne Bestätigungsleiste sofort aufnehmen" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ohne Bestätigungsleiste sofort aufnehmen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture Immediately Without the Confirmation Bar"
+          }
+        }
+      }
+    },
     "Nach dem Übernehmen zeigt die Vorschau die Abschnittsmitte." : {
       "extractionState" : "manual",
       "localizations" : {

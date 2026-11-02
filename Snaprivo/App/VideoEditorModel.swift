@@ -243,13 +243,16 @@ enum VideoEditError: LocalizedError {
         guard requestFeature(.video) else { return false }
         guard !isBusy else { return false }
         isSaving = true; pausePlayback()
+        let savedPosition = position
         let task = Task { [self] in
             do {
                 let next = try await files.setEdit(id, trim: edit.trim, presentation: edit.presentation, playback: edit.playback, expectedRevision: document.revision)
                 document = next
                 if let historyDestination { historyIndex = historyDestination }
                 else { history.removeSubrange((historyIndex + 1)..<history.count); history.append(edit); historyIndex += 1 }
-                discardDraft(); await onSave(); return true
+                discardDraft()
+                if historyDestination == nil { seek(min(max(savedPosition, start), end)) }
+                await onSave(); return true
             } catch { self.error = error.localizedDescription; return false }
         }
         saving = task; let result = await task.value; saving = nil; isSaving = false

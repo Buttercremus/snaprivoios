@@ -19,7 +19,7 @@ final class ScreenshotSelector {
     private var scrollOverlay: CaptureSelectionOverlay?
     private var videoOverlay: CaptureSelectionOverlay?
 
-    func select(source: CaptureSource, windows: [CapturableWindow], desktop: FrozenDesktop, media: CaptureMedia = .image, allowsVideoAction: Bool = true, scrolling: Bool = false, allowsScrolling: Bool = true, destination: CaptureImageDestination = .image) async throws -> ScreenshotSelection? {
+    func select(source: CaptureSource, windows: [CapturableWindow], desktop: FrozenDesktop, media: CaptureMedia = .image, allowsVideoAction: Bool = true, scrolling: Bool = false, allowsScrolling: Bool = true, destination: CaptureImageDestination = .image, confirmsImmediately: Bool = false) async throws -> ScreenshotSelection? {
         let screens = NSScreen.screens
         let screenChoices = screens.compactMap { screen -> CaptureScreenChoice? in
             guard let id = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? UInt32 else { return nil }
@@ -65,6 +65,7 @@ final class ScreenshotSelector {
                 view.allowsScrolling = allowsScrolling
                 view.isVideo = media == .video
                 view.isScrolling = scrolling
+                view.confirmsImmediately = confirmsImmediately
                 view.imageDestination = destination
                 view.onDestinationChange = { [weak self] value in
                     self?.views.forEach { $0.imageDestination = value }
@@ -437,6 +438,11 @@ final class SelectionView: NSView {
     var allowsVideoAction = true
     var allowsScrolling = true
     var isScrolling = false
+    /// The selecting gesture also confirms a photo; ⌥ on release keeps the bar for adjustments.
+    var confirmsImmediately = false
+    private var capturesOnRelease: Bool { confirmsImmediately && !isVideo && !isScrolling && !keepsReview }
+    /// Once the bar was requested with ⌥ or is showing, later gestures of this selection keep it.
+    private var keepsReview = false
     var imageDestination: CaptureImageDestination = .image { didSet { updateReview() } }
     var onDestinationChange: ((CaptureImageDestination) -> Void)?
     var onMediaChange: ((Bool) -> Void)?
@@ -722,18 +728,23 @@ final class SelectionView: NSView {
         if selectsRegion { updateRegion(from: start, to: point) }
         self.start = nil
         isDragging = false
-        if mode == .display { onPropose?(screenFrame); return }
+        let capturesNow = capturesOnRelease && !isReviewing && !event.modifierFlags.contains(.option)
+        if confirmsImmediately && !capturesNow { keepsReview = true }
+        if mode == .display { onPropose?(screenFrame); if capturesNow { confirm() }; return }
         if mode != .region && !selectsRegion {
-            onHover?(point); onPropose?(nil); return
+            onHover?(point); onPropose?(nil); if capturesNow { confirm() }; return
         }
         let rect = CaptureGeometry.selection(from: start, to: point, within: screenFrame)
-        if !rect.isNull, rect.width >= 2, rect.height >= 2 { onPropose?(rect) }
+        if !rect.isNull, rect.width >= 2, rect.height >= 2 { onPropose?(rect); if capturesNow { confirm() } }
         else { isDragging = false; onHover?(screenPoint(event)) }
     }
     private func updateRegion(from start: CGPoint, to point: CGPoint) {
         if !isDragging { isDragging = true; onDragStart?() }
         highlight = CaptureGeometry.selection(from: start, to: point, within: screenFrame)
-        if let highlight { caption = String(localized: "\(pixelDimensions(highlight)) · Loslassen: Auswahl prüfen · Esc: Abbrechen") }
+        if let highlight {
+            caption = capturesOnRelease ? String(localized: "\(pixelDimensions(highlight)) · Loslassen: Aufnehmen · Mit ⌥ loslassen: vorher prüfen · Esc: Abbrechen")
+                : String(localized: "\(pixelDimensions(highlight)) · Loslassen: Auswahl prüfen · Esc: Abbrechen")
+        }
     }
     override func cancelOperation(_ sender: Any?) { onCancel?() }
     override func keyDown(with event: NSEvent) {
@@ -795,7 +806,7 @@ final class SelectionView: NSView {
             let below = local.minY - height - 8, above = local.maxY + 8
             let y = below >= margin ? below : above + height <= bounds.maxY - margin ? above : margin
             toolbar?.frame = CGRect(x: x, y: y, width: width, height: height)
-            toolbar?.dimensions.stringValue = pixelDimensions(draft.rect).replacingOccurrences(of: " px", with: "")
+            toolbar?.setDimensions(pixelDimensions(draft.rect).replacingOccurrences(of: " px", with: ""))
             toolbar?.needsLayout = true
             if isVideo && draft.windowID != nil {
                 caption = String(localized: "Ganzes Fenster aufnehmen und beim Verschieben folgen. Rahmen ändern: fester Bereich. Enter: Bestätigen. Esc: Abbrechen.")
@@ -935,7 +946,8 @@ struct CaptureScreenChoice: Equatable {
 final class CaptureReviewToolbar: CaptureToolbarSurface {
     static let height = CaptureToolbarSurface.barHeight
     static func preferredWidth(allowsVideoAction: Bool) -> CGFloat { allowsVideoAction ? 728 : 640 }
-    let dimensions = NSTextField(labelWithString: "")
+    /// The pixel size is itself the control for entering an exact size, like the source and screen menus.
+    let size = CaptureFlatButton(frame: .zero)
     var onCapture: ((Bool) -> Void)?
     var onScrollCapture: (() -> Void)?
     var onDestinationCapture: ((CaptureImageDestination) -> Void)?
@@ -955,7 +967,6 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
     private let photoSelection = NSView()
     private let screen = CaptureFlatButton(frame: .zero)
     private let sourceButton = CaptureFlatButton(frame: .zero)
-    private let settings = CaptureFlatButton(frame: .zero)
     private let restart = CaptureFlatButton(frame: .zero)
     private let cancel = CaptureFlatButton(frame: .zero)
     private var dividers: [NSView] = []
@@ -999,11 +1010,11 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
         sourceButton.flatCell.iconSize = 20
         sourceButton.setAccessibilityRole(.popUpButton)
         sourceButton.setAccessibilityLabel(String(localized: "Auswahlart"))
-        dimensions.alignment = .center; dimensions.textColor = NSColor.white.withAlphaComponent(0.68)
-        dimensions.setAccessibilityLabel(String(localized: "Auswahlgröße")); controls.addSubview(dimensions)
-        configure(settings, title: "", symbol: "gearshape", action: #selector(editSize(_:)), identifier: "capture.settings")
-        settings.flatCell.iconSize = 22
-        settings.setAccessibilityLabel(String(localized: "Auswahlgröße")); settings.toolTip = String(localized: "Auswahlgröße")
+        configure(size, title: "", symbol: "", action: #selector(editSize(_:)), identifier: "capture.size")
+        size.image = nil; size.imagePosition = .noImage
+        size.flatCell.showsChevron = true
+        size.setAccessibilityRole(.popUpButton)
+        size.setAccessibilityLabel(String(localized: "Auswahlgröße")); size.toolTip = String(localized: "Genaue Größe in Pixeln eingeben")
         configure(restart, title: "", symbol: "arrow.counterclockwise", action: #selector(restartPressed), identifier: "capture.restart")
         restart.flatCell.iconSize = 24
         restart.setAccessibilityLabel(String(localized: "Neu auswählen")); restart.toolTip = String(localized: "Neu auswählen")
@@ -1041,25 +1052,27 @@ final class CaptureReviewToolbar: CaptureToolbarSurface {
         capture.frame = NSRect(x: 0, y: 0, width: 86 * scale, height: height)
         choices.frame = NSRect(x: 86 * scale, y: 0, width: 22 * scale, height: height)
         videoButton?.frame = NSRect(x: 108 * scale, y: 0, width: 88 * scale, height: height)
-        for (button, x, width) in [(screen, CGFloat(226), CGFloat(116)), (sourceButton, 362, 96), (settings, 584, 36), (restart, 626, 36), (cancel, 682, 36)] {
+        for (button, x, width) in [(screen, CGFloat(226), CGFloat(116)), (sourceButton, 362, 96), (size, 476, 136), (restart, 626, 36), (cancel, 682, 36)] {
             button.frame = rect(x - withoutVideo, width)
         }
-        dimensions.frame = rect(478 - withoutVideo, 86)
-        let size = min(12 * scale, 12 * scale * dimensions.frame.width / max(1, (dimensions.stringValue as NSString).size(withAttributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12 * scale, weight: .medium)]).width))
-        dimensions.font = .monospacedDigitSystemFont(ofSize: size, weight: .medium)
-        // A label uses its natural height; centering its cell in a tall frame
-        // otherwise leaves it aligned with the top rather than the icons.
-        dimensions.frame.size.height = ceil(dimensions.intrinsicContentSize.height)
-        dimensions.frame.origin.y = (bounds.height - dimensions.frame.height) / 2
         for button in actionButtons.compactMap({ $0 as? CaptureFlatButton }) {
             let primary = button === capture || button === videoButton
             button.font = .systemFont(ofSize: (primary ? 14 : 12) * scale,
                                       weight: button === capture ? .semibold : primary ? .medium : .regular)
             button.flatCell.contentScale = scale; button.needsDisplay = true
         }
-        for (divider, x) in zip(dividers, [CGFloat(216), 352, 468, 574, 672]) {
+        // Monospaced digits keep the size steady while dragging; long values shrink to fit beside the chevron.
+        let digits = NSFont.monospacedDigitSystemFont(ofSize: 12 * scale, weight: .medium)
+        let available = size.frame.width - 40 * scale
+        size.font = .monospacedDigitSystemFont(ofSize: min(12 * scale, 12 * scale * available / max(1, (size.title as NSString).size(withAttributes: [.font: digits]).width)), weight: .medium)
+        size.flatCell.foreground = NSColor.white.withAlphaComponent(0.82)
+        for (divider, x) in zip(dividers, [CGFloat(216), 352, 468, 618, 672]) {
             divider.frame = NSRect(x: left + (x - withoutVideo) * scale, y: (bounds.height - 32 * scale) / 2, width: 1, height: 32 * scale)
         }
+    }
+    func setDimensions(_ text: String) {
+        guard size.title != text else { return }
+        size.title = text; size.setAccessibilityValue(text); needsLayout = true
     }
     func setVideo(_ video: Bool) {
         photoSelection.isHidden = video

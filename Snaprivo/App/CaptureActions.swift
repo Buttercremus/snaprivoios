@@ -62,7 +62,8 @@ enum CaptureLauncher {
             return
         }
         workspace.editor?.finishTextEditing()
-        workspace.screenshot.start(configuration: workspace.captureConfiguration, requestPermission: requestPermission, scrolling: workspace.isScrollCapture, videoMouseClicks: workspace.preferences.videoMouseClicks, videoAudio: .init(systemAudio: workspace.preferences.videoSystemAudio, microphone: workspace.preferences.videoMicrophone), activatesOnImageCapture: guide != nil || !workspace.preferences.quickPreviewAfterCapture, onFailure: {
+        workspace.screenshot.start(configuration: workspace.captureConfiguration, requestPermission: requestPermission, scrolling: workspace.isScrollCapture, videoMouseClicks: workspace.preferences.videoMouseClicks, videoAudio: .init(systemAudio: workspace.preferences.videoSystemAudio, microphone: workspace.preferences.videoMicrophone), activatesOnImageCapture: guide != nil || !workspace.preferences.quickPreviewAfterCapture,
+            confirmsImmediately: workspace.preferences.capturesImmediately, onFailure: {
             AppWindows.show("capture", using: openWindow)
         }, authorizeRecognition: { workspace.requirePro(.textRecognition) }, onRecognitionCapture: { image, codesOnly in
             workspace.recognizeCapturedText(image, codesOnly: codesOnly, onFinished: { dismissWindow(id: "capture") })
@@ -226,7 +227,7 @@ extension WorkspaceModel {
         directCaptureNotice = nil
         directCaptureReadsCodes = codesOnly
         screenshot.start(configuration: CaptureConfiguration(media: .image, source: .region, includesCursor: false), requestPermission: true,
-            imageOnly: true, destination: codesOnly ? .code : .text, activatesOnImageCapture: false,
+            imageOnly: true, destination: codesOnly ? .code : .text, activatesOnImageCapture: false, confirmsImmediately: preferences.capturesImmediately,
             onFailure: { AppWindows.show("workspace", using: openWindow) },
             authorizeRecognition: { self.requirePro(.textRecognition) },
             onRecognitionCapture: { [weak self] image, codes in

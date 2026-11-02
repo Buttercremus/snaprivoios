@@ -180,6 +180,16 @@ struct CaptureSelectionChecks {
             precondition(toolbar.bounds.contains(button.convert(button.bounds, to: toolbar)), "Compact capture control is clipped")
         }
         precondition(view.bounds.contains(toolbar.frame), "Controls outside the display")
+        // The pixel size itself opens the exact-size editor; there is no separate gear for it.
+        let reviewToolbar = toolbar as! CaptureReviewToolbar
+        let sizeButton = buttons.first { $0.accessibilityIdentifier() == "capture.size" }!
+        precondition(buttons.allSatisfy { $0.accessibilityIdentifier() != "capture.settings" } && sizeButton.title.contains("×")
+                     && sizeButton.accessibilityValue() as? String == sizeButton.title, "The selection size is not its own control")
+        let showSize = reviewToolbar.onEditSize
+        var sizeEdits = 0
+        reviewToolbar.onEditSize = { button in sizeEdits += 1; precondition(button === sizeButton) }
+        sizeButton.performClick(nil); precondition(sizeEdits == 1, "Clicking the size did not open its editor")
+        reviewToolbar.onEditSize = showSize
         // Moving the frame is live and becomes a crop, with no capture on release.
         view.mouseDown(with: event(.leftMouseDown, 100, 200))
         view.mouseDragged(with: event(.leftMouseDragged, 150, 230))
@@ -265,6 +275,33 @@ struct CaptureSelectionChecks {
         precondition(view.reviewDraft?.rect == CGRect(x: -620, y: 280, width: 130, height: 90))
         precondition(view.reviewDraft?.windowID == nil && captures == 2)
         precondition(window.frame == view.screenFrame, "Capture gesture moved the overlay panel")
+        // Immediate capture: releasing a region or clicking a window confirms at once; ⌥ keeps the bar, video always does.
+        var immediate: [CaptureSelectionDraft] = []
+        view.onConfirm = { immediate.append($0) }
+        view.onRestart?(); view.confirmsImmediately = true
+        view.mouseDown(with: event(.leftMouseDown, 150, 120))
+        view.mouseDragged(with: event(.leftMouseDragged, 370, 280))
+        precondition(view.caption.contains(String(localized: "Loslassen: Aufnehmen")), "The release hint still promised a review")
+        view.mouseUp(with: event(.leftMouseUp, 370, 280))
+        precondition(immediate.map(\.rect) == [CGRect(x: -650, y: 220, width: 220, height: 160)], "Releasing a region did not capture at once")
+        view.onRestart?()
+        view.mouseDown(with: event(.leftMouseDown, 200, 200)); view.mouseUp(with: event(.leftMouseUp, 200, 200))
+        precondition(immediate.count == 2 && immediate[1].windowID == 42, "A window click did not capture at once")
+        view.onRestart?()
+        view.mouseDown(with: event(.leftMouseDown, 150, 120))
+        view.mouseUp(with: NSEvent.mouseEvent(with: .leftMouseUp, location: CGPoint(x: 370, y: 280), modifierFlags: .option, timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!)
+        precondition(immediate.count == 2 && view.reviewDraft != nil
+                     && view.subviews.contains { $0.accessibilityIdentifier() == "capture.reviewToolbar" }, "⌥ on release did not keep the bar")
+        // Once the bar is shown, a further gesture adjusts or reselects instead of capturing.
+        view.mouseDown(with: event(.leftMouseDown, 400, 300)); view.mouseUp(with: event(.leftMouseUp, 420, 320))
+        precondition(immediate.count == 2, "A gesture while reviewing captured at once")
+        view.onRestart?(); view.isVideo = true
+        view.mouseDown(with: event(.leftMouseDown, 150, 120)); view.mouseUp(with: event(.leftMouseUp, 370, 280))
+        precondition(immediate.count == 2 && view.reviewDraft != nil, "Video skipped its confirmation bar")
+        view.onRestart?(); view.isVideo = false; view.confirmsImmediately = false
+        view.onConfirm = { captures += 1; lastCapture = $0 }
+        view.mouseDown(with: event(.leftMouseDown, 200, 200)); view.mouseUp(with: event(.leftMouseUp, 200, 200))
         // Former window-only entry points must also allow free drawing.
         view.onRestart?()
         view.mode = .window

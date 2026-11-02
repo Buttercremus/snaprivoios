@@ -49,6 +49,10 @@ struct CaptureSetupView: View {
                     Toggle(String(localized: "Screenshot automatisch kopieren"), isOn: Binding(
                         get: { workspace.preferences.copyAfterCapture }, set: { workspace.preferences.copyAfterCapture = $0 }
                     )).accessibilityIdentifier("capture.copyAfterCapture")
+                    Toggle(String(localized: "Ohne Bestätigungsleiste sofort aufnehmen"), isOn: Binding(
+                        get: { workspace.preferences.capturesImmediately }, set: { workspace.preferences.capturesImmediately = $0 }
+                    )).help(String(localized: "Loslassen oder Fensterklick nimmt direkt auf. ⌥ beim Loslassen zeigt die Leiste."))
+                        .accessibilityIdentifier("capture.immediately")
                 }
             }
             .disabled(workspace.screenshot.isBusy)

@@ -40,7 +40,8 @@ import SnagForgeDomain
         precondition(restoredHints.completedOnboarding && restoredHints.dismissedEditorHints == ["selection", "firstAnnotation", "crop", "redaction", "filmstripMultiCopy"])
         restoredIntroduction.dismissedEditorHints = []
         precondition(AppPreferences(defaults: defaults).dismissedEditorHints.isEmpty)
-        precondition(preferences.toolbarSize == .standard && preferences.captureDelay == 0 && !preferences.copyAfterCapture)
+        precondition(preferences.toolbarSize == .standard && preferences.captureDelay == 0 && !preferences.copyAfterCapture
+                     && !preferences.capturesImmediately, "Immediate capture must start off; the confirmation bar stays the default")
         precondition(preferences.automaticallyFitsImage, "Existing installations must keep fit as their default")
         preferences.automaticallyFitsImage = false
         precondition(!preferences.videoSystemAudio && !preferences.videoMicrophone && !preferences.videoMouseClicks)
@@ -48,10 +49,12 @@ import SnagForgeDomain
         preferences.opensVideoEditorAfterCapture = true
         preferences.videoSystemAudio = true; preferences.videoMicrophone = true; preferences.videoMouseClicks = true
         preferences.toolbarSize = .large; preferences.captureDelay = 5; preferences.includesCursor = true; preferences.copyAfterCapture = true
+        preferences.capturesImmediately = true
         let restored = AppPreferences(defaults: UserDefaults(suiteName: suite)!)
         precondition(restored.videoSystemAudio && restored.videoMicrophone && restored.videoMouseClicks)
         precondition(restored.opensVideoEditorAfterCapture)
-        precondition(restored.toolbarSize == .large && restored.captureDelay == 5 && restored.includesCursor && restored.copyAfterCapture)
+        precondition(restored.toolbarSize == .large && restored.captureDelay == 5 && restored.includesCursor && restored.copyAfterCapture
+                     && restored.capturesImmediately, "Immediate capture was not restored")
         precondition(!restored.automaticallyFitsImage, "Actual-pixel opening preference did not survive restart")
         checkToolbarOrder(defaults: defaults, suite: suite)
         checkToolbarVisibility(defaults: defaults, suite: suite)

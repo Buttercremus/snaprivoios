@@ -82,6 +82,36 @@
 		6A2D8418AF551FA424B28092 /* Snaprivo/App/GuideAssistantService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52F136F4F421DFAB3A22599A /* Snaprivo/App/GuideAssistantService.swift */; };
 		410796D52D6957DE65E66C57 /* Snaprivo/App/GuideAssistantModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9653A36067BDC18DF1E5BCC0 /* Snaprivo/App/GuideAssistantModel.swift */; };
 		B446DDCF2C705E05C3868CE3 /* Snaprivo/Features/GuideAssistantView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42ED4E7ECE31975338C5AC9E /* Snaprivo/Features/GuideAssistantView.swift */; };
+		A05000000000000000000014 /* Renderer in Preview */ = {
+			isa = PBXBuildFile; fileRef = A05000000000000000000001;
+		};
+		A05000000000000000000015 /* EditorRenderer in Preview */ = {
+			isa = PBXBuildFile; fileRef = D7550116397EB6ECD1335D87;
+		};
+		A05000000000000000000016 /* PreviewProvider in Sources */ = {
+			isa = PBXBuildFile; fileRef = A05000000000000000000002;
+		};
+		A05000000000000000000017 /* Renderer in Thumbnail */ = {
+			isa = PBXBuildFile; fileRef = A05000000000000000000001;
+		};
+		A05000000000000000000018 /* EditorRenderer in Thumbnail */ = {
+			isa = PBXBuildFile; fileRef = D7550116397EB6ECD1335D87;
+		};
+		A05000000000000000000019 /* ThumbnailProvider in Sources */ = {
+			isa = PBXBuildFile; fileRef = A05000000000000000000003;
+		};
+		A0500000000000000000001A /* SnagForgeDomain in Frameworks */ = {
+			isa = PBXBuildFile; productRef = A05000000000000000000028;
+		};
+		A0500000000000000000001B /* SnagForgeDomain in Frameworks */ = {
+			isa = PBXBuildFile; productRef = A05000000000000000000029;
+		};
+		A0500000000000000000001C /* Embed Quick Look Extension */ = {
+			isa = PBXBuildFile; fileRef = A0500000000000000000000A; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); };
+		};
+		A0500000000000000000001D /* Embed Quick Look Extension */ = {
+			isa = PBXBuildFile; fileRef = A0500000000000000000000B; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); };
+		};
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,7 +122,20 @@
 			remoteGlobalIDString = 416DBFD78C4446D9BE7B6D04;
 			remoteInfo = SnaprivoStoreHost;
 		};
+		A05000000000000000000048 /* SnaprivoProjectPreview */ = {
+			isa = PBXContainerItemProxy; containerPortal = 98F54143AB4E86B28C3AFEE0; proxyType = 1; remoteGlobalIDString = A05000000000000000000032; remoteInfo = SnaprivoProjectPreview;
+		};
+		A05000000000000000000049 /* SnaprivoProjectThumbnail */ = {
+			isa = PBXContainerItemProxy; containerPortal = 98F54143AB4E86B28C3AFEE0; proxyType = 1; remoteGlobalIDString = A05000000000000000000033; remoteInfo = SnaprivoProjectThumbnail;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A05000000000000000000042 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13;
+			files = (A0500000000000000000001C, A0500000000000000000001D, ); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		A04200000000000000000001 /* VideoAudioMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Capture/VideoAudioMeter.swift; sourceTree = SOURCE_ROOT; };
@@ -172,6 +215,30 @@
 		52F136F4F421DFAB3A22599A /* Snaprivo/App/GuideAssistantService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/GuideAssistantService.swift; sourceTree = SOURCE_ROOT; };
 		9653A36067BDC18DF1E5BCC0 /* Snaprivo/App/GuideAssistantModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/App/GuideAssistantModel.swift; sourceTree = SOURCE_ROOT; };
 		42ED4E7ECE31975338C5AC9E /* Snaprivo/Features/GuideAssistantView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Snaprivo/Features/GuideAssistantView.swift; sourceTree = SOURCE_ROOT; };
+		A05000000000000000000001 /* ProjectPreviewRenderer.swift */ = {
+			isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions/QuickLookShared/ProjectPreviewRenderer.swift; sourceTree = SOURCE_ROOT;
+		};
+		A05000000000000000000002 /* PreviewProvider.swift */ = {
+			isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions/ProjectPreview/PreviewProvider.swift; sourceTree = SOURCE_ROOT;
+		};
+		A05000000000000000000003 /* ThumbnailProvider.swift */ = {
+			isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions/ProjectThumbnail/ThumbnailProvider.swift; sourceTree = SOURCE_ROOT;
+		};
+		A05000000000000000000004 /* Preview Info.plist */ = {
+			isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Extensions/ProjectPreview/Info.plist; sourceTree = SOURCE_ROOT;
+		};
+		A05000000000000000000005 /* Thumbnail Info.plist */ = {
+			isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Extensions/ProjectThumbnail/Info.plist; sourceTree = SOURCE_ROOT;
+		};
+		A05000000000000000000006 /* QuickLook.entitlements */ = {
+			isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Extensions/QuickLookShared/QuickLook.entitlements; sourceTree = SOURCE_ROOT;
+		};
+		A0500000000000000000000A /* SnaprivoProjectPreview.appex */ = {
+			isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = SnaprivoProjectPreview.appex; sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		A0500000000000000000000B /* SnaprivoProjectThumbnail.appex */ = {
+			isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; path = SnaprivoProjectThumbnail.appex; sourceTree = BUILT_PRODUCTS_DIR;
+		};
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -189,6 +256,18 @@
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0500000000000000000003E /* PBXFrameworksBuildPhase */ = {
+			isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647;
+			files = (
+				A0500000000000000000001A,
+			); runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0500000000000000000003F /* PBXFrameworksBuildPhase */ = {
+			isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647;
+			files = (
+				A0500000000000000000001B,
+			); runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
@@ -260,6 +339,7 @@
 			children = (
 				3A2A88DEEFF3D1D23E496597 /* Snaprivo */,
 				FBDC4F23F93125BBEEAE800C /* Products */,
+				A0500000000000000000005A /* Extensions */,
 			);
 			sourceTree = "<group>";
 		};
@@ -280,6 +360,8 @@
 				D450F83BF91F4C429CA1EBB2 /* SnaprivoStoreHost.app */,
 				9287F7BE55B548D7B369565F /* SnaprivoStoreTests.xctest */,
 				38A007151ABE87CC01A5B6E9 /* Snaprivo.app */,
+				A0500000000000000000000A /* SnaprivoProjectPreview.appex */,
+				A0500000000000000000000B /* SnaprivoProjectThumbnail.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -332,6 +414,9 @@
 			name = App;
 			sourceTree = "<group>";
 		};
+		A0500000000000000000005A /* Extensions */ = {
+			isa = PBXGroup; children = (A05000000000000000000001, A05000000000000000000002, A05000000000000000000003, A05000000000000000000004, A05000000000000000000005, A05000000000000000000006, ); name = Extensions; sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -342,10 +427,13 @@
 				BCE16DD0260827ECF338C787 /* Sources */,
 				7561BFB015D8F536760CB671 /* Frameworks */,
 				0189424A5A60FED329FA868E /* Resources */,
+				A05000000000000000000042 /* Embed App Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A05000000000000000000046,
+				A05000000000000000000047,
 			);
 			name = Snaprivo;
 			packageProductDependencies = (
@@ -388,6 +476,16 @@
 			productReference = 9287F7BE55B548D7B369565F /* SnaprivoStoreTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		A05000000000000000000032 /* SnaprivoProjectPreview */ = {
+			isa = PBXNativeTarget; buildConfigurationList = A05000000000000000000054;
+			buildPhases = (A0500000000000000000003C, A0500000000000000000003E, A05000000000000000000040, ); buildRules = (); dependencies = ();
+			name = SnaprivoProjectPreview; packageProductDependencies = (A05000000000000000000028, ); productName = SnaprivoProjectPreview; productReference = A0500000000000000000000A; productType = "com.apple.product-type.app-extension";
+		};
+		A05000000000000000000033 /* SnaprivoProjectThumbnail */ = {
+			isa = PBXNativeTarget; buildConfigurationList = A05000000000000000000055;
+			buildPhases = (A0500000000000000000003D, A0500000000000000000003F, A05000000000000000000041, ); buildRules = (); dependencies = ();
+			name = SnaprivoProjectThumbnail; packageProductDependencies = (A05000000000000000000029, ); productName = SnaprivoProjectThumbnail; productReference = A0500000000000000000000B; productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -418,6 +516,8 @@
 				416DBFD78C4446D9BE7B6D04 /* SnaprivoStoreHost */,
 				7CA28AD7D4104674B9AFA3E2 /* SnaprivoStoreTests */,
 				0E8A3AD980EC179856012B7E /* Snaprivo */,
+				A05000000000000000000032 /* SnaprivoProjectPreview */,
+				A05000000000000000000033 /* SnaprivoProjectThumbnail */,
 			);
 		};
 /* End PBXProject section */
@@ -440,6 +540,16 @@
 				B74F445EE61A4288B0E4D8BD /* Tests/Fixtures/Snaprivo.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A05000000000000000000040 /* PBXResourcesBuildPhase */ = {
+			isa = PBXResourcesBuildPhase; buildActionMask = 2147483647;
+			files = (
+			); runOnlyForDeploymentPostprocessing = 0;
+		};
+		A05000000000000000000041 /* PBXResourcesBuildPhase */ = {
+			isa = PBXResourcesBuildPhase; buildActionMask = 2147483647;
+			files = (
+			); runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
@@ -535,6 +645,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A0500000000000000000003C /* PBXSourcesBuildPhase */ = {
+			isa = PBXSourcesBuildPhase; buildActionMask = 2147483647;
+			files = (
+				A05000000000000000000014,
+				A05000000000000000000015,
+				A05000000000000000000016,
+			); runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0500000000000000000003D /* PBXSourcesBuildPhase */ = {
+			isa = PBXSourcesBuildPhase; buildActionMask = 2147483647;
+			files = (
+				A05000000000000000000017,
+				A05000000000000000000018,
+				A05000000000000000000019,
+			); runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -542,6 +668,12 @@
 			isa = PBXTargetDependency;
 			target = 416DBFD78C4446D9BE7B6D04 /* SnaprivoStoreHost */;
 			targetProxy = 25FF6DBD5AE94351B2927185 /* PBXContainerItemProxy */;
+		};
+		A05000000000000000000046 /* SnaprivoProjectPreview */ = {
+			isa = PBXTargetDependency; target = A05000000000000000000032; targetProxy = A05000000000000000000048;
+		};
+		A05000000000000000000047 /* SnaprivoProjectThumbnail */ = {
+			isa = PBXTargetDependency; target = A05000000000000000000033; targetProxy = A05000000000000000000049;
 		};
 /* End PBXTargetDependency section */
 
@@ -702,6 +834,96 @@
 			};
 			name = Release;
 		};
+		A05000000000000000000050 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = "YES";
+				CODE_SIGN_ENTITLEMENTS = "Extensions/QuickLookShared/QuickLook.entitlements";
+				CODE_SIGN_STYLE = "Automatic";
+				CURRENT_PROJECT_VERSION = "2";
+				DEVELOPMENT_TEAM = "24C8L59PV7";
+				ENABLE_APP_SANDBOX = "YES";
+				ENABLE_HARDENED_RUNTIME = "YES";
+				GENERATE_INFOPLIST_FILE = "NO";
+				INFOPLIST_FILE = "Extensions/ProjectPreview/Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = "26.0";
+				MARKETING_VERSION = "1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.snaprivo.app.preview";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = "macosx";
+				SKIP_INSTALL = "YES";
+				SWIFT_VERSION = "6.0";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+			}; name = Debug;
+		};
+		A05000000000000000000051 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = "YES";
+				CODE_SIGN_ENTITLEMENTS = "Extensions/QuickLookShared/QuickLook.entitlements";
+				CODE_SIGN_STYLE = "Automatic";
+				CURRENT_PROJECT_VERSION = "2";
+				DEVELOPMENT_TEAM = "24C8L59PV7";
+				ENABLE_APP_SANDBOX = "YES";
+				ENABLE_HARDENED_RUNTIME = "YES";
+				GENERATE_INFOPLIST_FILE = "NO";
+				INFOPLIST_FILE = "Extensions/ProjectPreview/Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = "26.0";
+				MARKETING_VERSION = "1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.snaprivo.app.preview";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = "macosx";
+				SKIP_INSTALL = "YES";
+				SWIFT_VERSION = "6.0";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+			}; name = Release;
+		};
+		A05000000000000000000052 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = "YES";
+				CODE_SIGN_ENTITLEMENTS = "Extensions/QuickLookShared/QuickLook.entitlements";
+				CODE_SIGN_STYLE = "Automatic";
+				CURRENT_PROJECT_VERSION = "2";
+				DEVELOPMENT_TEAM = "24C8L59PV7";
+				ENABLE_APP_SANDBOX = "YES";
+				ENABLE_HARDENED_RUNTIME = "YES";
+				GENERATE_INFOPLIST_FILE = "NO";
+				INFOPLIST_FILE = "Extensions/ProjectThumbnail/Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = "26.0";
+				MARKETING_VERSION = "1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.snaprivo.app.thumbnail";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = "macosx";
+				SKIP_INSTALL = "YES";
+				SWIFT_VERSION = "6.0";
+				CODE_SIGN_IDENTITY = "Apple Development";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+			}; name = Debug;
+		};
+		A05000000000000000000053 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = "YES";
+				CODE_SIGN_ENTITLEMENTS = "Extensions/QuickLookShared/QuickLook.entitlements";
+				CODE_SIGN_STYLE = "Automatic";
+				CURRENT_PROJECT_VERSION = "2";
+				DEVELOPMENT_TEAM = "24C8L59PV7";
+				ENABLE_APP_SANDBOX = "YES";
+				ENABLE_HARDENED_RUNTIME = "YES";
+				GENERATE_INFOPLIST_FILE = "NO";
+				INFOPLIST_FILE = "Extensions/ProjectThumbnail/Info.plist";
+				MACOSX_DEPLOYMENT_TARGET = "26.0";
+				MARKETING_VERSION = "1.0";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.snaprivo.app.thumbnail";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = "macosx";
+				SKIP_INSTALL = "YES";
+				SWIFT_VERSION = "6.0";
+				LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/../Frameworks", "@executable_path/../../../../Frameworks", );
+			}; name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -741,6 +963,12 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A05000000000000000000054 /* Configurations for SnaprivoProjectPreview */ = {
+			isa = XCConfigurationList; buildConfigurations = (A05000000000000000000050, A05000000000000000000051, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;
+		};
+		A05000000000000000000055 /* Configurations for SnaprivoProjectThumbnail */ = {
+			isa = XCConfigurationList; buildConfigurations = (A05000000000000000000052, A05000000000000000000053, ); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -755,6 +983,12 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 582681C2EAE02B3F3D399C0C /* XCLocalSwiftPackageReference "Packages/SnagForgeDomain" */;
 			productName = SnagForgeDomain;
+		};
+		A05000000000000000000028 /* SnagForgeDomain */ = {
+			isa = XCSwiftPackageProductDependency; productName = SnagForgeDomain;
+		};
+		A05000000000000000000029 /* SnagForgeDomain */ = {
+			isa = XCSwiftPackageProductDependency; productName = SnagForgeDomain;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

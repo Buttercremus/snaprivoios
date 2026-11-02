@@ -70,7 +70,7 @@ struct VideoPlaybackOptions: View {
                 .font(.caption).foregroundStyle(.secondary)
         }
         .disabled(model.isBusy || !model.hasProAccess())
-        .popover(item: $rangeEditor) { value in VideoRangeEditor(model: model, value: value) { rangeEditor = nil } }
+        .popover(item: $rangeEditor, arrowEdge: .leading) { value in VideoRangeEditor(model: model, value: value) { rangeEditor = nil } }
     }
     private func rangeText(_ range: VideoTrim) -> String { VideoTimeText.clock(range.start) + " – " + VideoTimeText.clock(range.end) }
     private func draft(zoom: Bool) -> VideoRangeDraft {

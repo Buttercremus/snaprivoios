@@ -22,6 +22,12 @@ enum VideoTimelineZoom: Int, CaseIterable {
         guard viewport.isFinite, viewport > 32 else { return 32 }
         return (viewport - 32) * CGFloat(rawValue) + 32
     }
+    func scrollOffset(playhead: Double, duration: Double, viewport: CGFloat) -> CGFloat {
+        guard viewport.isFinite, viewport > 32 else { return 0 }
+        let content = contentWidth(in: viewport)
+        let scale = VideoTimelineScale(duration: duration, width: content - 32)
+        return min(max(0, scale.x(for: playhead) + 16 - viewport / 2), max(0, content - viewport))
+    }
 }
 
 /// One scale for the selection, playhead, pointer and keyboard interactions.
@@ -61,6 +67,7 @@ struct VideoTrimTimeline: View {
     var zoom: VideoTimelineZoom = .fit
     @State private var frames: [CGImage] = []
     @State private var playheadDragOrigin: Double?
+    @State private var scrollPosition = ScrollPosition(x: 0)
     private enum Control: Hashable { case playhead }
     @FocusState private var focused: Control?
 
@@ -68,14 +75,15 @@ struct VideoTrimTimeline: View {
         VStack(spacing: 8) {
             GeometryReader { viewport in
                 let scale = VideoTimelineScale(duration: model.duration, width: zoom.contentWidth(in: viewport.size.width) - 32)
-                ScrollViewReader { scroll in
-                    ScrollView(.horizontal) {
-                        VStack(spacing: 8) {
-                            ruler(scale: scale).frame(width: scale.width).padding(.horizontal, 16)
-                            track(scale: scale).frame(width: scale.width + 32, height: 64)
-                        }.padding(.bottom, 12)
-                    }
-                    .onChange(of: zoom) { scroll.scrollTo("video.timeline.playhead", anchor: .center) }
+                ScrollView(.horizontal) {
+                    VStack(spacing: 8) {
+                        ruler(scale: scale).frame(width: scale.width).padding(.horizontal, 16)
+                        track(scale: scale).frame(width: scale.width + 32, height: 64)
+                    }.padding(.bottom, 12)
+                }
+                .scrollPosition($scrollPosition)
+                .onChange(of: zoom) {
+                    scrollPosition.scrollTo(x: zoom.scrollOffset(playhead: model.position, duration: model.duration, viewport: viewport.size.width))
                 }
             }.frame(height: 100)
             Text(String(localized: "Ziehe die Griffe, um Anfang und Ende zu kürzen."))
@@ -125,7 +133,7 @@ struct VideoTrimTimeline: View {
                 .gesture(DragGesture(minimumDistance: 0).onChanged { model.scrub(to: scale.seconds(at: $0.location.x)) })
                 .offset(x: 16, y: 8)
                 .accessibilityHidden(true)
-            playhead(x: scale.x(for: model.position) + 16, scale: scale).id("video.timeline.playhead")
+            playhead(x: scale.x(for: model.position) + 16, scale: scale)
             trimHandle(.start, x: start + 10, scale: scale)
             trimHandle(.end, x: end + 22, scale: scale)
         }.coordinateSpace(name: "video.timeline")

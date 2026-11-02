@@ -60,3 +60,12 @@ Der bisherige Selektor blendete bei Video seine Auswahlkontur aus und schloss di
 - Native Glasflächen brauchen den Window-Server-Compositor. Die Pixelprüfungen rasterisieren die tatsächlichen Desktop-/Masken-Zeichenmethoden getrennt von der Leiste; sie behaupten keinen Software-Screenshot des Glaseffekts. Die Gestaltung wird zusätzlich in der isolierten Produktionsoberfläche mit ausschließlich synthetischen Bildern betrachtet.
 
 **Restabnahme:** echte Mehrdisplay-/Spaces-/Vollbildbedienung und macOS 26, VoiceOver und Systemeinstellungen für mehr Kontrast/reduzierte Transparenz. Die nativen Tests auf dem vorhandenen Testhost ersetzen diese Fälle nicht. P01 und Q01 bleiben für ihre restlichen Fälle offen.
+
+## Größe und Sofortaufnahme – 2. November 2026
+
+Nutzerbefund: Die Auswahlgröße über ein Zahnrad einzustellen, wirkt wie eine Einstellung und ist schwer zu finden; außerdem kostet die Bestätigungsleiste bei schnellen Aufnahmen einen Klick.
+
+- **Größe:** Die Pixelgröße der Auswahl ist ein flacher Knopf mit Pfeil im Stil von „Bildschirm“ und „Bereich“ und öffnet den bisherigen Größeneditor (Breite/Höhe in Pixeln). Das Zahnrad entfällt; Leistenbreite und Reihenfolge der übrigen Aktionen bleiben. Ziffern sind gleich breit, lange Werte verkleinern sich passend. Bedienungshilfen: Rolle Aufklappknopf, Bezeichnung „Auswahlgröße“, Wert = aktuelle Größe.
+- **Sofortaufnahme:** Neue Einstellung „Ohne Bestätigungsleiste sofort aufnehmen“ (Einstellungen → Aufnahme und im Aufnahmefenster, Standard aus). Loslassen nach dem Aufziehen, ein Fensterklick oder die Bildschirmwahl bestätigen dann sofort als Foto bzw. als gewählte Text-/QR-Aufnahme. Mit ⌥ beim Loslassen erscheint die Leiste; danach bleibt sie für diese Auswahl bestehen, damit Anpassen oder neues Aufziehen nicht unbeabsichtigt aufnimmt. Video und Scroll-Aufnahme verwenden immer die Leiste. Der Hinweis beim Aufziehen nennt das jeweilige Verhalten.
+- Prüfung: `./scripts/test-capture.sh` (Größenknopf statt Zahnrad mit Wert und Editoraufruf; Sofortaufnahme für Bereich und Fensterklick, ⌥, keine Sofortaufnahme nach angezeigter Leiste, Video mit Leiste, Hinweistext), `./scripts/test-settings.sh` (Standard aus, Wiederherstellung nach Neustart), `./scripts/test-capture-tools.sh`, App-Build und Lokalisierung (1408 App-Texte). Die neue Leiste wurde als gerendertes Bild gesichtet.
+- Nicht geprüft: echte Aufnahme mit Bildschirmfreigabe und Maus auf einem realen Display, VoiceOver.

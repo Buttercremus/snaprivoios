@@ -21,6 +21,11 @@ import AppKit
                 "Zoom changed pixels without updating the pointer-to-source time scale")
         }
         precondition(VideoTimelineZoom.eightTimes.contentWidth(in: .infinity) == 32)
+        precondition(VideoTimelineZoom.eightTimes.scrollOffset(playhead: 0.25, duration: 2, viewport: 232) == 100)
+        precondition(VideoTimelineZoom.eightTimes.scrollOffset(playhead: 0, duration: 2, viewport: 232) == 0)
+        precondition(VideoTimelineZoom.eightTimes.scrollOffset(playhead: 2, duration: 2, viewport: 232) == 1400)
+        precondition(VideoTimelineZoom.fit.scrollOffset(playhead: 1, duration: 2, viewport: 232) == 0)
+        precondition(VideoTimelineZoom.eightTimes.scrollOffset(playhead: 1, duration: 2, viewport: .infinity) == 0)
         try await checkLiveHandles(model: model)
 
         var preciseValue = 1.876543, fieldEdits = 0
