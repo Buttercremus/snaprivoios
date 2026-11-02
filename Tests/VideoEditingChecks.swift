@@ -8,6 +8,7 @@ import SnagForgeDomain
     static let selection = VideoTrim(start: 0.23, end: 0.77)
 
     static func run() async throws {
+        try VideoAudioMeterChecks.run()
         try await VideoPresentationChecks.run()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("VideoEditing-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -286,7 +287,10 @@ private actor ExportPublishGate {
 }
 @main struct VideoEditingRunner {
     @MainActor static func main() async throws {
-        if CommandLine.arguments.count == 3 { try await VideoEditingChecks.restart(write: CommandLine.arguments[1] == "--write", key: CommandLine.arguments[2]) }
+        if CommandLine.arguments.dropFirst().first == "--audio-levels" {
+            try VideoAudioMeterChecks.run()
+            try await VideoLifecycleChecks.engines()
+        } else if CommandLine.arguments.count == 3 { try await VideoEditingChecks.restart(write: CommandLine.arguments[1] == "--write", key: CommandLine.arguments[2]) }
         else { try await VideoEditingChecks.run() }
     }
 }

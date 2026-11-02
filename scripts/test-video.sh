@@ -11,13 +11,13 @@ xcrun swiftc -swift-version 6 -target "$validation_target" -emit-library -emit-m
   -o "$validation_dir/libSnagForgeDomain.dylib"
 xcrun swiftc -swift-version 6 -target "$validation_target" -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
   -Xlinker -rpath -Xlinker "$validation_dir" \
-  Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift \
+  Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoAudioMeter.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift \
   Tests/VideoRecordingChecks.swift Tests/VideoLifecycleChecks.swift Tests/VideoCountdownChecks.swift Tests/VideoLibraryChecks.swift -o "$validation_dir/VideoRecordingChecks"
 if (( $# == 0 )) || [[ "$1" == "--permissions" ]]; then
   xcrun swiftc -swift-version 6 -target "$validation_target" -D VIDEO_PERMISSION_CHECKS \
     -I "$validation_dir" -L "$validation_dir" -lSnagForgeDomain \
     -Xlinker -rpath -Xlinker "$validation_dir" \
-    Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift \
+    Snaprivo/App/VideoLibraryModel.swift Snaprivo/App/VideoEditorModel.swift Snaprivo/Capture/ScreenshotService.swift Snaprivo/Capture/CaptureToolbarSurface.swift Snaprivo/Capture/VideoAudioMeter.swift Snaprivo/Capture/VideoRecording.swift Snaprivo/Capture/VideoComposition.swift Snaprivo/Capture/VideoRecordingFiles.swift \
     Tests/VideoRecordingChecks.swift Tests/VideoLifecycleChecks.swift Tests/VideoCountdownChecks.swift Tests/VideoLibraryChecks.swift -o "$validation_dir/VideoPermissionChecks"
   if (( $# == 0 )); then
     "$validation_dir/VideoRecordingChecks"

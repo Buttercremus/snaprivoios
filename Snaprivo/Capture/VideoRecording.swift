@@ -59,6 +59,7 @@ struct VideoMicrophoneAccess {
 enum VideoRecordingEvent {
     case started, finished
     case recordingFailed(any Error), streamFailed(any Error)
+    case audioLevel(VideoAudioSource, AudioSignalLevel)
 }
 
 /// Only the public SCK boundary is replaced by synthetic transports in tests.
@@ -106,6 +107,7 @@ final class VideoRecordingEngine {
     private var stopWaiters: [CheckedContinuation<Void, any Error>] = []
     private(set) var canDiscardPartial = true
     var onFailure: (@MainActor (any Error) -> Void)?
+    var onAudioLevel: (@MainActor (VideoAudioSource, AudioSignalLevel) -> Void)?
 
     init(timeout: Duration = .seconds(15), prepare: Prepare? = nil) {
         self.timeout = timeout
@@ -227,6 +229,8 @@ final class VideoRecordingEngine {
             outputFinished = true; fail(error)
         case .streamFailed(let error):
             fail(error)
+        case .audioLevel(let source, let level):
+            if phase == .recording { onAudioLevel?(source, level) }
         }
     }
 
@@ -326,12 +330,13 @@ final class VideoRecordingEngine {
     }
 }
 
-// SCK encodes media; delegate callbacks only deliver lifecycle events to MainActor.
+// SCK encodes media. The sample queue meters audio; MainActor receives numbers and lifecycle events.
 @MainActor
 private final class ScreenCaptureVideoTransport: NSObject, VideoRecordingTransport, SCStreamDelegate, SCStreamOutput, SCRecordingOutputDelegate {
     private var stream: SCStream!
     private var output: SCRecordingOutput!
     private let sampleQueue = DispatchQueue(label: "com.snaprivo.video.samples", qos: .userInitiated)
+    nonisolated private let meter = VideoAudioMeter()
     private var attached = false
     var onEvent: (@MainActor (VideoRecordingEvent) -> Void)?
 
@@ -396,7 +401,10 @@ private final class ScreenCaptureVideoTransport: NSObject, VideoRecordingTranspo
         attached = false
     }
     nonisolated func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
-        // SCRecordingOutput consumes the same media; release this delivery here.
+        let source: VideoAudioSource
+        switch type { case .audio: source = .system; case .microphone: source = .microphone; default: return }
+        guard let level = meter.read(sampleBuffer, source: source) else { return }
+        Task { @MainActor [weak self] in self?.onEvent?(.audioLevel(source, level)) }
     }
     nonisolated func recordingOutputDidStartRecording(_ recordingOutput: SCRecordingOutput) {
         Task { @MainActor [weak self] in self?.onEvent?(.started) }
@@ -630,6 +638,7 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
                 duration: String(format: "%02d:%02d", seconds / 60, seconds % 60),
                 dimensions: "\(outputSize?.width ?? 0) × \(outputSize?.height ?? 0) px",
                 canCancel: phase == .countingDown)
+            recordingToolbar.configureAudio(recordingAudio)
             show()
         } else {
             let wasVisible = recordingToolbar.isVisible
@@ -673,6 +682,10 @@ final class VideoRecordingSession: NSObject, NSWindowDelegate {
                 try Task.checkCancellation()
                 let engine = makeEngine(); self.engine = engine
                 engine.onFailure = { [weak self] error in self?.unexpectedFailure(error) }
+                engine.onAudioLevel = { [weak self] source, level in
+                    guard let self, phase == .recording else { return }
+                    recordingToolbar.updateAudioLevel(source, level: level)
+                }
                 outputSize = try await engine.start(selection: selection, includesCursor: includesCursor, audio: recordingAudio, url: url,
                     showsMouseClicks: showsMouseClicks)
                 try Task.checkCancellation()
@@ -936,6 +949,11 @@ final class VideoRecordingToolbar: NSObject {
     private let dimensions = NSTextField(labelWithString: "")
     private let message = NSTextField(wrappingLabelWithString: "")
     private let stop = CaptureFlatButton(frame: .zero)
+    private let audioMeters = NSStackView()
+    private var meterGroups: [VideoAudioSource: NSView] = [:]
+    private var indicators: [VideoAudioSource: NSLevelIndicator] = [:]
+    private var audio = VideoAudioOptions()
+    private var lastAudioUpdate: [VideoAudioSource: UInt64] = [:]
     private let reduceMotion: @MainActor () -> Bool
     private var isRecording = false
     private var cancelsCountdown = false
@@ -972,6 +990,27 @@ final class VideoRecordingToolbar: NSObject {
         time.setAccessibilityIdentifier("video.recordingTime")
         dimensions.setAccessibilityLabel(String(localized: "Auswahlgröße"))
         dimensions.textColor = NSColor.white.withAlphaComponent(0.68)
+        audioMeters.frame = CGRect(x: 128, y: 31, width: 108, height: 12)
+        audioMeters.orientation = .horizontal; audioMeters.spacing = 8; audioMeters.distribution = .fillEqually
+        audioMeters.isHidden = true; body.addSubview(audioMeters)
+        for source in [VideoAudioSource.system, .microphone] {
+            let icon = NSImageView()
+            icon.image = NSImage(systemSymbolName: source == .system ? "speaker.wave.2.fill" : "mic.fill", accessibilityDescription: nil)
+            icon.contentTintColor = NSColor.white.withAlphaComponent(0.85); icon.imageScaling = .scaleProportionallyDown
+            icon.setAccessibilityElement(false)
+            icon.widthAnchor.constraint(equalToConstant: 10).isActive = true
+            icon.heightAnchor.constraint(equalToConstant: 10).isActive = true
+            let indicator = NSLevelIndicator()
+            indicator.levelIndicatorStyle = .continuousCapacity; indicator.minValue = 0; indicator.maxValue = 100
+            indicator.warningValue = 85; indicator.criticalValue = 98; indicator.isEditable = false
+            indicator.fillColor = .systemGreen; indicator.warningFillColor = .systemOrange; indicator.criticalFillColor = .systemRed
+            indicator.numberOfTickMarks = 0
+            indicator.setAccessibilityLabel(source == .system ? String(localized: "Systemtonpegel") : String(localized: "Mikrofonpegel"))
+            indicator.setAccessibilityIdentifier(source == .system ? "video.audio.system" : "video.audio.microphone")
+            let group = NSStackView(views: [icon, indicator]); group.orientation = .horizontal; group.spacing = 3
+            group.alignment = .centerY; group.isHidden = true
+            audioMeters.addArrangedSubview(group); indicators[source] = indicator; meterGroups[source] = group
+        }
         message.frame = CGRect(x: 12, y: 10, width: 224, height: 36)
         message.font = .systemFont(ofSize: 12, weight: .medium); message.textColor = .white
         message.setAccessibilityIdentifier("video.recordingMessage"); body.addSubview(message)
@@ -986,6 +1025,9 @@ final class VideoRecordingToolbar: NSObject {
         // Keep Escape local to the countdown, then return keyboard focus to the source app.
         if cancelsCountdown && !canCancel && panel.isKeyWindow { panel.orderOut(nil) }
         isRecording = recording; cancelsCountdown = canCancel
+        updateAudioLayout()
+        if !recording { lastAudioUpdate.removeAll(); indicators.values.forEach { $0.doubleValue = 0 } }
+        expireAudioLevels()
         for view in [dot, rec, time, self.dimensions] { view.isHidden = !recording }
         message.isHidden = recording
         message.stringValue = status.components(separatedBy: "\n").prefix(2).joined(separator: "\n")
@@ -1003,6 +1045,33 @@ final class VideoRecordingToolbar: NSObject {
             ) { [weak self] _ in MainActor.assumeIsolated { self?.updatePulse() } }
         }
         updatePulse()
+    }
+    func configureAudio(_ value: VideoAudioOptions) {
+        if audio != value { lastAudioUpdate.removeAll(); indicators.values.forEach { $0.doubleValue = 0 } }
+        audio = value; updateAudioLayout()
+    }
+    func updateAudioLevel(_ source: VideoAudioSource, level: AudioSignalLevel, at time: UInt64 = DispatchTime.now().uptimeNanoseconds) {
+        guard isRecording, source == .system ? audio.systemAudio : audio.microphone else { return }
+        lastAudioUpdate[source] = time
+        indicators[source]?.doubleValue = level.fraction * 100
+        indicators[source]?.toolTip = source == .system ? String(localized: "Systemtonpegel") : String(localized: "Mikrofonpegel")
+        indicators[source]?.setAccessibilityHelp(nil)
+    }
+    func expireAudioLevels(at time: UInt64 = DispatchTime.now().uptimeNanoseconds) {
+        for (source, indicator) in indicators {
+            guard let last = lastAudioUpdate[source], time >= last, time - last < 600_000_000 else {
+                indicator.doubleValue = 0; indicator.toolTip = String(localized: "Wartet auf Audiodaten")
+                indicator.setAccessibilityHelp(String(localized: "Wartet auf Audiodaten")); continue
+            }
+        }
+    }
+    private func updateAudioLayout() {
+        let visible = isRecording && audio.requiresAudio
+        audioMeters.isHidden = !visible
+        meterGroups[.system]?.isHidden = !audio.systemAudio
+        meterGroups[.microphone]?.isHidden = !audio.microphone
+        dimensions.frame.origin.y = visible ? 10 : 20
+        dimensions.font = .monospacedDigitSystemFont(ofSize: visible ? 9 : 11, weight: .medium)
     }
 
     private func updatePulse() {

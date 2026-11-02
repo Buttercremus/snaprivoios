@@ -131,6 +131,9 @@ private actor UIExportHold {
         recordingToolbarPreview = toolbar
         toolbar.onStop = { recordingToolbarPreview?.hide(); recordingToolbarPreview = nil }
         toolbar.update(recording: true, status: "Videoaufnahme · 01:23", duration: "01:23", dimensions: "1280 × 800 px", canCancel: false)
+        toolbar.configureAudio(.init(systemAudio: true, microphone: true))
+        toolbar.updateAudioLevel(.system, level: AudioSignalLevel(rms: 0.15, peak: 0.3, sampleCount: 3200)!)
+        toolbar.updateAudioLevel(.microphone, level: AudioSignalLevel(rms: 0.025, peak: 0.1, sampleCount: 3200)!)
         let selection = sampleSelection()
         toolbar.show(region: selection.rect, screen: selection.screenFrame)
         // QA inspection only. Production show() deliberately preserves the

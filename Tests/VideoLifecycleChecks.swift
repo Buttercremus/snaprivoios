@@ -41,22 +41,33 @@ enum VideoLifecycleChecks {
         transport.startAction = { source, _ in source.onEvent?(.started) }
         transport.stopAction = { _, _ in }
         let recording = engine(transport)
+        let signal = AudioSignalLevel(rms: 0.2, peak: 0.5, sampleCount: 100)!
+        var meterEvents = 0
+        recording.onAudioLevel = { _, level in require(level == signal); meterEvents += 1 }
         await expectRecordingError(.notStarted) { try await recording.stop() }
         let state = SyntheticCompletion()
         let starting = Task { try await start(recording); state.started = true }
         try await waitUntil { transport.startCalls == 1 }
+        transport.onEvent?(.audioLevel(.microphone, signal))
+        require(meterEvents == 0, "Audio escaped the starting phase")
         require(!state.started)
         transport.startCompletion?(.success(()))
         try await starting.value
+        transport.onEvent?(.audioLevel(.system, signal))
+        require(meterEvents == 1)
         let lateEvent = transport.onEvent
         let firstStop = Task { try await recording.stop(); state.stops += 1 }
         let secondStop = Task { try await recording.stop(); state.stops += 1 }
         try await waitUntil { transport.stopCalls == 1 }
+        lateEvent?(.audioLevel(.system, signal))
+        require(meterEvents == 1, "Audio escaped the stopping phase")
         lateEvent?(.finished)
         require(state.stops == 0, "File finish bypassed the stream Stop result")
         transport.stopCompletion?(.success(()))
         try await firstStop.value; try await secondStop.value
         require(state.stops == 2 && recording.canDiscardPartial)
+        lateEvent?(.audioLevel(.microphone, signal))
+        require(meterEvents == 1, "Audio escaped a terminated recording")
         lateEvent?(.streamFailed(error(99))); lateEvent?(.started); lateEvent?(.finished)
         try await recording.stop()
         await expectRecordingError(.alreadyStarted) { try await start(recording) }

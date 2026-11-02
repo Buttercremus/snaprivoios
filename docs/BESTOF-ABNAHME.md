@@ -1,6 +1,6 @@
 # Nachweise zum Ausbau aus beiden App-Vergleichen
 
-Stand: 1. November 2026. Operative Aufgaben und Reihenfolge stehen ausschließlich im [Arbeitsplan](ARBEITSPLAN.md). Der Ausgangsstand wurde als `24a1bb2` lokal gesichert. Keine Veröffentlichung.
+Stand: 2. November 2026. Operative Aufgaben und Reihenfolge stehen ausschließlich im [Arbeitsplan](ARBEITSPLAN.md). Der Ausgangsstand wurde als `24a1bb2` lokal gesichert. Keine Veröffentlichung.
 
 ## A01 Icon-Wechsel
 
@@ -31,3 +31,17 @@ Zusätzliche Prüfungen deckten zwei Fehler vor Abschluss auf: gedrehte Quellen 
 - `git diff --check`: bestanden.
 
 Logs: `/tmp/Snaprivo-bestof-presentation-{build,video,sandbox,localization}.log`, Domain-Log `/tmp/Snaprivo-bestof-domain.log`. Keine Bildraten-, lange Aufnahme-, HDR- oder vollständige VoiceOver-Abnahme. Diese Ergebnisse bestätigen technische Ausgabe und synthetische Bedienung, keine neue Capture-/Berechtigungsabnahme.
+
+## A03 Audio-Pegel
+
+Die vorhandenen Systemton-/Mikrofon-Samples werden auf ihrer Sample-Queue ausgewertet. Nur begrenzte RMS-/Spitzenwertaggregate gelangen mit höchstens 10 Hz je Quelle auf den MainActor. Es gibt keinen zweiten Audiostream, keine neue Berechtigung und keine Persistenz von Samples oder Messwerten. Die Pegel werden nur während bestätigter Aufnahme weitergegeben, nicht bei Start, Stop oder späten Delegate-Ereignissen.
+
+Die bestehende 360 × 56 pt große Leiste zeigt aktivierte Quellen mit Lautsprecher/Mikrofon und nativer, nicht editierbarer Pegelanzeige. Ein eingehender Nullpegel bleibt Stille; ausbleibende Werte werden zurückgesetzt und erhalten „Wartet auf Audiodaten“ als Hilfe. Die vorhandenen Aufnahmefehler bleiben zuständig für tatsächliche Fehler. Beim Stop verschwinden die Anzeigen und verlieren ihre Werte. Ein Signaltest fand Rundung oberhalb des Spitzenwerts bei konstanten Samples; RMS wird deshalb auf den tatsächlich gemessenen Spitzenwert begrenzt.
+
+- Build mit `./scripts/build.sh -derivedDataPath build/BestOfApps/Xcode`: bestanden.
+- `./scripts/test.sh`: 186 Swift-Testing-Tests und 2 XCTest-Tests bestanden, einschließlich Stille, Pegel, NaN/Unendlich, Grenzen und konstantem Signal.
+- `./scripts/test-video-editing.sh --sandbox --audio-levels`: PCM-Signal/Stille, unabhängige Messfenster, zurückgesetzte Uhr, veraltete Werte, aktivierte Quellen, native Geometrie und Aufnahmezustände einschließlich Stop/Abbruch/später Ereignisse bestanden. Auch die vollständige Video-Regression mit dem final gebauten Sandbox-Testhost bestand. Dessen AVPlayer-Prüfung erfordert einen entsperrten Mac; ein Versuch im Sperrzustand wurde nicht als bestandene Prüfung gewertet.
+- Lokalisierung: 1376 App-, 7 InfoPlist- und 19 Domain-Texte vollständig Deutsch/Englisch; native Sprach-/Neustartprüfungen bestanden.
+- Native deutsche Prüf-App mit synthetischen Werten: getrennte grüne Anzeigen, Icons, Zeit, Abmessungen und Stop in unverändert großer Leiste gesichtet. Keine echte Aufnahme gestartet.
+
+Logs: `/tmp/Snaprivo-bestof-audio-{build,domain,video,sandbox,localization}.log`. Reale Tonquellen, Signal-/Bildsynchronität einer neuen Hardwareaufnahme und vollständige VoiceOver-Abnahme bleiben offen.
