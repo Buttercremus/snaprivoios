@@ -14,6 +14,13 @@ import AppKit
         precondition(scale.x(for: 2) == 40 && scale.seconds(at: 100) == 5)
         precondition(scale.seconds(at: -10) == 0 && scale.seconds(at: 300) == 10)
         precondition(scale.x(for: .infinity) == 0 && VideoTimelineScale(duration: 0, width: 0).seconds(at: 50) == 0)
+        for zoom in VideoTimelineZoom.allCases {
+            let zoomed = VideoTimelineScale(duration: 10, width: zoom.contentWidth(in: 232) - 32)
+            precondition(abs(zoomed.seconds(at: zoomed.x(for: 2.345)) - 2.345) < 0.000001)
+            precondition(abs(zoomed.seconds(at: zoomed.x(for: 2) + 20) - 2 - 1 / Double(zoom.rawValue)) < 0.000001,
+                "Zoom changed pixels without updating the pointer-to-source time scale")
+        }
+        precondition(VideoTimelineZoom.eightTimes.contentWidth(in: .infinity) == 32)
         try await checkLiveHandles(model: model)
 
         var preciseValue = 1.876543, fieldEdits = 0
@@ -165,6 +172,15 @@ import AppKit
         end.mouseDown(with: event(.leftMouseDown, 300)); end.mouseDragged(with: event(.leftMouseDragged, 350))
         precondition(close(model.end, 0.75) && !end.accessibilityPerformIncrement(), "Native drag bypassed Pro access")
         model.hasProAccess = { true }
+        start.timelineWidth = 3200
+        start.mouseDown(with: event(.leftMouseDown, 120)); start.mouseDragged(with: event(.leftMouseDragged, 160))
+        precondition(close(model.start, 0.3125), "8× zoom retained the unzoomed drag sensitivity")
+        start.frame.origin.x -= 60
+        start.mouseDragged(with: event(.leftMouseDragged, 140)); start.mouseUp(with: event(.leftMouseUp, 140))
+        precondition(close(model.start, 0.30625), "Scrolled timeline corrupted the held zoomed handle")
+        start.keyDown(with: right)
+        precondition(close(model.start, 0.40625), "Zoom altered the keyboard's source-time step")
+        model.moveStart(to: 0.3)
         start.timelineWidth = 0
         start.mouseDown(with: event(.leftMouseDown, 120)); start.mouseDragged(with: event(.leftMouseDragged, 200))
         precondition(close(model.start, 0.3), "An unavailable timeline scale changed the trim")

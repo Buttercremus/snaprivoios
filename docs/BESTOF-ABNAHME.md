@@ -59,3 +59,11 @@ Ein beständiger Sheet-Container besitzt Player-Lebenszyklus und Kompositionsauf
 - Vollständige VoiceOver- und reale Aufnahmeabnahme werden damit nicht ersetzt.
 
 Logs: `/tmp/Snaprivo-bestof-preview-{build,library,settings,sandbox,localization}.log`.
+
+## A05 Zeitansicht – erster Teil
+
+Gesamt/2×/4×/8× vergrößern ausschließlich die gemeinsame Zeitskala in einer horizontal scrollenden Ansicht. Der Abspielkopf wird beim Wechsel in die Mitte der sichtbaren Zeitansicht gebracht. Zwischenzeiten bleiben auch in vergrößerten Ausschnitten ablesbar. Es werden weiterhin höchstens acht kleine Quellminiaturen geladen. Keine Änderung an Datei-, Schnitt-, Export- oder Undo-Daten durch diese Ansichtsoption.
+
+Build und vollständige Video-Sandbox-/Neustartregression bestanden. Zusätzliche Prüfungen bestätigen die Zeitskala aller vier Ansichten, native Mausbewegungen bei 8× mit verschobenem Griff sowie die weiterhin 0,1 s große Tastaturbewegung. Compiler-Abdeckung: 1385 App-, 7 InfoPlist- und 19 Domain-Texte vollständig Deutsch/Englisch. Die native Sichtprüfung des vollständigen scrollenden Editors ist noch offen: Der Mac war beim Öffnen des finalen Prüf-Builds erneut gesperrt. Operativer Gesamtpunkt A05 bleibt für diese Bedienprüfung, Teilstücke, Tempo/Lautstärke und manuelle Zoomabschnitte offen.
+
+Logs: `/tmp/Snaprivo-bestof-timeline-{build,sandbox}.log`.

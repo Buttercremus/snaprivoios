@@ -95,6 +95,7 @@ struct VideoEditorView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var confirmsDiscard = false
+    @State private var timelineZoom = VideoTimelineZoom.fit
 
     var body: some View {
         VStack(spacing: 16) {
@@ -116,12 +117,17 @@ struct VideoEditorView: View {
                 HStack {
                     Label(String(localized: "Schnittbereich"), systemImage: "scissors").font(.callout.weight(.semibold))
                     Spacer()
+                    Picker(String(localized: "Zeitansicht"), selection: $timelineZoom) {
+                        ForEach(VideoTimelineZoom.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }.fixedSize().disabled(model.isBusy)
+                        .help(String(localized: "Zeitleiste für genauere Schnitte vergrößern."))
+                        .accessibilityIdentifier("video.editor.timelineZoom")
                     Button(String(localized: "Zurücksetzen")) { if model.requestFeature(.video) { model.restoreOriginal() } }
                         .disabled(model.isBusy || (model.start == 0 && model.end == model.duration))
                         .help(String(localized: "Gesamtes Video verwenden"))
                         .accessibilityIdentifier("video.editor.reset")
                 }
-                VideoTrimTimeline(model: model)
+                VideoTrimTimeline(model: model, zoom: timelineZoom)
                 HStack(spacing: 24) {
                     trimField(start: true)
                     Spacer(minLength: 8)
